@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Environment
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Next.js
+server/.next/
+server/out/
+
+# Build
+server/dist/
+android/app/build/
+android/build/
+android/.gradle/
+ios/build/
+ios/DerivedData/
+
+# IDE
+.idea/
+*.iml
+*.xcworkspace/
+*.xcuserdata/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Prisma
+server/prisma/migrations/dev/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+Thumbs.db
+
+# Android
+android/local.properties
+android/captures/
+android/.externalNativeBuild/
+
+# iOS
+ios/Pods/
+ios/Podfile.lock
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# MySQL
+*.sql.bak
