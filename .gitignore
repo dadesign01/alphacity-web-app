@@ -55,3 +55,9 @@ ios/*.xcodeproj/project.xcworkspace/xcuserdata/
 
 # MySQL
 *.sql.bak
+
+admin_legacy/
+
+CLAUDE.md
+.claude.json
+.claude/

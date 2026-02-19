@@ -1,0 +1,282 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  name      String   @db.VarChar(100)
+  phone     String?  @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("admins")
+}
+
+model Program {
+  id               Int           @id @default(autoincrement())
+  name             String        @db.VarChar(255)
+  description      String?       @db.Text
+  startDate        DateTime      @map("start_date") @db.Date
+  endDate          DateTime      @map("end_date") @db.Date
+  status           ProgramStatus @default(scheduled)
+  autoNotification Boolean       @default(true) @map("auto_notification")
+  collectStats     Boolean       @default(true) @map("collect_stats")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  events Event[]
+
+  @@map("programs")
+}
+
+enum ProgramStatus {
+  scheduled
+  in_progress
+  ended
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  nickname     String   @db.VarChar(100)
+  profileImage String?  @map("profile_image") @db.VarChar(500)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  eventParticipants  EventParticipant[]
+  missionCompletions MissionCompletion[]
+  userStamps         UserStamp[]
+  userCoupons        UserCoupon[]
+
+  @@map("users")
+}
+
+model Event {
+  id               Int         @id @default(autoincrement())
+  programId        Int         @map("program_id")
+  name             String      @db.VarChar(255)
+  type             EventType
+  startDate        DateTime    @map("start_date") @db.Date
+  endDate          DateTime    @map("end_date") @db.Date
+  reward           String?     @db.VarChar(255)
+  participantLimit Int         @default(0) @map("participant_limit")
+  status           EventStatus @default(scheduled)
+  createdAt        DateTime    @default(now()) @map("created_at")
+
+  program      Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
+  participants EventParticipant[]
+
+  @@map("events")
+}
+
+enum EventType {
+  raffle
+  first_come
+}
+
+enum EventStatus {
+  scheduled
+  in_progress
+  ended
+}
+
+model EventParticipant {
+  id       Int      @id @default(autoincrement())
+  eventId  Int      @map("event_id")
+  userId   Int      @map("user_id")
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@map("event_participants")
+}
+
+model Place {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(255)
+  category    PlaceCategory
+  latitude    Decimal       @db.Decimal(10, 7)
+  longitude   Decimal       @db.Decimal(10, 7)
+  address     String?       @db.VarChar(500)
+  description String?       @db.Text
+  imageUrl    String?       @map("image_url") @db.VarChar(500)
+  ttsText     String?       @map("tts_text") @db.Text
+  isActive    Boolean       @default(true) @map("is_active")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  missions Mission[]
+
+  @@map("places")
+}
+
+enum PlaceCategory {
+  entrance
+  food
+  facility
+  photo_zone
+  other
+}
+
+model Mission {
+  id          Int         @id @default(autoincrement())
+  name        String      @db.VarChar(255)
+  type        MissionType
+  placeId     Int?        @map("place_id")
+  question    String?     @db.Text
+  answer      String?     @db.VarChar(500)
+  stayMinutes Int?        @map("stay_minutes")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  place       Place?              @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  completions MissionCompletion[]
+
+  @@map("missions")
+}
+
+enum MissionType {
+  quiz
+  location_auth
+  stay_time
+}
+
+model MissionCompletion {
+  id          Int      @id @default(autoincrement())
+  missionId   Int      @map("mission_id")
+  userId      Int      @map("user_id")
+  completedAt DateTime @default(now()) @map("completed_at")
+
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([missionId, userId])
+  @@map("mission_completions")
+}
+
+model Stamp {
+  id              Int            @id @default(autoincrement())
+  name            String         @db.VarChar(255)
+  conditionType   StampCondition @map("condition_type")
+  conditionDetail String?        @map("condition_detail") @db.Text
+  imageUrl        String?        @map("image_url") @db.VarChar(500)
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  userStamps UserStamp[]
+
+  @@map("stamps")
+}
+
+enum StampCondition {
+  mission_complete
+  event_participate
+  place_visit
+  quiz_correct
+}
+
+model UserStamp {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  stampId     Int      @map("stamp_id")
+  collectedAt DateTime @default(now()) @map("collected_at")
+  latitude    Decimal? @db.Decimal(10, 7)
+  longitude   Decimal? @db.Decimal(10, 7)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stamp Stamp @relation(fields: [stampId], references: [id], onDelete: Cascade)
+
+  @@map("user_stamps")
+}
+
+model Coupon {
+  id             Int      @id @default(autoincrement())
+  name           String   @db.VarChar(255)
+  description    String?  @db.Text
+  requiredStamps Int      @default(0) @map("required_stamps")
+  validUntil     DateTime @map("valid_until") @db.Date
+  imageUrl       String?  @map("image_url") @db.VarChar(500)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  userCoupons UserCoupon[]
+
+  @@map("coupons")
+}
+
+model UserCoupon {
+  id          Int              @id @default(autoincrement())
+  userId      Int              @map("user_id")
+  couponId    Int              @map("coupon_id")
+  code        String           @unique @db.VarChar(50)
+  status      UserCouponStatus @default(issued)
+  storeId     Int?             @map("store_id")
+  requestedAt DateTime?        @map("requested_at")
+  usedAt      DateTime?        @map("used_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  store  Store? @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  @@map("user_coupons")
+}
+
+enum UserCouponStatus {
+  issued
+  pending
+  used
+  rejected
+}
+
+model Store {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(255)
+  category    StoreCategory
+  ownerName   String        @map("owner_name") @db.VarChar(100)
+  phone       String        @db.VarChar(20)
+  status      StoreStatus   @default(pending)
+  requestDate DateTime      @map("request_date") @db.Date
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  userCoupons UserCoupon[]
+
+  @@map("stores")
+}
+
+enum StoreCategory {
+  food
+  souvenir
+  other
+}
+
+enum StoreStatus {
+  pending
+  approved
+  rejected
+}
+
+model Notification {
+  id             Int                @id @default(autoincrement())
+  title          String             @db.VarChar(255)
+  message        String             @db.Text
+  target         NotificationTarget @default(all)
+  sentAt         DateTime           @default(now()) @map("sent_at")
+  recipientCount Int                @default(0) @map("recipient_count")
+
+  @@map("notifications")
+}
+
+enum NotificationTarget {
+  all
+  active
+  specific_group
+}
