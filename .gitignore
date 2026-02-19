@@ -57,6 +57,7 @@ ios/*.xcodeproj/project.xcworkspace/xcuserdata/
 *.sql.bak
 
 admin_legacy/
+docs/
 
 CLAUDE.md
 .claude.json
