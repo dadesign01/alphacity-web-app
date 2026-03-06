@@ -6,8 +6,15 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
     const status = searchParams.get('status');
+    const category = searchParams.get('category');
 
-    const where = status && status !== 'all' ? { status: status as 'scheduled' | 'in_progress' | 'ended' } : {};
+    const where: Record<string, unknown> = {};
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+    if (category && category !== 'all') {
+      where.category = category;
+    }
 
     const programs = await prisma.program.findMany({
       where,
@@ -24,7 +31,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, startDate, endDate, status } = body;
+    const { name, description, category, imageUrl, operatingHours, location, speaker, startDate, endDate, status } = body;
 
     if (!name || !startDate || !endDate) {
       return errorResponse('INVALID_INPUT', '행사명, 시작일, 종료일은 필수입니다');
@@ -34,6 +41,11 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         description,
+        category: category || 'exhibition',
+        imageUrl,
+        operatingHours,
+        location,
+        speaker,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         status: status || 'scheduled',

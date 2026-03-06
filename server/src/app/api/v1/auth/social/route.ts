@@ -1,0 +1,112 @@
+import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { signToken } from '@/lib/auth';
+import { successResponse, errorResponse } from '@/lib/api-response';
+
+interface SocialProfile {
+  socialId: string;
+  email: string;
+  nickname: string;
+  profileImage?: string;
+}
+
+async function getKakaoProfile(accessToken: string): Promise<SocialProfile> {
+  const res = await fetch('https://kapi.kakao.com/v2/user/me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error('카카오 프로필 조회 실패');
+
+  const data = await res.json();
+  const account = data.kakao_account;
+
+  return {
+    socialId: String(data.id),
+    email: account?.email || `kakao_${data.id}@kakao.com`,
+    nickname: account?.profile?.nickname || `카카오유저${data.id}`,
+    profileImage: account?.profile?.profile_image_url,
+  };
+}
+
+async function getNaverProfile(accessToken: string): Promise<SocialProfile> {
+  const res = await fetch('https://openapi.naver.com/v1/nid/me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error('네이버 프로필 조회 실패');
+
+  const data = await res.json();
+  const profile = data.response;
+
+  return {
+    socialId: profile.id,
+    email: profile.email || `naver_${profile.id}@naver.com`,
+    nickname: profile.nickname || profile.name || `네이버유저${profile.id}`,
+    profileImage: profile.profile_image,
+  };
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { provider, accessToken } = await request.json();
+
+    if (!provider || !accessToken) {
+      return errorResponse('INVALID_INPUT', 'provider와 accessToken을 입력하세요');
+    }
+
+    if (provider !== 'kakao' && provider !== 'naver') {
+      return errorResponse('INVALID_INPUT', '지원하지 않는 소셜 로그인입니다');
+    }
+
+    // 소셜 프로필 조회
+    const profile = provider === 'kakao'
+      ? await getKakaoProfile(accessToken)
+      : await getNaverProfile(accessToken);
+
+    // 기존 유저 검색 (provider + socialId)
+    let user = await prisma.user.findUnique({
+      where: { provider_socialId: { provider, socialId: profile.socialId } },
+    });
+
+    if (!user) {
+      // 같은 이메일로 가입된 이메일 유저가 있는지 확인
+      const existingEmailUser = await prisma.user.findUnique({
+        where: { email: profile.email },
+      });
+
+      if (existingEmailUser) {
+        // 기존 이메일 유저에 소셜 정보 연결
+        user = await prisma.user.update({
+          where: { id: existingEmailUser.id },
+          data: { provider, socialId: profile.socialId },
+        });
+      } else {
+        // 신규 회원가입
+        user = await prisma.user.create({
+          data: {
+            email: profile.email,
+            nickname: profile.nickname,
+            profileImage: profile.profileImage,
+            provider,
+            socialId: profile.socialId,
+          },
+        });
+      }
+    }
+
+    const token = await signToken({ userId: user.id, email: user.email });
+    const refreshToken = await signToken({ userId: user.id, type: 'refresh' }, '30d');
+
+    return successResponse({
+      token,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        nickname: user.nickname,
+        profileImage: user.profileImage,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '서버 오류가 발생했습니다';
+    return errorResponse('SOCIAL_AUTH_ERROR', message, 500);
+  }
+}

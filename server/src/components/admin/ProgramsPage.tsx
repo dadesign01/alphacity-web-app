@@ -1,11 +1,17 @@
 'use client';
 
-import { Plus, Edit, Trash2, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Filter, X, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface Program {
   id: number;
   name: string;
+  description?: string;
+  category: string;
+  imageUrl?: string;
+  operatingHours?: string;
+  location?: string;
+  speaker?: string;
   startDate: string;
   endDate: string;
   status: string;
@@ -18,38 +24,105 @@ const STATUS_MAP: Record<string, string> = {
   ended: '종료',
 };
 
+const CATEGORY_MAP: Record<string, string> = {
+  exhibition: '전시',
+  seminar: '세미나',
+  food: '맛집',
+};
+
+const CATEGORY_COLOR: Record<string, string> = {
+  exhibition: 'bg-purple-100 text-purple-800',
+  seminar: 'bg-amber-100 text-amber-800',
+  food: 'bg-orange-100 text-orange-800',
+};
+
+interface FormState {
+  name: string;
+  description: string;
+  category: string;
+  imageUrl: string;
+  operatingHours: string;
+  location: string;
+  speaker: string;
+  startDate: string;
+  endDate: string;
+}
+
+const EMPTY_FORM: FormState = {
+  name: '',
+  description: '',
+  category: 'exhibition',
+  imageUrl: '',
+  operatingHours: '',
+  location: '',
+  speaker: '',
+  startDate: '',
+  endDate: '',
+};
+
 export default function ProgramsPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', startDate: '', endDate: '' });
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
   const fetchPrograms = () => {
-    fetch(`/api/v1/admin/programs?status=${statusFilter}`)
+    const params = new URLSearchParams();
+    if (statusFilter !== 'all') params.set('status', statusFilter);
+    if (categoryFilter !== 'all') params.set('category', categoryFilter);
+    fetch(`/api/v1/admin/programs?${params}`)
       .then((res) => res.json())
       .then((data) => { if (data.success) setPrograms(data.data); });
   };
 
-  useEffect(() => { fetchPrograms(); }, [statusFilter]);
+  useEffect(() => { fetchPrograms(); }, [statusFilter, categoryFilter]);
 
-  const handleCreate = async () => {
+  const openCreateForm = () => {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setShowForm(true);
+  };
+
+  const openEditForm = (program: Program) => {
+    setEditingId(program.id);
+    setForm({
+      name: program.name,
+      description: program.description || '',
+      category: program.category,
+      imageUrl: program.imageUrl || '',
+      operatingHours: program.operatingHours || '',
+      location: program.location || '',
+      speaker: program.speaker || '',
+      startDate: program.startDate.split('T')[0],
+      endDate: program.endDate.split('T')[0],
+    });
+    setShowForm(true);
+  };
+
+  const handleSubmit = async () => {
+    const isEdit = editingId !== null;
+    const url = isEdit ? `/api/v1/admin/programs/${editingId}` : '/api/v1/admin/programs';
+    const method = isEdit ? 'PUT' : 'POST';
+
     try {
-      const res = await fetch('/api/v1/admin/programs', {
-        method: 'POST',
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
       const data = await res.json();
       if (data.success) {
         setShowForm(false);
-        setForm({ name: '', description: '', startDate: '', endDate: '' });
-        setStatusFilter('all');
+        setForm(EMPTY_FORM);
+        setEditingId(null);
         fetchPrograms();
       } else {
-        alert(`행사 등록 실패: ${data.error?.message || '알 수 없는 오류'}`);
+        alert(`${isEdit ? '수정' : '등록'} 실패: ${data.error?.message || '알 수 없는 오류'}`);
       }
     } catch {
-      alert('행사 등록 실패: 서버와 통신할 수 없습니다');
+      alert(`${isEdit ? '수정' : '등록'} 실패: 서버와 통신할 수 없습니다`);
     }
   };
 
@@ -76,7 +149,7 @@ export default function ProgramsPage() {
           <p className="text-sm text-gray-500 mt-1">프로그램 행사를 등록하고 관리합니다</p>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={openCreateForm}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -86,13 +159,31 @@ export default function ProgramsPage() {
 
       {showForm && (
         <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">새 행사 등록</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-900">
+              {editingId ? '행사 수정' : '새 행사 등록'}
+            </h3>
+            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="text-gray-400 hover:text-gray-600">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">행사명</label>
-              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="행사 이름을 입력하세요"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">행사명 *</label>
+                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="행사 이름을 입력하세요"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">카테고리 *</label>
+                <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value="exhibition">전시</option>
+                  <option value="seminar">세미나</option>
+                  <option value="food">맛집</option>
+                </select>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">설명</label>
@@ -102,18 +193,49 @@ export default function ProgramsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">시작일</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">운영 시간</label>
+                <input type="text" value={form.operatingHours} onChange={(e) => setForm({ ...form, operatingHours: e.target.value })}
+                  placeholder="예: 10:00 - 18:00"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">장소</label>
+                <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  placeholder="예: 알파시티 2로 33 태왕알파시티 3층"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+            </div>
+            {form.category === 'seminar' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">연사 정보</label>
+                <input type="text" value={form.speaker} onChange={(e) => setForm({ ...form, speaker: e.target.value })}
+                  placeholder="예: 김태현 교수(서울대학교 경제학과)"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">이미지 URL</label>
+              <input type="text" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                placeholder="이미지 URL을 입력하세요"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">시작일 *</label>
                 <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">종료일</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">종료일 *</label>
                 <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
             </div>
-            <button onClick={handleCreate}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">등록</button>
+            <button onClick={handleSubmit}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <Save className="w-4 h-4" />
+              {editingId ? '수정' : '등록'}
+            </button>
           </div>
         </div>
       )}
@@ -122,17 +244,35 @@ export default function ProgramsPage() {
       <div className="mb-6 bg-white rounded-lg border border-gray-200 p-4">
         <div className="flex items-center gap-2 mb-3">
           <Filter className="w-4 h-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">상태 필터</span>
+          <span className="text-sm font-medium text-gray-700">필터</span>
         </div>
-        <div className="flex gap-2">
-          {['all', 'scheduled', 'in_progress', 'ended'].map((status) => (
-            <button key={status} onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                statusFilter === status ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}>
-              {status === 'all' ? '전체' : STATUS_MAP[status]}
-            </button>
-          ))}
+        <div className="flex gap-6">
+          <div>
+            <span className="text-xs text-gray-500 mb-1 block">상태</span>
+            <div className="flex gap-2">
+              {['all', 'scheduled', 'in_progress', 'ended'].map((status) => (
+                <button key={status} onClick={() => setStatusFilter(status)}
+                  className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                    statusFilter === status ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}>
+                  {status === 'all' ? '전체' : STATUS_MAP[status]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <span className="text-xs text-gray-500 mb-1 block">카테고리</span>
+            <div className="flex gap-2">
+              {['all', 'exhibition', 'seminar', 'food'].map((cat) => (
+                <button key={cat} onClick={() => setCategoryFilter(cat)}
+                  className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                    categoryFilter === cat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}>
+                  {cat === 'all' ? '전체' : CATEGORY_MAP[cat]}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -142,19 +282,32 @@ export default function ProgramsPage() {
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">행사명</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">기간</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">운영시간</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">이벤트 수</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">이벤트</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {programs.map((program) => (
               <tr key={program.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm text-gray-900">{program.name}</td>
+                <td className="px-6 py-4">
+                  <div className="text-sm font-medium text-gray-900">{program.name}</div>
+                  {program.location && (
+                    <div className="text-xs text-gray-500 mt-1">{program.location}</div>
+                  )}
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex px-2 py-1 text-xs rounded-full ${CATEGORY_COLOR[program.category] || 'bg-gray-100 text-gray-800'}`}>
+                    {CATEGORY_MAP[program.category] || program.category}
+                  </span>
+                </td>
                 <td className="px-6 py-4 text-sm text-gray-600">
                   {new Date(program.startDate).toLocaleDateString()} ~ {new Date(program.endDate).toLocaleDateString()}
                 </td>
+                <td className="px-6 py-4 text-sm text-gray-600">{program.operatingHours || '-'}</td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
                     program.status === 'in_progress' ? 'bg-green-100 text-green-800'
@@ -167,7 +320,8 @@ export default function ProgramsPage() {
                 <td className="px-6 py-4 text-sm text-gray-600">{program._count.events}개</td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2">
-                    <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                    <button onClick={() => openEditForm(program)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                       <Edit className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleDelete(program.id)}
@@ -179,7 +333,7 @@ export default function ProgramsPage() {
               </tr>
             ))}
             {programs.length === 0 && (
-              <tr><td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">등록된 행사가 없습니다</td></tr>
+              <tr><td colSpan={7} className="px-6 py-8 text-center text-sm text-gray-500">등록된 행사가 없습니다</td></tr>
             )}
           </tbody>
         </table>

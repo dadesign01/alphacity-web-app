@@ -20,20 +20,34 @@ model Admin {
 }
 
 model Program {
-  id               Int           @id @default(autoincrement())
-  name             String        @db.VarChar(255)
-  description      String?       @db.Text
-  startDate        DateTime      @map("start_date") @db.Date
-  endDate          DateTime      @map("end_date") @db.Date
-  status           ProgramStatus @default(scheduled)
-  autoNotification Boolean       @default(true) @map("auto_notification")
-  collectStats     Boolean       @default(true) @map("collect_stats")
-  createdAt        DateTime      @default(now()) @map("created_at")
-  updatedAt        DateTime      @updatedAt @map("updated_at")
+  id               Int              @id @default(autoincrement())
+  name             String           @db.VarChar(255)
+  description      String?          @db.Text
+  category         ProgramCategory  @default(exhibition)
+  imageUrl         String?          @map("image_url") @db.VarChar(500)
+  operatingHours   String?          @map("operating_hours") @db.VarChar(100)
+  location         String?          @db.VarChar(500)
+  latitude         Decimal?         @db.Decimal(10, 7)
+  longitude        Decimal?         @db.Decimal(10, 7)
+  speaker          String?          @db.VarChar(255)
+  startDate        DateTime         @map("start_date") @db.Date
+  endDate          DateTime         @map("end_date") @db.Date
+  status           ProgramStatus    @default(scheduled)
+  autoNotification Boolean          @default(true) @map("auto_notification")
+  collectStats     Boolean          @default(true) @map("collect_stats")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
 
   events Event[]
 
   @@map("programs")
+}
+
+enum ProgramCategory {
+  exhibition
+  seminar
+  food
+  event
 }
 
 enum ProgramStatus {
@@ -45,9 +59,11 @@ enum ProgramStatus {
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique @db.VarChar(255)
-  passwordHash String   @map("password_hash") @db.VarChar(255)
+  passwordHash String?  @map("password_hash") @db.VarChar(255)
   nickname     String   @db.VarChar(100)
   profileImage String?  @map("profile_image") @db.VarChar(500)
+  provider     String?  @db.VarChar(20)
+  socialId     String?  @map("social_id") @db.VarChar(255)
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -57,6 +73,7 @@ model User {
   userStamps         UserStamp[]
   userCoupons        UserCoupon[]
 
+  @@unique([provider, socialId])
   @@map("users")
 }
 
@@ -64,6 +81,8 @@ model Event {
   id               Int         @id @default(autoincrement())
   programId        Int         @map("program_id")
   name             String      @db.VarChar(255)
+  description      String?     @db.Text
+  imageUrl         String?     @map("image_url") @db.VarChar(500)
   type             EventType
   startDate        DateTime    @map("start_date") @db.Date
   endDate          DateTime    @map("end_date") @db.Date
@@ -237,15 +256,24 @@ enum UserCouponStatus {
 }
 
 model Store {
-  id          Int           @id @default(autoincrement())
-  name        String        @db.VarChar(255)
-  category    StoreCategory
-  ownerName   String        @map("owner_name") @db.VarChar(100)
-  phone       String        @db.VarChar(20)
-  status      StoreStatus   @default(pending)
-  requestDate DateTime      @map("request_date") @db.Date
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
+  id            Int           @id @default(autoincrement())
+  name          String        @db.VarChar(255)
+  category      StoreCategory
+  ownerName     String        @map("owner_name") @db.VarChar(100)
+  phone         String        @db.VarChar(20)
+  address       String?       @db.VarChar(500)
+  addressDetail String?       @map("address_detail") @db.VarChar(500)
+  description   String?       @db.Text
+  imageUrl      String?       @map("image_url") @db.VarChar(500)
+  storeCode     String?       @unique @map("store_code") @db.VarChar(50)
+  operatingDays String?       @map("operating_days") @db.VarChar(50)
+  openTime      String?       @map("open_time") @db.VarChar(10)
+  closeTime     String?       @map("close_time") @db.VarChar(10)
+  userId        Int?          @map("user_id")
+  status        StoreStatus   @default(pending)
+  requestDate   DateTime      @map("request_date") @db.Date
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
 
   userCoupons UserCoupon[]
 
@@ -253,15 +281,28 @@ model Store {
 }
 
 enum StoreCategory {
-  food
-  souvenir
-  other
+  cafe
+  restaurant
+  shopping
+  hotel
+  convenience
 }
 
 enum StoreStatus {
   pending
   approved
   rejected
+}
+
+model Banner {
+  id        Int      @id @default(autoincrement())
+  title     String   @db.VarChar(255)
+  imageUrl  String   @map("image_url") @db.VarChar(500)
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("banners")
 }
 
 model Notification {

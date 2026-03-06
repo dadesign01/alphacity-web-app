@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, X as XIcon } from 'lucide-react';
+import { CheckCircle, X as XIcon, MapPin, Clock, Phone, Store } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface StoreItem {
@@ -9,6 +9,14 @@ interface StoreItem {
   category: string;
   ownerName: string;
   phone: string;
+  address?: string;
+  addressDetail?: string;
+  description?: string;
+  imageUrl?: string;
+  storeCode?: string;
+  operatingDays?: string;
+  openTime?: string;
+  closeTime?: string;
   requestDate: string;
   status: string;
   createdAt: string;
@@ -22,7 +30,13 @@ interface Stats {
   rejectedCount: number;
 }
 
-const CATEGORY_MAP: Record<string, string> = { food: '식음료', souvenir: '기념품', other: '기타' };
+const CATEGORY_MAP: Record<string, string> = {
+  cafe: '카페',
+  restaurant: '음식점',
+  shopping: '쇼핑',
+  hotel: '호텔',
+  convenience: '편의시설',
+};
 const STATUS_MAP: Record<string, string> = { pending: '대기중', approved: '승인', rejected: '반려' };
 
 export default function StoresPage() {
@@ -40,7 +54,7 @@ export default function StoresPage() {
 
   const handleAction = async (id: number, status: 'approved' | 'rejected') => {
     try {
-      const res = await fetch(`/api/v1/admin/stores/${id}/status`, {
+      const res = await fetch(`/api/v1/admin/stores/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -145,14 +159,21 @@ export default function StoresPage() {
 
       {selected && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelected(null)}>
-          <div className="bg-white rounded-lg w-full max-w-lg mx-4 p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">상점 상세정보</h3>
-              <button onClick={() => setSelected(null)} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
-                <XIcon className="w-5 h-5" />
-              </button>
+          <div className="bg-white rounded-lg w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white p-6 pb-4 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">상점 상세정보</h3>
+                <button onClick={() => setSelected(null)} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                  <XIcon className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-            <div className="space-y-4">
+            <div className="p-6 pt-4 space-y-4">
+              {selected.imageUrl && (
+                <div>
+                  <img src={selected.imageUrl} alt={selected.name} className="w-full h-40 object-cover rounded-lg" />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">상점명</p>
@@ -175,6 +196,33 @@ export default function StoresPage() {
                   <p className="text-sm text-gray-900">{selected.phone}</p>
                 </div>
               </div>
+              {(selected.address || selected.addressDetail) && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><MapPin className="w-3 h-3" /> 주소</p>
+                  <p className="text-sm text-gray-900">{selected.address}{selected.addressDetail ? ` ${selected.addressDetail}` : ''}</p>
+                </div>
+              )}
+              {selected.storeCode && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Store className="w-3 h-3" /> 상점 코드</p>
+                  <p className="text-sm font-mono text-gray-900">{selected.storeCode}</p>
+                </div>
+              )}
+              {(selected.operatingDays || selected.openTime) && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Clock className="w-3 h-3" /> 운영 정보</p>
+                  <p className="text-sm text-gray-900">
+                    {selected.operatingDays && `${selected.operatingDays} `}
+                    {selected.openTime && selected.closeTime && `${selected.openTime} ~ ${selected.closeTime}`}
+                  </p>
+                </div>
+              )}
+              {selected.description && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">상점 설명</p>
+                  <p className="text-sm text-gray-900 whitespace-pre-line">{selected.description}</p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">신청일</p>
@@ -191,18 +239,8 @@ export default function StoresPage() {
                   </span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">등록일</p>
-                  <p className="text-sm text-gray-900">{new Date(selected.createdAt).toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">최근 수정일</p>
-                  <p className="text-sm text-gray-900">{new Date(selected.updatedAt).toLocaleString()}</p>
-                </div>
-              </div>
             </div>
-            <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
+            <div className="sticky bottom-0 bg-white flex justify-end gap-2 p-6 pt-4 border-t border-gray-200">
               {selected.status !== 'approved' && (
                 <button onClick={() => { handleAction(selected.id, 'approved'); setSelected(null); }}
                   className="flex items-center gap-1 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">

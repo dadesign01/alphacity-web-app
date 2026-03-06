@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#2563EB</color>
+    <color name="primary_light">#60BDFF</color>
+    <color name="background">#F9F9F9</color>
+    <color name="text_dark">#3A3E47</color>
+    <color name="text_gray">#5F687C</color>
+    <color name="white">#FFFFFF</color>
+    <color name="splash_gradient_start">#60BDFF</color>
+    <color name="splash_gradient_end">#94E8FF</color>
+    <color name="ic_launcher_background">#2563EB</color>
+</resources>

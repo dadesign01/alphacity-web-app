@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
+  Image as ImageIcon,
   Calendar,
   CalendarCheck,
   Map,
@@ -19,6 +20,7 @@ import {
 
 const menuItems = [
   { path: '/admin', label: '대시보드', icon: LayoutDashboard },
+  { path: '/admin/banners', label: '배너 관리', icon: ImageIcon },
   { path: '/admin/programs', label: '행사 관리', icon: Calendar },
   { path: '/admin/events', label: '이벤트 관리', icon: CalendarCheck },
   { path: '/admin/places', label: '지도 / 장소 관리', icon: Map },

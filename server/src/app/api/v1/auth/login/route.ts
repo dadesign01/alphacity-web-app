@@ -17,6 +17,10 @@ export async function POST(request: NextRequest) {
       return errorResponse('INVALID_CREDENTIALS', '이메일 또는 비밀번호가 올바르지 않습니다', 401);
     }
 
+    if (!user.passwordHash) {
+      return errorResponse('SOCIAL_ACCOUNT', '소셜 로그인으로 가입한 계정입니다', 401);
+    }
+
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
       return errorResponse('INVALID_CREDENTIALS', '이메일 또는 비밀번호가 올바르지 않습니다', 401);

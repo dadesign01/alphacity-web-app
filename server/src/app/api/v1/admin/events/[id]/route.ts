@@ -24,6 +24,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       where: { id: Number(id) },
       data: {
         ...(body.name && { name: body.name }),
+        ...(body.description !== undefined && { description: body.description }),
+        ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
         ...(body.type && { type: body.type }),
         ...(body.startDate && { startDate: new Date(body.startDate) }),
         ...(body.endDate && { endDate: new Date(body.endDate) }),

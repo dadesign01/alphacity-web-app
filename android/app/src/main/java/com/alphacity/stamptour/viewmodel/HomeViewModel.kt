@@ -1,0 +1,84 @@
+package com.alphacity.stamptour.viewmodel
+
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.alphacity.stamptour.network.dto.BannerItem
+import com.alphacity.stamptour.network.dto.EventItem
+import com.alphacity.stamptour.network.dto.ProgramItem
+import com.alphacity.stamptour.repository.HomeRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val homeRepository: HomeRepository,
+) : ViewModel() {
+
+    private val _banners = MutableStateFlow<List<BannerItem>>(emptyList())
+    val banners: StateFlow<List<BannerItem>> = _banners
+
+    private val _programs = MutableStateFlow<List<ProgramItem>>(emptyList())
+    val programs: StateFlow<List<ProgramItem>> = _programs
+
+    private val _events = MutableStateFlow<List<EventItem>>(emptyList())
+    val events: StateFlow<List<EventItem>> = _events
+
+    private val _totalStampCount = MutableStateFlow(10)
+    val totalStampCount: StateFlow<Int> = _totalStampCount
+
+    private val _userStampCount = MutableStateFlow(0)
+    val userStampCount: StateFlow<Int> = _userStampCount
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    fun fetchHomeData() {
+        if (_isLoading.value) return
+        _isLoading.value = true
+
+        viewModelScope.launch {
+            val bannersDeferred = async {
+                homeRepository.getBanners()
+                    .onSuccess { _banners.value = it }
+                    .onFailure { Log.e("HomeViewModel", "배너 로드 실패", it) }
+            }
+
+            val programsDeferred = async {
+                homeRepository.getPrograms()
+                    .onSuccess { _programs.value = it }
+                    .onFailure { Log.e("HomeViewModel", "프로그램 로드 실패", it) }
+            }
+
+            val eventsDeferred = async {
+                homeRepository.getEvents()
+                    .onSuccess { _events.value = it }
+                    .onFailure { Log.e("HomeViewModel", "이벤트 로드 실패", it) }
+            }
+
+            val stampsDeferred = async {
+                homeRepository.getStamps()
+                    .onSuccess { _totalStampCount.value = maxOf(it.size, 1) }
+                    .onFailure { Log.e("HomeViewModel", "스탬프 로드 실패", it) }
+            }
+
+            bannersDeferred.await()
+            programsDeferred.await()
+            eventsDeferred.await()
+            stampsDeferred.await()
+
+            // 로그인 상태면 유저 프로필도 가져오기
+            if (homeRepository.isLoggedIn) {
+                homeRepository.getUserProfile()
+                    .onSuccess { profile -> _userStampCount.value = profile.stampCount ?: 0 }
+                    .onFailure { Log.e("HomeViewModel", "프로필 로드 실패", it) }
+            }
+
+            _isLoading.value = false
+        }
+    }
+}

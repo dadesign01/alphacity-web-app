@@ -25,6 +25,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       data: {
         ...(body.name && { name: body.name }),
         ...(body.description !== undefined && { description: body.description }),
+        ...(body.category && { category: body.category }),
+        ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
+        ...(body.operatingHours !== undefined && { operatingHours: body.operatingHours }),
+        ...(body.location !== undefined && { location: body.location }),
+        ...(body.speaker !== undefined && { speaker: body.speaker }),
         ...(body.startDate && { startDate: new Date(body.startDate) }),
         ...(body.endDate && { endDate: new Date(body.endDate) }),
         ...(body.status && { status: body.status }),
