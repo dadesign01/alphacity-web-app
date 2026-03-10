@@ -122,6 +122,30 @@ struct UserStampData: Decodable, Identifiable {
     let collectedAt: String?
 }
 
+// MARK: - 쿠폰
+
+struct CouponData: Decodable, Identifiable {
+    let id: Int
+    let name: String
+    let description: String?
+    let requiredStamps: Int
+    let validUntil: String
+    let imageUrl: String?
+    let programId: Int?
+}
+
+struct UserCouponData: Decodable, Identifiable {
+    let id: Int
+    let userId: Int
+    let couponId: Int
+    let code: String
+    let status: String
+    let storeId: Int?
+    let requestedAt: String?
+    let usedAt: String?
+    let createdAt: String?
+}
+
 // MARK: - 유저 프로필
 
 struct UserProfileData: Decodable {

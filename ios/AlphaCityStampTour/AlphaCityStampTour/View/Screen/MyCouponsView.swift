@@ -25,6 +25,11 @@ private let mockCoupons: [CouponItemData] = [
 struct MyCouponsView: View {
     var onBackTapped: () -> Void
     @State private var selectedCoupon: CouponItemData? = nil
+    @State private var usedCouponIds: Set<Int> = []
+
+    private var availableCoupons: [CouponItemData] {
+        mockCoupons.filter { !usedCouponIds.contains($0.id) }
+    }
 
     var body: some View {
         ZStack {
@@ -72,7 +77,7 @@ struct MyCouponsView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .frame(height: 185)
 
-                            Text("\(mockCoupons.count)개")
+                            Text("\(availableCoupons.count)개")
                                 .font(AppFont.bold(35))
                                 .foregroundColor(AppColor.primary)
                                 .padding(.trailing, 20)
@@ -83,7 +88,7 @@ struct MyCouponsView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 30)
 
-                        // === CTA Button (between info card and coupon list) ===
+                        // === CTA Button ===
                         Button(action: onBackTapped) {
                             HStack {
                                 Spacer()
@@ -119,32 +124,45 @@ struct MyCouponsView: View {
                             .padding(.top, 24)
 
                         // === Coupon List ===
-                        VStack(spacing: 12) {
-                            ForEach(mockCoupons) { coupon in
-                                CouponCard(coupon: coupon) {
-                                    selectedCoupon = coupon
+                        if availableCoupons.isEmpty {
+                            Text("사용 가능한 쿠폰이 없습니다.")
+                                .font(AppFont.medium(14))
+                                .foregroundColor(Color(hex: "9CA3AF"))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 40)
+                        } else {
+                            VStack(spacing: 12) {
+                                ForEach(availableCoupons) { coupon in
+                                    CouponCard(coupon: coupon) {
+                                        selectedCoupon = coupon
+                                    }
                                 }
                             }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 16)
 
                         // Footer
                         Text("© 2026 Alpha Stamp. All rights reserved.")
                             .font(AppFont.regular(10))
-                            .foregroundColor(Color(hex: "AFBFCC"))
+                            .foregroundColor(Color(hex: "8F8F8F"))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 40)
-                            .background(Color(hex: "282828"))
+                            .background(Color(hex: "F9F9F9"))
                     }
                 }
             }
 
             // === Bottom Sheet Overlay ===
             if let coupon = selectedCoupon {
-                CouponDetailSheet(coupon: coupon) {
-                    selectedCoupon = nil
-                }
+                CouponDetailSheet(
+                    coupon: coupon,
+                    onDismiss: { selectedCoupon = nil },
+                    onUseCoupon: {
+                        usedCouponIds.insert(coupon.id)
+                        selectedCoupon = nil
+                    }
+                )
             }
         }
     }
@@ -159,7 +177,6 @@ private struct CouponCard: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 0) {
-                // Left: Thumbnail
                 ZStack {
                     Circle()
                         .fill(Color(hex: "F8F8F8"))
@@ -171,7 +188,6 @@ private struct CouponCard: View {
                 }
                 .padding(.leading, 16)
 
-                // Middle: Info
                 VStack(alignment: .leading, spacing: 2) {
                     Text(coupon.name)
                         .font(AppFont.medium(16))
@@ -194,9 +210,7 @@ private struct CouponCard: View {
 
                 Spacer(minLength: 0)
 
-                // Right: Blue decoration with QR icon
                 ZStack {
-                    // Blue curved background
                     CouponDecoShape()
                         .fill(
                             LinearGradient(
@@ -206,7 +220,6 @@ private struct CouponCard: View {
                             )
                         )
 
-                    // QR icon
                     Image(systemName: "qrcode")
                         .font(.system(size: 28, weight: .medium))
                         .foregroundColor(.white)
@@ -224,7 +237,7 @@ private struct CouponCard: View {
     }
 }
 
-// MARK: - Coupon Deco Shape (right side blue wave)
+// MARK: - Coupon Deco Shape
 
 private struct CouponDecoShape: Shape {
     func path(in rect: CGRect) -> Path {
@@ -232,17 +245,11 @@ private struct CouponDecoShape: Shape {
         let w = rect.width
         let h = rect.height
 
-        // Start from top-left with a curve
         path.move(to: CGPoint(x: w * 0.35, y: 0))
         path.addLine(to: CGPoint(x: w, y: 0))
-
-        // Right side with rounded corner
         path.addLine(to: CGPoint(x: w, y: h))
-
-        // Bottom to left with curve
         path.addLine(to: CGPoint(x: w * 0.35, y: h))
 
-        // Left side wavy curve going back up
         path.addCurve(
             to: CGPoint(x: w * 0.15, y: h * 0.5),
             control1: CGPoint(x: w * 0.0, y: h * 0.85),
@@ -264,9 +271,9 @@ private struct CouponDecoShape: Shape {
 private struct CouponDetailSheet: View {
     let coupon: CouponItemData
     let onDismiss: () -> Void
+    let onUseCoupon: () -> Void
 
     var body: some View {
-        // Dimmed background
         Color.black.opacity(0.61)
             .ignoresSafeArea()
             .onTapGesture { onDismiss() }
@@ -312,7 +319,7 @@ private struct CouponDetailSheet: View {
                     .padding(.top, 16)
 
                 // Use button
-                Button(action: onDismiss) {
+                Button(action: onUseCoupon) {
                     Text("쿠폰 사용하기")
                         .font(AppFont.semibold(16))
                         .foregroundColor(.white)
@@ -332,7 +339,7 @@ private struct CouponDetailSheet: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
 
-                // Caution section
+                // Caution section — 회색 배경 양끝까지
                 ScrollView {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 4) {

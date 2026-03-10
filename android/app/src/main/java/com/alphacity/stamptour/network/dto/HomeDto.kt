@@ -125,6 +125,32 @@ data class MissionPlace(
     val longitude: Double? = null,
 )
 
+// === 쿠폰 ===
+
+@Serializable
+data class CouponItem(
+    val id: Int,
+    val name: String,
+    val description: String? = null,
+    val requiredStamps: Int,
+    val validUntil: String,
+    val imageUrl: String? = null,
+    val programId: Int? = null,
+)
+
+@Serializable
+data class UserCouponItem(
+    val id: Int,
+    val userId: Int,
+    val couponId: Int,
+    val code: String,
+    val status: String,
+    val storeId: Int? = null,
+    val requestedAt: String? = null,
+    val usedAt: String? = null,
+    val createdAt: String? = null,
+)
+
 // === 유저 프로필 ===
 
 @Serializable

@@ -48,6 +48,8 @@ fun MyPageScreen(
         EditProfileScreen(
             onBackClick = { showEditProfile = false },
             onLogout = onLogout,
+            initialNickname = userProfile?.nickname ?: "",
+            initialEmail = userProfile?.email ?: "",
         )
         return
     }

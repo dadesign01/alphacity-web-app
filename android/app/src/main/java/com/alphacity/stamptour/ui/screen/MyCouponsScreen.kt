@@ -61,6 +61,9 @@ fun MyCouponsScreen(
     onBackClick: () -> Unit,
 ) {
     var selectedCoupon by remember { mutableStateOf<CouponItem?>(null) }
+    var usedCouponIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+
+    val availableCoupons = mockCoupons.filter { it.id !in usedCouponIds }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -132,7 +135,7 @@ fun MyCouponsScreen(
                         )
                     }
                     Text(
-                        text = "${mockCoupons.size}개",
+                        text = "${availableCoupons.size}개",
                         fontFamily = Pretendard,
                         fontWeight = FontWeight.Bold,
                         fontSize = 35.sp,
@@ -143,7 +146,7 @@ fun MyCouponsScreen(
                     )
                 }
 
-                // === CTA Button (between info card and coupon list) ===
+                // === CTA Button ===
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 20.dp)
@@ -191,14 +194,28 @@ fun MyCouponsScreen(
                 )
 
                 // === Coupon Cards ===
-                Column(
-                    modifier = Modifier
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    mockCoupons.forEach { coupon ->
-                        CouponCardItem(coupon = coupon) { selectedCoupon = coupon }
+                if (availableCoupons.isEmpty()) {
+                    Text(
+                        text = "사용 가능한 쿠폰이 없습니다.",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp,
+                        color = Color(0xFF9CA3AF),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 40.dp),
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .padding(horizontal = 20.dp)
+                            .padding(top = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        availableCoupons.forEach { coupon ->
+                            CouponCardItem(coupon = coupon) { selectedCoupon = coupon }
+                        }
                     }
                 }
 
@@ -208,11 +225,11 @@ fun MyCouponsScreen(
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Normal,
                     fontSize = 10.sp,
-                    color = Color(0xFFAFBFCC),
+                    color = Color(0xFF8F8F8F),
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF282828))
+                        .background(Color(0xFFF9F9F9))
                         .padding(vertical = 40.dp),
                 )
             }
@@ -223,6 +240,10 @@ fun MyCouponsScreen(
             CouponDetailBottomSheet(
                 coupon = coupon,
                 onDismiss = { selectedCoupon = null },
+                onUseCoupon = {
+                    usedCouponIds = usedCouponIds + coupon.id
+                    selectedCoupon = null
+                },
             )
         }
     }
@@ -339,7 +360,11 @@ private fun CouponCardItem(coupon: CouponItem, onClick: () -> Unit) {
 }
 
 @Composable
-private fun CouponDetailBottomSheet(coupon: CouponItem, onDismiss: () -> Unit) {
+private fun CouponDetailBottomSheet(
+    coupon: CouponItem,
+    onDismiss: () -> Unit,
+    onUseCoupon: () -> Unit,
+) {
     // Dimmed overlay
     Box(
         modifier = Modifier
@@ -432,7 +457,7 @@ private fun CouponDetailBottomSheet(coupon: CouponItem, onDismiss: () -> Unit) {
                             colors = listOf(Color(0xFF6092FF), Color(0xFF2563EB), Color(0xFF1551D3))
                         )
                     )
-                    .clickable(onClick = onDismiss),
+                    .clickable(onClick = onUseCoupon),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -444,7 +469,7 @@ private fun CouponDetailBottomSheet(coupon: CouponItem, onDismiss: () -> Unit) {
                 )
             }
 
-            // Caution section
+            // Caution section — 회색 배경 양끝까지
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -465,7 +490,8 @@ private fun CouponDetailBottomSheet(coupon: CouponItem, onDismiss: () -> Unit) {
                         "- 쿠폰은 1회 사용 원칙이며, 재사용 불가합니다.\n" +
                         "- 현금 교환 및 환불은 불가합니다.\n" +
                         "- 타 쿠폰과 중복 사용이 불가할 수 있습니다.\n" +
-                        "- 알파시티 축제 고객센터 : 053-123-4567",
+                        "- 알파시티 축제 고객센터 : 053-123-4567\n" +
+                        "- 쿠폰 사용 조건은 사용처 사정에 따라 변경될 수 있습니다.",
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Medium,
                     fontSize = 10.sp,

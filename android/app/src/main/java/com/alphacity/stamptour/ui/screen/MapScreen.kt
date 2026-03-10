@@ -32,7 +32,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -131,15 +133,6 @@ fun MapScreen(
 ) {
     val filteredPrograms by viewModel.filteredPrograms.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
-    var storeDetailProgram by remember { mutableStateOf<ProgramItem?>(null) }
-
-    val handleProgramClick: (ProgramItem) -> Unit = { program ->
-        if (program.category == "food") {
-            storeDetailProgram = program
-        } else {
-            onProgramClick(program)
-        }
-    }
 
     LaunchedEffect(Unit) {
         viewModel.fetchPrograms()
@@ -155,7 +148,7 @@ fun MapScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             KakaoMapContent(
                 programs = filteredPrograms,
-                onProgramClick = handleProgramClick,
+                onProgramClick = onProgramClick,
                 focusLat = focusLat,
                 focusLng = focusLng,
                 onFocusConsumed = onFocusConsumed,
@@ -191,13 +184,6 @@ fun MapScreen(
         }
     }
 
-    // Store detail modal for food programs
-    storeDetailProgram?.let { store ->
-        StoreDetailSheet(
-            program = store,
-            onDismiss = { storeDetailProgram = null },
-        )
-    }
 }
 
 @Composable

@@ -1,7 +1,9 @@
 package com.alphacity.stamptour.ui.screen
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,10 +22,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -37,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.alphacity.stamptour.R
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.viewmodel.RegisterViewModel
@@ -85,25 +88,26 @@ fun RegisterScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .background(Color.White),
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 헤더
-            Box(
-                modifier = Modifier.fillMaxWidth(),
+            // === 헤더 ===
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    painter = painterResource(android.R.drawable.ic_menu_revert),
+                Image(
+                    painter = painterResource(id = R.drawable.icon_back_arrow),
                     contentDescription = "뒤로가기",
-                    tint = Color(0xFF121212),
                     modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .size(24.dp)
+                        .size(width = 13.dp, height = 26.dp)
                         .clickable { onBackClick() },
+                    colorFilter = ColorFilter.tint(Color(0xFF121212)),
                 )
+
+                Spacer(modifier = Modifier.width(24.dp))
+
                 Text(
                     text = "회원가입",
                     style = androidx.compose.ui.text.TextStyle(
@@ -112,9 +116,21 @@ fun RegisterScreen(
                         fontSize = 18.sp,
                     ),
                     color = Color(0xFF121212),
-                    modifier = Modifier.align(Alignment.Center),
                 )
             }
+
+            HorizontalDivider(
+                color = Color(0xFFE2E2E2),
+                thickness = 1.dp,
+            )
+
+            // === 폼 ===
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
+            ) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -124,7 +140,7 @@ fun RegisterScreen(
                 value = name,
                 onValueChange = { name = it },
                 placeholder = "홍길동",
-                leadingIcon = android.R.drawable.ic_menu_myplaces,
+                leadingIcon = R.drawable.icon_profile,
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -135,7 +151,7 @@ fun RegisterScreen(
                 value = email,
                 onValueChange = { email = it },
                 placeholder = "example@email.com",
-                leadingIcon = android.R.drawable.ic_dialog_email,
+                leadingIcon = R.drawable.icon_email,
                 keyboardType = KeyboardType.Email,
             )
 
@@ -150,8 +166,8 @@ fun RegisterScreen(
                 RegisterTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    placeholder = "01012345678",
-                    leadingIcon = android.R.drawable.ic_menu_call,
+                    placeholder = "010-1234-5678",
+                    leadingIcon = R.drawable.icon_profile,
                     keyboardType = KeyboardType.Phone,
                     enabled = !uiState.isPhoneVerified,
                     modifier = Modifier.weight(1f),
@@ -191,7 +207,7 @@ fun RegisterScreen(
                         value = verificationCode,
                         onValueChange = { verificationCode = it },
                         placeholder = "인증번호 6자리",
-                        leadingIcon = android.R.drawable.ic_dialog_info,
+                        leadingIcon = R.drawable.icon_lock,
                         keyboardType = KeyboardType.Number,
                         modifier = Modifier.weight(1f),
                     )
@@ -244,7 +260,7 @@ fun RegisterScreen(
                 value = password,
                 onValueChange = { password = it },
                 placeholder = "8자 이상 입력해주세요.",
-                leadingIcon = android.R.drawable.ic_lock_idle_lock,
+                leadingIcon = R.drawable.icon_lock,
                 isPassword = true,
             )
 
@@ -256,7 +272,7 @@ fun RegisterScreen(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
                 placeholder = "비밀번호를 다시 입력해주세요.",
-                leadingIcon = android.R.drawable.ic_lock_idle_lock,
+                leadingIcon = R.drawable.icon_lock,
                 isPassword = true,
             )
 
@@ -267,15 +283,23 @@ fun RegisterScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Checkbox(
-                    checked = agreedToTerms,
-                    onCheckedChange = { agreedToTerms = it },
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = Primary,
-                        uncheckedColor = Color(0xFFE9E9E9),
-                    ),
-                    modifier = Modifier.size(18.dp),
-                )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(18.dp)
+                        .border(1.dp, Color(0xFFE9E9E9), RoundedCornerShape(3.dp))
+                        .background(Color.White, RoundedCornerShape(3.dp))
+                        .clickable { agreedToTerms = !agreedToTerms },
+                ) {
+                    if (agreedToTerms) {
+                        Text(
+                            text = "✓",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Primary,
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
@@ -372,7 +396,8 @@ fun RegisterScreen(
                     .fillMaxWidth()
                     .padding(bottom = 40.dp),
             )
-        }
+            } // end scroll Column
+        } // end outer Column
 
         // 로딩 오버레이
         if (uiState.isLoading) {
@@ -441,11 +466,12 @@ private fun RegisterTextField(
             )
         },
         leadingIcon = {
-            Icon(
+            Image(
                 painter = painterResource(leadingIcon),
                 contentDescription = null,
                 modifier = Modifier.size(17.dp),
-                tint = Color(0xFFC7C7C7),
+                contentScale = ContentScale.Fit,
+                alpha = 0.5f,
             )
         },
         visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
@@ -463,6 +489,7 @@ private fun RegisterTextField(
         ),
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp),
+            .height(48.dp)
+            .border(1.dp, Color(0xFFE9E9E9), RoundedCornerShape(8.dp)),
     )
 }

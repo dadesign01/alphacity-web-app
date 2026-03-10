@@ -51,6 +51,7 @@ fun MainScreen(
     var programListCategory by remember { mutableStateOf<String?>(null) }
     var showEventHighlight by remember { mutableStateOf(false) }
     var showMyCoupons by remember { mutableStateOf(false) }
+    var showStampExchange by remember { mutableStateOf(false) }
     var selectedProgram by remember { mutableStateOf<ProgramItem?>(null) }
     var showGuestDialog by remember { mutableStateOf(false) }
     var mapFocusLat by remember { mutableStateOf<Double?>(null) }
@@ -109,6 +110,17 @@ fun MainScreen(
         return
     }
 
+    if (showStampExchange) {
+        StampExchangeScreen(
+            onBackClick = { showStampExchange = false },
+            onNavigateToCoupons = {
+                showStampExchange = false
+                showMyCoupons = true
+            },
+        )
+        return
+    }
+
     // 비회원 안내 다이얼로그
     if (showGuestDialog) {
         GuestRestrictionDialog(
@@ -152,7 +164,14 @@ fun MainScreen(
                     focusLng = mapFocusLng,
                     onFocusConsumed = { mapFocusLat = null; mapFocusLng = null },
                 )
-                BottomTab.STAMP -> StampScreen()
+                BottomTab.STAMP -> StampScreen(
+                    onNavigateToMap = { lat, lng ->
+                        mapFocusLat = lat
+                        mapFocusLng = lng
+                        selectedTab = BottomTab.MAP
+                    },
+                    onNavigateToExchange = { showStampExchange = true },
+                )
                 BottomTab.MYPAGE -> MyPageScreen(onLogout = onLogout)
             }
         }

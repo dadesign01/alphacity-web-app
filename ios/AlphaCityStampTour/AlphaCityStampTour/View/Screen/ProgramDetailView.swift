@@ -128,11 +128,7 @@ struct ProgramDetailView: View {
                                         viewModel.speakDescription(desc)
                                     }
                                 }) {
-                                    Image(systemName: viewModel.isSpeaking ? "stop.fill" : "speaker.wave.2.fill")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 16, height: 16)
-                                        .foregroundColor(AppColor.primary)
+                                    TTSIndicator(isSpeaking: viewModel.isSpeaking)
                                 }
                             }
 

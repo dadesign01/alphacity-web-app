@@ -8,13 +8,15 @@ import SwiftUI
 struct EditProfileView: View {
     var onBackTapped: () -> Void
     var onLogout: () -> Void
+    var initialNickname: String = ""
+    var initialEmail: String = ""
 
-    @State private var nickname = "울퉁불퉁한만두"
-    @State private var email = "mandu@example.com"
+    @State private var nickname = ""
+    @State private var email = ""
     @State private var password = ""
     @State private var passwordConfirm = ""
-    private let name = "홍길동"
-    @State private var phone = "010-1234-5678"
+    private let name = ""
+    @State private var phone = ""
     @State private var address = ""
     @State private var addressDetail = ""
 
@@ -244,6 +246,10 @@ struct EditProfileView: View {
             }
         }
         .background(Color.white)
+        .onAppear {
+            nickname = initialNickname
+            email = initialEmail
+        }
     }
 }
 
@@ -316,5 +322,5 @@ private struct ProfileTextFieldView: View {
 }
 
 #Preview {
-    EditProfileView(onBackTapped: {}, onLogout: {})
+    EditProfileView(onBackTapped: {}, onLogout: {}, initialNickname: "테스트유저", initialEmail: "test@example.com")
 }

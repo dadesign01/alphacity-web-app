@@ -34,7 +34,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         throw new Error('EVENT_FULL');
       }
 
-      const raffleNumber = currentCount + 1;
+      // 같은 이벤트 내 기존 참여번호 조회
+      const existingNumbers = await tx.eventParticipant.findMany({
+        where: { eventId },
+        select: { raffleNumber: true },
+      });
+      const usedNumbers = new Set(existingNumbers.map((e) => e.raffleNumber));
+
+      // 중복 없는 무작위 4자리 번호 생성 (1000~9999)
+      let raffleNumber: number;
+      do {
+        raffleNumber = Math.floor(Math.random() * 9000) + 1000;
+      } while (usedNumbers.has(raffleNumber));
 
       return tx.eventParticipant.create({
         data: { eventId, userId, raffleNumber },

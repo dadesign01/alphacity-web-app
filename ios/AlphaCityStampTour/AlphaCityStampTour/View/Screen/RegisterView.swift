@@ -20,30 +20,31 @@ struct RegisterView: View {
 
     var body: some View {
         ZStack {
+            VStack(spacing: 0) {
+                // 헤더
+                HStack(spacing: 24) {
+                    Button(action: onBackTapped) {
+                        Image("IconBackArrow")
+                            .renderingMode(.original)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 13, height: 26)
+                    }
+
+                    Text("회원가입")
+                        .font(AppFont.semibold(18))
+                        .foregroundStyle(Color(hex: "121212"))
+
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .frame(height: 50)
+
+                Divider()
+                    .background(Color(hex: "E2E2E2"))
+
             ScrollView {
                 VStack(spacing: 0) {
-                    // 헤더
-                    HStack {
-                        Button(action: onBackTapped) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundStyle(Color(hex: "121212"))
-                        }
-
-                        Spacer()
-
-                        Text("회원가입")
-                            .font(AppFont.semibold(18))
-                            .foregroundStyle(Color(hex: "121212"))
-
-                        Spacer()
-
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .medium))
-                            .opacity(0)
-                    }
-                    .padding(.top, 16)
-
                     Spacer().frame(height: 32)
 
                     // 이름
@@ -72,7 +73,7 @@ struct RegisterView: View {
                     HStack(spacing: 8) {
                         RegisterTextField(
                             text: $phone,
-                            placeholder: "01012345678",
+                            placeholder: "010-1234-5678",
                             iconName: "phone.fill",
                             keyboardType: .phonePad,
                             isDisabled: viewModel.isPhoneVerified
@@ -226,7 +227,8 @@ struct RegisterView: View {
                         .padding(.bottom, 40)
                 }
                 .padding(.horizontal, 20)
-            }
+            } // end ScrollView
+            } // end outer VStack
             .background(Color.white)
 
             // 로딩 오버레이

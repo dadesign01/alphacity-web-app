@@ -7,6 +7,8 @@ import SwiftUI
 
 struct StampView: View {
     @StateObject private var viewModel = StampViewModel()
+    var onNavigateToMap: () -> Void = {}
+    var onNavigateToExchange: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -15,14 +17,14 @@ struct StampView: View {
 
             ScrollView {
                 VStack(spacing: 0) {
-                    // Title Section - 둘 다 left 정렬
+                    // Title Section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("스탬프 컬렉션")
                             .font(AppFont.bold(24))
                             .foregroundColor(Color(hex: "121212"))
                             .tracking(-0.48)
 
-                        Text("축제 현장에서 미션에 참여해 스탬프를 획득해보세요.")
+                        Text("수성 알파시티 스탬프 투어의 진행 현황을 확인하세요.")
                             .font(AppFont.regular(14))
                             .foregroundColor(Color(hex: "121212"))
                     }
@@ -33,15 +35,21 @@ struct StampView: View {
                     // Progress Card
                     StampProgressCardView(
                         progress: viewModel.progress,
-                        percentText: viewModel.percentText
+                        percentText: viewModel.percentText,
+                        userStampCount: viewModel.userStampCount,
+                        totalStampCount: viewModel.totalStampCount,
+                        completedMissionCount: viewModel.completedMissionCount,
+                        remainingMissionCount: viewModel.remainingMissionCount
                     )
                     .padding(.top, 20)
                     .padding(.horizontal, 20)
 
                     // Reward Button
-                    RewardButtonView()
-                        .padding(.top, 12)
-                        .padding(.horizontal, 20)
+                    Button(action: onNavigateToExchange) {
+                        RewardButtonView()
+                    }
+                    .padding(.top, 12)
+                    .padding(.horizontal, 20)
 
                     // Stamp Grid Section (light blue background)
                     VStack(spacing: 0) {
@@ -53,24 +61,40 @@ struct StampView: View {
                             .padding(.horizontal, 20)
                             .padding(.top, 24)
 
-                        // Stamp Grid
                         StampGridView(
                             stamps: viewModel.stamps,
-                            collectedStampIds: viewModel.collectedStampIds
+                            collectedStampIds: viewModel.collectedStampIds,
+                            onUncollectedTap: { _ in onNavigateToMap() }
                         )
                         .padding(.top, 16)
                         .padding(.horizontal, 20)
                         .padding(.bottom, 32)
-
-                        // Footer
-                        Text("© 2026 Alpha Stamp. All rights reserved.")
-                            .font(AppFont.regular(10))
-                            .foregroundColor(Color(hex: "AFBFCC"))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
                     }
                     .background(Color(hex: "EDF7FF"))
                     .padding(.top, 20)
+
+                    // Mission List Section
+                    if !viewModel.missions.isEmpty {
+                        MissionListSection(missions: viewModel.missions)
+                    }
+
+                    // Stamp History Section
+                    if !viewModel.stamps.isEmpty {
+                        StampHistorySection(
+                            stamps: viewModel.stamps,
+                            collectedStampIds: viewModel.collectedStampIds,
+                            userStamps: viewModel.userStamps,
+                            onUncollectedTap: { _ in onNavigateToMap() }
+                        )
+                    }
+
+                    // Footer
+                    Text("© 2026 Alpha Stamp. All rights reserved.")
+                        .font(AppFont.regular(10))
+                        .foregroundColor(Color(hex: "AFBFCC"))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color(hex: "EDF7FF"))
                 }
             }
         }
@@ -125,6 +149,10 @@ private struct StampHeaderView: View {
 private struct StampProgressCardView: View {
     let progress: Float
     let percentText: String
+    var userStampCount: Int = 0
+    var totalStampCount: Int = 0
+    var completedMissionCount: Int = 0
+    var remainingMissionCount: Int = 0
 
     var body: some View {
         ZStack {
@@ -228,10 +256,48 @@ private struct StampProgressCardView: View {
                     }
                 }
                 .frame(height: 47)
+
+                Spacer().frame(height: 16)
+
+                // Stats Row
+                HStack(spacing: 0) {
+                    StatItemView(label: "획득 스탬프", value: "\(userStampCount)", total: "/ \(totalStampCount)", color: Color(hex: "2563EB"))
+                    Divider().frame(width: 1, height: 36).background(Color(hex: "D0D5DD"))
+                    StatItemView(label: "완료 미션", value: "\(completedMissionCount)", total: "/ \(completedMissionCount + remainingMissionCount)", color: Color(hex: "16A34A"))
+                    Divider().frame(width: 1, height: 36).background(Color(hex: "D0D5DD"))
+                    StatItemView(label: "남은 미션", value: "\(remainingMissionCount)", total: "", color: Color(hex: "EA580C"))
+                }
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 24)
         }
+    }
+}
+
+private struct StatItemView: View {
+    let label: String
+    let value: String
+    let total: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(label)
+                .font(AppFont.medium(11))
+                .foregroundColor(Color(hex: "6B7280"))
+            HStack(alignment: .bottom, spacing: 2) {
+                Text(value)
+                    .font(AppFont.bold(20))
+                    .foregroundColor(color)
+                if !total.isEmpty {
+                    Text(total)
+                        .font(AppFont.medium(12))
+                        .foregroundColor(Color(hex: "9CA3AF"))
+                        .padding(.bottom, 2)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -278,16 +344,23 @@ private struct RewardButtonView: View {
 private struct StampGridView: View {
     let stamps: [StampData]
     let collectedStampIds: Set<Int>
+    var onUncollectedTap: (StampData) -> Void = { _ in }
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 19), count: 3)
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 12) {
             ForEach(stamps) { stamp in
+                let isCollected = collectedStampIds.contains(stamp.id)
                 StampSlotView(
                     stamp: stamp,
-                    isCollected: collectedStampIds.contains(stamp.id)
+                    isCollected: isCollected
                 )
+                .onTapGesture {
+                    if !isCollected {
+                        onUncollectedTap(stamp)
+                    }
+                }
             }
         }
     }
@@ -355,6 +428,228 @@ private struct StampSlotView: View {
                 .foregroundColor(Color(hex: "121212"))
                 .lineLimit(1)
         }
+    }
+}
+
+// MARK: - Mission List Section
+
+private struct MissionListSection: View {
+    let missions: [MissionData]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("스탬프 미션")
+                .font(AppFont.semibold(18))
+                .foregroundColor(Color(hex: "121212"))
+                .tracking(-0.36)
+
+            Text("미션을 완료하고 스탬프를 획득하세요")
+                .font(AppFont.regular(13))
+                .foregroundColor(Color(hex: "6B7280"))
+
+            ForEach(missions) { mission in
+                MissionCardView(mission: mission)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+    }
+}
+
+private struct MissionCardView: View {
+    let mission: MissionData
+    private var isCompleted: Bool { mission.isCompleted == true }
+
+    private var typeLabel: String {
+        switch mission.type {
+        case "quiz": return "퀴즈"
+        case "location_auth": return "위치인증"
+        case "stay_time": return "체류시간"
+        default: return mission.type
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Status icon
+            ZStack {
+                Circle()
+                    .fill(isCompleted ? Color(hex: "DCFCE7") : Color(hex: "DBEAFE"))
+                    .frame(width: 40, height: 40)
+                Image(systemName: isCompleted ? "checkmark.circle.fill" : "clock.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(isCompleted ? Color(hex: "16A34A") : Color(hex: "2563EB"))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(mission.name)
+                    .font(AppFont.semibold(14))
+                    .foregroundColor(Color(hex: "121212"))
+                    .lineLimit(1)
+
+                HStack(spacing: 6) {
+                    Text(typeLabel)
+                        .font(AppFont.medium(11))
+                        .foregroundColor(Color(hex: "6B7280"))
+                    if let place = mission.place {
+                        Text("·")
+                            .foregroundColor(Color(hex: "D0D5DD"))
+                        Text(place.name)
+                            .font(AppFont.medium(11))
+                            .foregroundColor(Color(hex: "6B7280"))
+                            .lineLimit(1)
+                    }
+                }
+            }
+
+            Spacer()
+
+            // Status badge
+            Text(isCompleted ? "완료" : "진행중")
+                .font(AppFont.semibold(11))
+                .foregroundColor(isCompleted ? Color(hex: "16A34A") : Color(hex: "2563EB"))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(isCompleted ? Color(hex: "DCFCE7") : Color(hex: "DBEAFE"))
+                )
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 1)
+        )
+    }
+}
+
+// MARK: - Stamp History Section
+
+private struct StampHistorySection: View {
+    let stamps: [StampData]
+    let collectedStampIds: Set<Int>
+    let userStamps: [UserStampData]
+    var onUncollectedTap: (StampData) -> Void = { _ in }
+
+    private var sortedStamps: [StampData] {
+        stamps.sorted { a, b in
+            let aCollected = collectedStampIds.contains(a.id)
+            let bCollected = collectedStampIds.contains(b.id)
+            if aCollected != bCollected { return aCollected }
+            return a.id < b.id
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("스탬프 획득 이력")
+                .font(AppFont.semibold(18))
+                .foregroundColor(Color(hex: "121212"))
+                .tracking(-0.36)
+
+            ForEach(sortedStamps) { stamp in
+                let isCollected = collectedStampIds.contains(stamp.id)
+                let userStamp = userStamps.first { $0.stampId == stamp.id }
+                StampHistoryRowView(
+                    stamp: stamp,
+                    isCollected: isCollected,
+                    collectedAt: userStamp?.collectedAt
+                )
+                .onTapGesture {
+                    if !isCollected {
+                        onUncollectedTap(stamp)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+        .padding(.bottom, 16)
+    }
+}
+
+private struct StampHistoryRowView: View {
+    let stamp: StampData
+    let isCollected: Bool
+    var collectedAt: String? = nil
+
+    private var fallbackImage: String {
+        switch stamp.conditionType {
+        case "mission_complete", "place_visit": return "StampTrophy"
+        case "event_participate", "quiz_correct": return "StampMedal"
+        default: return "StampTrophy"
+        }
+    }
+
+    private var formattedDate: String? {
+        guard let dateStr = collectedAt else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: dateStr) {
+            let display = DateFormatter()
+            display.dateFormat = "yyyy.MM.dd HH:mm"
+            return display.string(from: date)
+        }
+        return dateStr.prefix(10).replacingOccurrences(of: "-", with: ".")
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Stamp icon
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isCollected ? Color(hex: "EDF7FF") : Color(hex: "F3F4F6"))
+                    .frame(width: 44, height: 44)
+                if isCollected {
+                    Image(fallbackImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 24, height: 24)
+                } else {
+                    Image("StampLocked")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 24)
+                        .opacity(0.4)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(stamp.name)
+                    .font(AppFont.semibold(14))
+                    .foregroundColor(Color(hex: "121212"))
+                    .lineLimit(1)
+
+                if isCollected, let date = formattedDate {
+                    Text(date)
+                        .font(AppFont.regular(12))
+                        .foregroundColor(Color(hex: "9CA3AF"))
+                } else {
+                    Text("미획득 · 탭하여 지도에서 확인")
+                        .font(AppFont.regular(12))
+                        .foregroundColor(Color(hex: "2563EB"))
+                }
+            }
+
+            Spacer()
+
+            Text(isCollected ? "획득" : "미획득")
+                .font(AppFont.semibold(11))
+                .foregroundColor(isCollected ? Color(hex: "16A34A") : Color(hex: "9CA3AF"))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(isCollected ? Color(hex: "DCFCE7") : Color(hex: "F3F4F6"))
+                )
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 1)
+        )
     }
 }
 

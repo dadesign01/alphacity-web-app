@@ -26,6 +26,11 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.VolumeUp
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -234,17 +239,26 @@ fun ProgramDetailScreen(
                     if (!isFood) {
                         Spacer(modifier = Modifier.width(8.dp))
                         val isSpeaking by viewModel.isSpeaking.collectAsState()
-                        Icon(
-                            imageVector = if (isSpeaking) Icons.Filled.Stop else Icons.Outlined.VolumeUp,
-                            contentDescription = if (isSpeaking) "TTS 중지" else "TTS 재생",
+                        Box(
                             modifier = Modifier
-                                .size(20.dp)
+                                .size(22.dp)
                                 .clickable {
                                     if (isSpeaking) viewModel.stopSpeaking()
                                     else program.description?.let { viewModel.speakDescription(it) }
                                 },
-                            tint = Primary,
-                        )
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (isSpeaking) {
+                                TTSSoundBars()
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Outlined.VolumeUp,
+                                    contentDescription = "TTS 재생",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = Primary,
+                                )
+                            }
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -903,6 +917,42 @@ private fun MissionSelectionBottomSheet(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun TTSSoundBars() {
+    val transition = rememberInfiniteTransition(label = "tts")
+    val bar1 = transition.animateFloat(
+        initialValue = 5f, targetValue = 14f,
+        animationSpec = infiniteRepeatable(tween(400), RepeatMode.Reverse),
+        label = "bar1",
+    )
+    val bar2 = transition.animateFloat(
+        initialValue = 4f, targetValue = 16f,
+        animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse),
+        label = "bar2",
+    )
+    val bar3 = transition.animateFloat(
+        initialValue = 6f, targetValue = 12f,
+        animationSpec = infiniteRepeatable(tween(350), RepeatMode.Reverse),
+        label = "bar3",
+    )
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(2.5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.height(22.dp),
+    ) {
+        listOf(bar1, bar2, bar3).forEach { bar ->
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(bar.value.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Primary),
+            )
         }
     }
 }

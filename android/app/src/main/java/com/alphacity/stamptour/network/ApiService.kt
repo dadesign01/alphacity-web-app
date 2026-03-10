@@ -14,9 +14,11 @@ import com.alphacity.stamptour.network.dto.EventParticipationResult
 import com.alphacity.stamptour.network.dto.MissionCompletionResult
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
+import com.alphacity.stamptour.network.dto.CouponItem
 import com.alphacity.stamptour.network.dto.StampItem
 import com.alphacity.stamptour.network.dto.StoreData
 import com.alphacity.stamptour.network.dto.StoreRegisterRequest
+import com.alphacity.stamptour.network.dto.UserCouponItem
 import com.alphacity.stamptour.network.dto.TokenData
 import com.alphacity.stamptour.network.dto.UserProfile
 import com.alphacity.stamptour.network.dto.UserStampItem
@@ -90,9 +92,20 @@ interface ApiService {
     @GET("programs/{id}/missions")
     suspend fun getProgramMissions(@Path("id") programId: Int): ApiResponse<List<MissionItem>>
 
+    // 미션 목록
+    @GET("missions")
+    suspend fun getMissions(): ApiResponse<List<MissionItem>>
+
     // 미션 완료
     @POST("missions/{id}/complete")
     suspend fun completeMission(@Path("id") missionId: Int, @Body body: Map<String, String> = emptyMap()): ApiResponse<MissionCompletionResult>
+
+    // 쿠폰
+    @GET("coupons")
+    suspend fun getCoupons(): ApiResponse<List<CouponItem>>
+
+    @POST("coupons/{id}/redeem")
+    suspend fun redeemCoupon(@Path("id") couponId: Int): ApiResponse<UserCouponItem>
 
     // 상점 등록
     @POST("stores/register")

@@ -32,7 +32,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.alphacity.stamptour.BuildConfig
 import com.alphacity.stamptour.R
+import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.StampItem
+import com.alphacity.stamptour.network.dto.UserStampItem
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.viewmodel.StampViewModel
@@ -40,11 +42,15 @@ import com.alphacity.stamptour.viewmodel.StampViewModel
 @Composable
 fun StampScreen(
     viewModel: StampViewModel = hiltViewModel(),
+    onNavigateToMap: (lat: Double?, lng: Double?) -> Unit = { _, _ -> },
+    onNavigateToExchange: () -> Unit = {},
 ) {
     val stamps by viewModel.stamps.collectAsState()
     val userStampCount by viewModel.userStampCount.collectAsState()
     val totalStampCount by viewModel.totalStampCount.collectAsState()
     val collectedStampIds by viewModel.collectedStampIds.collectAsState()
+    val missions by viewModel.missions.collectAsState()
+    val userStamps by viewModel.userStamps.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.fetchStampData()
@@ -54,6 +60,9 @@ fun StampScreen(
         (userStampCount.toFloat() / totalStampCount).coerceIn(0f, 1f)
     } else 0f
     val percentText = "${(progress * 100).toInt()}%"
+
+    val completedMissionCount = missions.count { it.isCompleted == true }
+    val remainingMissionCount = missions.size - completedMissionCount
 
     Column(
         modifier = Modifier
@@ -69,7 +78,7 @@ fun StampScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
-            // Title Section - 둘 다 left 정렬
+            // Title Section
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
@@ -85,7 +94,7 @@ fun StampScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "축제 현장에서 미션에 참여해 스탬프를 획득해보세요.",
+                text = "수성 알파시티 스탬프 투어의 진행 현황을 확인하세요.",
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.Normal,
                 fontSize = 14.sp,
@@ -96,12 +105,19 @@ fun StampScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // Progress Card
-            StampProgressCard(progress, percentText)
+            StampProgressCard(
+                progress = progress,
+                percentText = percentText,
+                userStampCount = userStampCount,
+                totalStampCount = totalStampCount,
+                completedMissionCount = completedMissionCount,
+                remainingMissionCount = remainingMissionCount,
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             // Reward Button
-            RewardButton()
+            RewardButton(onClick = onNavigateToExchange)
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -125,7 +141,30 @@ fun StampScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Stamp Grid
-                StampGrid(stamps = stamps, collectedStampIds = collectedStampIds)
+                StampGrid(
+                    stamps = stamps,
+                    collectedStampIds = collectedStampIds,
+                    onUncollectedClick = { stamp ->
+                        onNavigateToMap(null, null)
+                    },
+                )
+            }
+
+            // Mission List Section
+            if (missions.isNotEmpty()) {
+                MissionListSection(missions = missions)
+            }
+
+            // Stamp History Section
+            if (stamps.isNotEmpty()) {
+                StampHistorySection(
+                    stamps = stamps,
+                    collectedStampIds = collectedStampIds,
+                    userStamps = userStamps,
+                    onUncollectedClick = { stamp ->
+                        onNavigateToMap(null, null)
+                    },
+                )
             }
 
             // Footer
@@ -199,7 +238,14 @@ private fun StampHeader() {
 // MARK: - Progress Card (반원 데코레이션 포함)
 
 @Composable
-private fun StampProgressCard(progress: Float, percentText: String) {
+private fun StampProgressCard(
+    progress: Float,
+    percentText: String,
+    userStampCount: Int = 0,
+    totalStampCount: Int = 0,
+    completedMissionCount: Int = 0,
+    remainingMissionCount: Int = 0,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -326,6 +372,78 @@ private fun StampProgressCard(progress: Float, percentText: String) {
                         ),
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Stats Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                StatItem(
+                    label = "획득 스탬프",
+                    value = "$userStampCount",
+                    total = "/ $totalStampCount",
+                    color = Color(0xFF2563EB),
+                )
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(36.dp)
+                        .background(Color(0xFFD0D5DD)),
+                )
+                StatItem(
+                    label = "완료 미션",
+                    value = "$completedMissionCount",
+                    total = "/ ${completedMissionCount + remainingMissionCount}",
+                    color = Color(0xFF16A34A),
+                )
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(36.dp)
+                        .background(Color(0xFFD0D5DD)),
+                )
+                StatItem(
+                    label = "남은 미션",
+                    value = "$remainingMissionCount",
+                    total = "",
+                    color = Color(0xFFEA580C),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatItem(label: String, value: String, total: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.Medium,
+            fontSize = 11.sp,
+            color = Color(0xFF6B7280),
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = value,
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = color,
+            )
+            if (total.isNotEmpty()) {
+                Text(
+                    text = total,
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
+                    color = Color(0xFF9CA3AF),
+                    modifier = Modifier.padding(start = 2.dp, bottom = 2.dp),
+                )
+            }
         }
     }
 }
@@ -333,7 +451,7 @@ private fun StampProgressCard(progress: Float, percentText: String) {
 // MARK: - Reward Button (피그마 아이콘 사용)
 
 @Composable
-private fun RewardButton() {
+private fun RewardButton(onClick: () -> Unit = {}) {
     val gradientBrush = Brush.linearGradient(
         colors = listOf(
             Color(0xFF6092FF),
@@ -349,7 +467,7 @@ private fun RewardButton() {
             .height(56.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(gradientBrush)
-            .clickable { },
+            .clickable(onClick = onClick),
     ) {
         Row(
             modifier = Modifier
@@ -389,7 +507,11 @@ private fun RewardButton() {
 // MARK: - Stamp Grid (트로피/메달 구분, 자물쇠)
 
 @Composable
-private fun StampGrid(stamps: List<StampItem>, collectedStampIds: Set<Int>) {
+private fun StampGrid(
+    stamps: List<StampItem>,
+    collectedStampIds: Set<Int>,
+    onUncollectedClick: (StampItem) -> Unit = {},
+) {
     val chunkedStamps = stamps.chunked(3)
 
     Column(
@@ -410,6 +532,9 @@ private fun StampGrid(stamps: List<StampItem>, collectedStampIds: Set<Int>) {
                         stamp = stamp,
                         isCollected = isCollected,
                         modifier = Modifier.weight(1f),
+                        onClick = if (!isCollected) {
+                            { onUncollectedClick(stamp) }
+                        } else null,
                     )
                 }
 
@@ -426,6 +551,7 @@ private fun StampSlot(
     stamp: StampItem,
     isCollected: Boolean,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     // conditionType에 따라 다른 이미지
     val fallbackRes = when (stamp.conditionType) {
@@ -435,7 +561,9 @@ private fun StampSlot(
     }
 
     Column(
-        modifier = modifier,
+        modifier = modifier.then(
+            if (onClick != null) Modifier.clickable { onClick() } else Modifier
+        ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -511,5 +639,298 @@ private fun StampSlot(
             textAlign = TextAlign.Center,
             maxLines = 1,
         )
+    }
+}
+
+// MARK: - Mission List Section
+
+@Composable
+private fun MissionListSection(missions: List<MissionItem>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(top = 24.dp, bottom = 16.dp),
+    ) {
+        Text(
+            text = "스탬프 미션",
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 18.sp,
+            color = Color(0xFF121212),
+            letterSpacing = (-0.36).sp,
+            modifier = Modifier.padding(horizontal = 20.dp),
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = "미션을 완료하고 스탬프를 획득하세요",
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.Normal,
+            fontSize = 13.sp,
+            color = Color(0xFF9CA3AF),
+            modifier = Modifier.padding(horizontal = 20.dp),
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        missions.forEach { mission ->
+            MissionCard(mission = mission)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun MissionCard(mission: MissionItem) {
+    val isCompleted = mission.isCompleted == true
+    val typeLabel = when (mission.type) {
+        "quiz" -> "퀴즈"
+        "location_auth" -> "위치인증"
+        "stay_time" -> "체류시간"
+        else -> mission.type
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isCompleted) Color(0xFFF0FDF4) else Color(0xFFF8FAFC))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Status icon
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(if (isCompleted) Color(0xFF16A34A) else Color(0xFF2563EB)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = if (isCompleted) "✓" else "!",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = Color.White,
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = mission.name,
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                color = Color(0xFF121212),
+                maxLines = 1,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Type badge
+                Text(
+                    text = typeLabel,
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.sp,
+                    color = Color(0xFF6B7280),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFFE5E7EB))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+
+                if (mission.place != null) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = mission.place.name,
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = Color(0xFF9CA3AF),
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+
+        // Status badge
+        Text(
+            text = if (isCompleted) "완료" else "진행중",
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 12.sp,
+            color = if (isCompleted) Color(0xFF16A34A) else Color(0xFF2563EB),
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (isCompleted) Color(0xFFDCFCE7) else Color(0xFFDBEAFE))
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+        )
+    }
+}
+
+// MARK: - Stamp History Section
+
+@Composable
+private fun StampHistorySection(
+    stamps: List<StampItem>,
+    collectedStampIds: Set<Int>,
+    userStamps: List<UserStampItem>,
+    onUncollectedClick: (StampItem) -> Unit = {},
+) {
+    val userStampMap = userStamps.associateBy { it.stampId }
+
+    // 수집된 스탬프 먼저, 미수집 스탬프 나중에
+    val sortedStamps = stamps.sortedByDescending { collectedStampIds.contains(it.id) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFEDF7FF))
+            .padding(top = 24.dp, bottom = 32.dp),
+    ) {
+        Text(
+            text = "스탬프 획득 이력",
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 18.sp,
+            color = Color(0xFF121212),
+            letterSpacing = (-0.36).sp,
+            modifier = Modifier.padding(horizontal = 20.dp),
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        sortedStamps.forEach { stamp ->
+            val isCollected = collectedStampIds.contains(stamp.id)
+            val userStamp = userStampMap[stamp.id]
+
+            StampHistoryRow(
+                stamp = stamp,
+                isCollected = isCollected,
+                collectedAt = userStamp?.collectedAt,
+                onClick = if (!isCollected) {
+                    { onUncollectedClick(stamp) }
+                } else null,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun StampHistoryRow(
+    stamp: StampItem,
+    isCollected: Boolean,
+    collectedAt: String?,
+    onClick: (() -> Unit)?,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Stamp icon
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (isCollected) Color(0xFFDBEAFE) else Color(0xFFF3F4F6)),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (isCollected && !stamp.imageUrl.isNullOrBlank()) {
+                val fullUrl = if (stamp.imageUrl.startsWith("http")) {
+                    stamp.imageUrl
+                } else {
+                    BuildConfig.SERVER_URL + stamp.imageUrl
+                }
+                AsyncImage(
+                    model = fullUrl,
+                    contentDescription = stamp.name,
+                    modifier = Modifier.fillMaxSize(0.7f),
+                    contentScale = ContentScale.Fit,
+                )
+            } else {
+                Image(
+                    painter = painterResource(
+                        id = if (isCollected) R.drawable.stamp_trophy else R.drawable.stamp_locked,
+                    ),
+                    contentDescription = stamp.name,
+                    modifier = Modifier.size(24.dp),
+                    contentScale = ContentScale.Fit,
+                    alpha = if (isCollected) 1f else 0.4f,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stamp.name,
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                color = if (isCollected) Color(0xFF121212) else Color(0xFF9CA3AF),
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            if (isCollected && collectedAt != null) {
+                Text(
+                    text = collectedAt.take(10),
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    color = Color(0xFF9CA3AF),
+                )
+            } else if (!isCollected) {
+                Text(
+                    text = "미획득 · 탭하여 지도에서 확인",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    color = Color(0xFF2563EB),
+                )
+            }
+        }
+
+        if (isCollected) {
+            Text(
+                text = "획득",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp,
+                color = Color(0xFF16A34A),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xFFDCFCE7))
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+        } else {
+            Text(
+                text = "미획득",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp,
+                color = Color(0xFFEA580C),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xFFFFF7ED))
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+        }
     }
 }

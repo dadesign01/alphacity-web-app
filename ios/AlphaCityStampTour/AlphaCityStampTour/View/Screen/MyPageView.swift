@@ -13,6 +13,7 @@ struct MyPageView: View {
     @State private var showStoreRegister = false
     @State private var showMyCoupons = false
     @State private var showStampExchange = false
+    @StateObject private var stampViewModel = StampViewModel()
     var onLogout: () -> Void
 
     private var nickname: String {
@@ -34,7 +35,9 @@ struct MyPageView: View {
         } else if showEditProfile {
             EditProfileView(
                 onBackTapped: { showEditProfile = false },
-                onLogout: onLogout
+                onLogout: onLogout,
+                initialNickname: viewModel.userProfile?.nickname ?? "",
+                initialEmail: viewModel.userProfile?.email ?? ""
             )
         } else if showSettings {
             SettingsView(onBackTapped: { showSettings = false })
@@ -43,7 +46,7 @@ struct MyPageView: View {
         } else if showMyCoupons {
             MyCouponsView(onBackTapped: { showMyCoupons = false })
         } else if showStampExchange {
-            StampExchangeView(onBackTapped: { showStampExchange = false })
+            StampExchangeView(onBackTapped: { showStampExchange = false }, viewModel: stampViewModel)
         } else {
         ScrollView {
             VStack(spacing: 0) {

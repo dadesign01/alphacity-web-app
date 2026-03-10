@@ -31,6 +31,8 @@ struct MainTabView: View {
     @State private var programListCategory: String? = nil
     @State private var showEventHighlight = false
     @State private var showMyCoupons = false
+    @State private var showStampExchange = false
+    @StateObject private var stampViewModel = StampViewModel()
     @State private var selectedProgram: ProgramData? = nil
     @State private var showGuestDialog = false
     @State private var mapFocusLat: Double? = nil
@@ -67,6 +69,15 @@ struct MainTabView: View {
             MyCouponsView(
                 onBackTapped: { showMyCoupons = false }
             )
+        } else if showStampExchange {
+            StampExchangeView(
+                onBackTapped: { showStampExchange = false },
+                onNavigateToCoupons: {
+                    showStampExchange = false
+                    showMyCoupons = true
+                },
+                viewModel: stampViewModel
+            )
         } else {
         VStack(spacing: 0) {
             // Content
@@ -99,7 +110,10 @@ struct MainTabView: View {
                         focusLng: $mapFocusLng
                     )
                 case .stamp:
-                    StampView()
+                    StampView(
+                        onNavigateToMap: { selectedTab = .map },
+                        onNavigateToExchange: { showStampExchange = true }
+                    )
                 case .mypage:
                     MyPageView(onLogout: onLogout)
                 }

@@ -47,14 +47,18 @@ class AuthRepository @Inject constructor(
 
     suspend fun socialLogin(provider: String, accessToken: String): Result<AuthData> {
         return try {
+            android.util.Log.d("AuthRepository", "소셜 로그인 요청: provider=$provider")
             val response = apiService.socialLogin(SocialLoginRequest(provider, accessToken))
             if (response.success && response.data != null) {
                 tokenManager.saveTokens(response.data.token, response.data.refreshToken)
+                android.util.Log.d("AuthRepository", "소셜 로그인 성공: ${response.data.user}")
                 Result.success(response.data)
             } else {
+                android.util.Log.e("AuthRepository", "소셜 로그인 실패: ${response.error?.message}")
                 Result.failure(Exception(response.error?.message ?: "소셜 로그인에 실패했습니다"))
             }
         } catch (e: Exception) {
+            android.util.Log.e("AuthRepository", "소셜 로그인 예외", e)
             Result.failure(e)
         }
     }

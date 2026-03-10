@@ -89,8 +89,10 @@ fun LoginScreen(
     // 카카오 로그인 콜백
     val kakaoCallback: (OAuthToken?, Throwable?) -> Unit = { token, error ->
         if (error != null) {
-            Toast.makeText(context, "카카오 로그인 실패", Toast.LENGTH_SHORT).show()
+            android.util.Log.e("KakaoLogin", "카카오 로그인 실패: ${error.message}", error)
+            Toast.makeText(context, "카카오 로그인 실패: ${error.message}", Toast.LENGTH_LONG).show()
         } else if (token != null) {
+            android.util.Log.d("KakaoLogin", "카카오 토큰 획득 성공")
             viewModel.socialLogin("kakao", token.accessToken)
         }
     }

@@ -36,13 +36,15 @@ import com.alphacity.stamptour.ui.theme.Primary
 fun EditProfileScreen(
     onBackClick: () -> Unit,
     onLogout: () -> Unit,
+    initialNickname: String = "",
+    initialEmail: String = "",
 ) {
-    var nickname by remember { mutableStateOf("울퉁불퉁한만두") }
-    var email by remember { mutableStateOf("mandu@example.com") }
+    var nickname by remember { mutableStateOf(initialNickname) }
+    var email by remember { mutableStateOf(initialEmail) }
     var password by remember { mutableStateOf("") }
     var passwordConfirm by remember { mutableStateOf("") }
-    val name = "홍길동"
-    var phone by remember { mutableStateOf("010-1234-5678") }
+    val name = ""
+    var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var addressDetail by remember { mutableStateOf("") }
 
