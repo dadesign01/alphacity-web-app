@@ -131,6 +131,15 @@ fun MapScreen(
 ) {
     val filteredPrograms by viewModel.filteredPrograms.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
+    var storeDetailProgram by remember { mutableStateOf<ProgramItem?>(null) }
+
+    val handleProgramClick: (ProgramItem) -> Unit = { program ->
+        if (program.category == "food") {
+            storeDetailProgram = program
+        } else {
+            onProgramClick(program)
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.fetchPrograms()
@@ -146,7 +155,7 @@ fun MapScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             KakaoMapContent(
                 programs = filteredPrograms,
-                onProgramClick = onProgramClick,
+                onProgramClick = handleProgramClick,
                 focusLat = focusLat,
                 focusLng = focusLng,
                 onFocusConsumed = onFocusConsumed,
@@ -180,6 +189,14 @@ fun MapScreen(
                 }
             }
         }
+    }
+
+    // Store detail modal for food programs
+    storeDetailProgram?.let { store ->
+        StoreDetailSheet(
+            program = store,
+            onDismiss = { storeDetailProgram = null },
+        )
     }
 }
 

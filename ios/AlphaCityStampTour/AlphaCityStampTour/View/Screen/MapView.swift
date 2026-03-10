@@ -71,6 +71,7 @@ struct MapContentView: View {
     var onProfileTap: (() -> Void)? = nil
     @Binding var focusLat: Double?
     @Binding var focusLng: Double?
+    @State private var storeDetailProgram: ProgramData? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -86,7 +87,11 @@ struct MapContentView: View {
                     programs: viewModel.filteredPrograms,
                     onMarkerTapped: { programId in
                         if let program = viewModel.filteredPrograms.first(where: { $0.id == programId }) {
-                            onProgramTapped?(program)
+                            if program.category == "food" {
+                                storeDetailProgram = program
+                            } else {
+                                onProgramTapped?(program)
+                            }
                         }
                     },
                     focusLat: $focusLat,
@@ -127,6 +132,13 @@ struct MapContentView: View {
         }
         .onAppear {
             viewModel.fetchPrograms()
+        }
+        .sheet(item: $storeDetailProgram) { program in
+            StoreDetailSheet(
+                program: program,
+                onDismiss: { storeDetailProgram = nil }
+            )
+            .presentationDetents([.large])
         }
     }
 }
