@@ -21,8 +21,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // API Base URL - 한 곳에서만 정의
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:1111/api/v1\"")
-        buildConfigField("String", "SERVER_URL", "\"http://10.0.2.2:1111\"")
+        buildConfigField("String", "API_BASE_URL", "\"http://223.130.141.53:1111/api/v1\"")
+        buildConfigField("String", "SERVER_URL", "\"http://223.130.141.53:1111\"")
 
         // Google Maps API Key (local.properties에서 오버라이드 가능)
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = ""
@@ -35,8 +35,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "API_BASE_URL", "\"https://도메인/api/v1\"")
-            buildConfigField("String", "SERVER_URL", "\"https://도메인\"")
+            buildConfigField("String", "API_BASE_URL", "\"http://223.130.141.53:1111/api/v1\"")
+            buildConfigField("String", "SERVER_URL", "\"http://223.130.141.53:1111\"")
         }
     }
 

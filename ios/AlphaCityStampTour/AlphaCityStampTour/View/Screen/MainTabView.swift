@@ -25,10 +25,15 @@ enum Tab: Int, CaseIterable {
 struct MainTabView: View {
     @Binding var deepLinkProgramId: Int?
     var onLogout: () -> Void = {}
+    var onNavigateToRegister: () -> Void = {}
     @State private var selectedTab: Tab = .home
     @State private var showProgramList = false
     @State private var showEventHighlight = false
+    @State private var showMyCoupons = false
     @State private var selectedProgram: ProgramData? = nil
+    @State private var showGuestDialog = false
+
+    private var isGuest: Bool { !TokenManager.shared.isLoggedIn }
 
     var body: some View {
         if let program = selectedProgram {
@@ -48,6 +53,10 @@ struct MainTabView: View {
             EventHighlightView(
                 onBackTapped: { showEventHighlight = false }
             )
+        } else if showMyCoupons {
+            MyCouponsView(
+                onBackTapped: { showMyCoupons = false }
+            )
         } else {
         VStack(spacing: 0) {
             // Content
@@ -55,9 +64,18 @@ struct MainTabView: View {
                 switch selectedTab {
                 case .home:
                     HomeView(
-                        onNavigateToMyPage: { selectedTab = .mypage },
+                        onNavigateToMyPage: {
+                            if isGuest { showGuestDialog = true }
+                            else { selectedTab = .mypage }
+                        },
                         onNavigateToProgramList: { showProgramList = true },
-                        onNavigateToEventHighlight: { showEventHighlight = true }
+                        onNavigateToEventHighlight: { showEventHighlight = true },
+                        onNavigateToMap: { selectedTab = .map },
+                        onNavigateToStamp: { selectedTab = .stamp },
+                        onNavigateToCoupons: { showMyCoupons = true },
+                        onProgramClick: { program in selectedProgram = program },
+                        onGuestRestricted: { showGuestDialog = true },
+                        isGuest: isGuest
                     )
                 case .map:
                     MapContentView(
@@ -79,7 +97,11 @@ struct MainTabView: View {
             HStack(spacing: 0) {
                 ForEach(Tab.allCases, id: \.self) { tab in
                     Button {
-                        selectedTab = tab
+                        if isGuest && tab != .home {
+                            showGuestDialog = true
+                        } else {
+                            selectedTab = tab
+                        }
                     } label: {
                         VStack(spacing: 4) {
                             Image(tab.icon)
@@ -102,6 +124,17 @@ struct MainTabView: View {
             .background(Color.white)
         }
         .edgesIgnoringSafeArea(.bottom)
+        .alert("회원 전용 기능", isPresented: $showGuestDialog) {
+            Button("회원가입") {
+                showGuestDialog = false
+                onNavigateToRegister()
+            }
+            Button("취소", role: .cancel) {
+                showGuestDialog = false
+            }
+        } message: {
+            Text("회원가입 후 이용하실 수 있습니다.\n회원가입 페이지로 이동하시겠습니까?")
+        }
         .onChange(of: deepLinkProgramId) { _, newId in
             guard let programId = newId else { return }
             Task {

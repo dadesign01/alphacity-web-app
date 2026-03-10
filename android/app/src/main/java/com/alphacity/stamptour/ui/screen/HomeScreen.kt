@@ -41,6 +41,12 @@ fun HomeScreen(
     onNavigateToMyPage: () -> Unit = {},
     onNavigateToProgramList: () -> Unit = {},
     onNavigateToEventHighlight: () -> Unit = {},
+    onNavigateToMap: () -> Unit = {},
+    onNavigateToStamp: () -> Unit = {},
+    onNavigateToCoupons: () -> Unit = {},
+    onProgramClick: (ProgramItem) -> Unit = {},
+    onGuestRestricted: () -> Unit = {},
+    isGuest: Boolean = false,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val banners by viewModel.banners.collectAsState()
@@ -71,19 +77,37 @@ fun HomeScreen(
             BannerCarousel(banners = banners)
 
             // 오늘의 프로그램
-            ProgramSection(programs = programs, onSeeAllClick = onNavigateToProgramList)
+            ProgramSection(
+                programs = programs,
+                onSeeAllClick = onNavigateToProgramList,
+                onProgramClick = onProgramClick,
+            )
 
             // 알파시티 이벤트
-            EventSection(events = events, onSeeAllTapped = onNavigateToEventHighlight)
+            EventSection(
+                events = events,
+                onSeeAllTapped = onNavigateToEventHighlight,
+                onEventClick = onNavigateToEventHighlight,
+            )
 
             // 나의 스탬프 진행률
             StampProgressSection(
                 stampCount = userStampCount,
                 totalStamps = totalStampCount,
+                onStampClick = {
+                    if (isGuest) onGuestRestricted() else onNavigateToStamp()
+                },
             )
 
             // 지도보기 + 쿠폰함 + Footer (gray background area)
-            QuickMenuSection()
+            QuickMenuSection(
+                onMapClick = {
+                    if (isGuest) onGuestRestricted() else onNavigateToMap()
+                },
+                onCouponClick = {
+                    if (isGuest) onGuestRestricted() else onNavigateToCoupons()
+                },
+            )
 
             Text(
                 text = "© 2026 Alpha Stamp. All rights reserved.",
@@ -205,7 +229,7 @@ private fun BannerCarousel(banners: List<BannerItem> = emptyList()) {
 // MARK: - 오늘의 프로그램
 
 @Composable
-private fun ProgramSection(programs: List<ProgramItem> = emptyList(), onSeeAllClick: () -> Unit = {}) {
+private fun ProgramSection(programs: List<ProgramItem> = emptyList(), onSeeAllClick: () -> Unit = {}, onProgramClick: (ProgramItem) -> Unit = {}) {
     val fallbackPrograms = remember {
         listOf(
             Triple(R.drawable.program_img_1, "알파시티 카페", "#카페"),
@@ -256,7 +280,13 @@ private fun ProgramSection(programs: List<ProgramItem> = emptyList(), onSeeAllCl
             } else {
                 programs.forEach { program ->
                     val tag = if (program.status == "in_progress") "#진행중" else "#예정"
-                    ProgramCard(imageRes = R.drawable.program_img_1, name = program.name, tag = tag)
+                    ProgramCard(
+                        imageRes = R.drawable.program_img_1,
+                        imageUrl = program.imageUrl,
+                        name = program.name,
+                        tag = tag,
+                        onClick = { onProgramClick(program) },
+                    )
                 }
             }
         }
@@ -264,16 +294,28 @@ private fun ProgramSection(programs: List<ProgramItem> = emptyList(), onSeeAllCl
 }
 
 @Composable
-private fun ProgramCard(imageRes: Int, name: String, tag: String) {
-    Column(modifier = Modifier.width(168.dp)) {
-        Image(
-            painter = painterResource(id = imageRes),
-            contentDescription = name,
-            modifier = Modifier
-                .size(168.dp)
-                .clip(RoundedCornerShape(12.dp)),
-            contentScale = ContentScale.Crop,
-        )
+private fun ProgramCard(imageRes: Int, imageUrl: String? = null, name: String, tag: String, onClick: () -> Unit = {}) {
+    Column(modifier = Modifier.width(168.dp).clickable { onClick() }) {
+        if (!imageUrl.isNullOrEmpty()) {
+            val fullUrl = if (imageUrl.startsWith("http")) imageUrl else BuildConfig.SERVER_URL + imageUrl
+            AsyncImage(
+                model = fullUrl,
+                contentDescription = name,
+                modifier = Modifier
+                    .size(168.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Image(
+                painter = painterResource(id = imageRes),
+                contentDescription = name,
+                modifier = Modifier
+                    .size(168.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop,
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -297,7 +339,7 @@ private fun ProgramCard(imageRes: Int, name: String, tag: String) {
 // MARK: - 알파시티 이벤트
 
 @Composable
-private fun EventSection(events: List<EventItem> = emptyList(), onSeeAllTapped: () -> Unit = {}) {
+private fun EventSection(events: List<EventItem> = emptyList(), onSeeAllTapped: () -> Unit = {}, onEventClick: () -> Unit = {}) {
     data class FallbackEvent(
         val imageRes: Int,
         val name: String,
@@ -392,12 +434,14 @@ private fun EventSection(events: List<EventItem> = emptyList(), onSeeAllTapped: 
                     val dateStr = "${formatDate(event.startDate)} ~ ${formatDate(event.endDate)}"
                     EventCard(
                         imageRes = R.drawable.event_img_2,
+                        imageUrl = event.imageUrl,
                         name = event.name,
                         date = dateStr,
                         tags = listOf(
                             Triple(typeTag, Color(0xFFE85151), Color(0xFFE85151)),
                             Triple("#${event.reward ?: "보상"}", Color(0xFF5182FF), Color(0xFF5182FF)),
                         ),
+                        onClick = onEventClick,
                     )
                 }
             }
@@ -408,19 +452,33 @@ private fun EventSection(events: List<EventItem> = emptyList(), onSeeAllTapped: 
 @Composable
 private fun EventCard(
     imageRes: Int,
+    imageUrl: String? = null,
     name: String,
     date: String,
     tags: List<Triple<String, Color, Color>>,
+    onClick: () -> Unit = {},
 ) {
-    Column(modifier = Modifier.width(168.dp)) {
-        Image(
-            painter = painterResource(id = imageRes),
-            contentDescription = name,
-            modifier = Modifier
-                .size(168.dp)
-                .clip(RoundedCornerShape(12.dp)),
-            contentScale = ContentScale.Crop,
-        )
+    Column(modifier = Modifier.width(168.dp).clickable { onClick() }) {
+        if (!imageUrl.isNullOrEmpty()) {
+            val fullUrl = if (imageUrl.startsWith("http")) imageUrl else BuildConfig.SERVER_URL + imageUrl
+            AsyncImage(
+                model = fullUrl,
+                contentDescription = name,
+                modifier = Modifier
+                    .size(168.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Image(
+                painter = painterResource(id = imageRes),
+                contentDescription = name,
+                modifier = Modifier
+                    .size(168.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop,
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -471,7 +529,7 @@ private fun TagChip(text: String, textColor: Color, borderColor: Color) {
 // MARK: - 나의 스탬프 진행률
 
 @Composable
-private fun StampProgressSection(stampCount: Int = 0, totalStamps: Int = 10) {
+private fun StampProgressSection(stampCount: Int = 0, totalStamps: Int = 10, onStampClick: () -> Unit = {}) {
     val progress = if (totalStamps > 0) (stampCount.toFloat() / totalStamps).coerceIn(0f, 1f) else 0f
     val percentText = "${(progress * 100).toInt()}%"
 
@@ -556,7 +614,7 @@ private fun StampProgressSection(stampCount: Int = 0, totalStamps: Int = 10) {
                     .height(44.dp)
                     .clip(RoundedCornerShape(13.dp))
                     .background(Primary)
-                    .clickable { },
+                    .clickable { onStampClick() },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -574,7 +632,7 @@ private fun StampProgressSection(stampCount: Int = 0, totalStamps: Int = 10) {
 // MARK: - Quick Menu
 
 @Composable
-private fun QuickMenuSection() {
+private fun QuickMenuSection(onMapClick: () -> Unit = {}, onCouponClick: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -591,24 +649,26 @@ private fun QuickMenuSection() {
                 title = "지도보기",
                 imageRes = R.drawable.icon_mapview,
                 modifier = Modifier.weight(1f),
+                onClick = onMapClick,
             )
             QuickMenuCard(
                 title = "쿠폰함",
                 imageRes = R.drawable.icon_coupon,
                 modifier = Modifier.weight(1f),
+                onClick = onCouponClick,
             )
         }
     }
 }
 
 @Composable
-private fun QuickMenuCard(title: String, imageRes: Int, modifier: Modifier = Modifier) {
+private fun QuickMenuCard(title: String, imageRes: Int, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
     Box(
         modifier = modifier
             .height(168.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color.White)
-            .clickable { },
+            .clickable { onClick() },
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Text(

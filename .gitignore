@@ -62,3 +62,5 @@ docs/
 CLAUDE.md
 .claude.json
 .claude/
+
+alphacity.pem

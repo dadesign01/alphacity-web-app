@@ -8,14 +8,8 @@ import Foundation
 final class APIClient {
     static let shared = APIClient()
 
-    // TODO: 배포 시 실제 도메인으로 변경
-    #if DEBUG
-    private let baseURL = "http://localhost:1111/api/v1"
-    static let serverURL = "http://localhost:1111"
-    #else
-    private let baseURL = "https://도메인/api/v1"
-    static let serverURL = "https://도메인"
-    #endif
+    private let baseURL = "http://223.130.141.53:1111/api/v1"
+    static let serverURL = "http://223.130.141.53:1111"
 
     private let decoder: JSONDecoder = {
         let decoder = JSONDecoder()

@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, MapPin } from 'lucide-react';
+import { Plus, MapPin, Edit, Trash2, X, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 
@@ -28,10 +28,13 @@ const CATEGORY_MAP: Record<string, string> = {
   entrance: '입구', food: '식음료', facility: '시설', photo_zone: '포토존', other: '기타',
 };
 
+const EMPTY_FORM = { name: '', category: 'entrance', latitude: '', longitude: '', address: '', description: '', ttsText: '' };
+
 export default function PlacesPage() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', category: 'entrance', latitude: '', longitude: '', address: '', description: '', ttsText: '' });
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const fetchPlaces = () => {
     fetch('/api/v1/admin/places').then((r) => r.json()).then((d) => { if (d.success) setPlaces(d.data); });
@@ -39,23 +42,63 @@ export default function PlacesPage() {
 
   useEffect(() => { fetchPlaces(); }, []);
 
-  const handleCreate = async () => {
+  const openCreateForm = () => {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setShowForm(true);
+  };
+
+  const openEditForm = (place: Place) => {
+    setEditingId(place.id);
+    setForm({
+      name: place.name,
+      category: place.category,
+      latitude: String(place.latitude),
+      longitude: String(place.longitude),
+      address: place.address || '',
+      description: place.description || '',
+      ttsText: place.ttsText || '',
+    });
+    setShowForm(true);
+  };
+
+  const handleSubmit = async () => {
+    const isEdit = editingId !== null;
+    const url = isEdit ? `/api/v1/admin/places/${editingId}` : '/api/v1/admin/places';
+    const method = isEdit ? 'PUT' : 'POST';
+
     try {
-      const res = await fetch('/api/v1/admin/places', {
-        method: 'POST',
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, latitude: parseFloat(form.latitude), longitude: parseFloat(form.longitude) }),
       });
       const data = await res.json();
       if (data.success) {
         setShowForm(false);
-        setForm({ name: '', category: 'entrance', latitude: '', longitude: '', address: '', description: '', ttsText: '' });
+        setEditingId(null);
+        setForm(EMPTY_FORM);
         fetchPlaces();
       } else {
-        alert(`장소 등록 실패: ${data.error?.message || '알 수 없는 오류'}`);
+        alert(`${isEdit ? '수정' : '등록'} 실패: ${data.error?.message || '알 수 없는 오류'}`);
       }
     } catch {
-      alert('장소 등록 실패: 서버와 통신할 수 없습니다');
+      alert(`${isEdit ? '수정' : '등록'} 실패: 서버와 통신할 수 없습니다`);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    try {
+      const res = await fetch(`/api/v1/admin/places/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        fetchPlaces();
+      } else {
+        alert(`삭제 실패: ${data.error?.message || '알 수 없는 오류'}`);
+      }
+    } catch {
+      alert('삭제 실패: 서버와 통신할 수 없습니다');
     }
   };
 
@@ -66,7 +109,7 @@ export default function PlacesPage() {
           <h2 className="text-2xl font-semibold text-gray-900">지도 / 장소 관리</h2>
           <p className="text-sm text-gray-500 mt-1">프로그램 장소를 등록하고 관리합니다</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)}
+        <button onClick={openCreateForm}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
           <Plus className="w-4 h-4" />
           장소 등록
@@ -75,7 +118,14 @@ export default function PlacesPage() {
 
       {showForm && (
         <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">새 장소 등록</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-900">
+              {editingId ? '장소 수정' : '새 장소 등록'}
+            </h3>
+            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="text-gray-400 hover:text-gray-600">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -109,13 +159,22 @@ export default function PlacesPage() {
                 placeholder="주소" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">설명</label>
+              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="장소 설명" rows={2}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">TTS 텍스트</label>
               <textarea value={form.ttsText} onChange={(e) => setForm({ ...form, ttsText: e.target.value })}
                 placeholder="TTS로 안내할 텍스트" rows={2}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
             </div>
-            <button onClick={handleCreate}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">등록</button>
+            <button onClick={handleSubmit}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <Save className="w-4 h-4" />
+              {editingId ? '수정' : '등록'}
+            </button>
           </div>
         </div>
       )}
@@ -134,7 +193,16 @@ export default function PlacesPage() {
                   <p className="text-sm font-medium text-gray-900">{place.name}</p>
                   <p className="text-xs text-gray-500">{CATEGORY_MAP[place.category] || place.category}</p>
                 </div>
-                <button className="text-sm text-blue-600 hover:underline">상세</button>
+                <div className="flex gap-1">
+                  <button onClick={() => openEditForm(place)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDelete(place.id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
             {places.length === 0 && <p className="text-sm text-gray-500 text-center py-4">등록된 장소가 없습니다</p>}

@@ -36,6 +36,8 @@ fun MyPageScreen(
     var showEditProfile by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showStoreRegister by remember { mutableStateOf(false) }
+    var showMyCoupons by remember { mutableStateOf(false) }
+    var showStampExchange by remember { mutableStateOf(false) }
 
     if (showActivityHistory) {
         ActivityHistoryScreen(onBackClick = { showActivityHistory = false })
@@ -57,6 +59,16 @@ fun MyPageScreen(
 
     if (showStoreRegister) {
         StoreRegisterScreen(onBackClick = { showStoreRegister = false })
+        return
+    }
+
+    if (showMyCoupons) {
+        MyCouponsScreen(onBackClick = { showMyCoupons = false })
+        return
+    }
+
+    if (showStampExchange) {
+        StampExchangeScreen(onBackClick = { showStampExchange = false })
         return
     }
 
@@ -142,6 +154,7 @@ fun MyPageScreen(
                             )
                         )
                     )
+                    .clickable { showStampExchange = true }
                     .padding(16.dp),
             ) {
                 Text(
@@ -169,6 +182,7 @@ fun MyPageScreen(
                     .height(90.dp)
                     .clip(RoundedCornerShape(15.dp))
                     .background(Color.White)
+                    .clickable { showMyCoupons = true }
                     .padding(16.dp),
             ) {
                 Text(

@@ -16,6 +16,8 @@ data class LoginUiState(
     val error: String? = null,
     val isLoggedIn: Boolean = false,
     val user: UserData? = null,
+    val failureCount: Int = 0,
+    val showForgotPasswordHint: Boolean = false,
 )
 
 @HiltViewModel
@@ -43,9 +45,12 @@ class LoginViewModel @Inject constructor(
                     )
                 }
                 .onFailure { e ->
+                    val newCount = _uiState.value.failureCount + 1
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = e.message ?: "로그인에 실패했습니다",
+                        failureCount = newCount,
+                        showForgotPasswordHint = newCount >= 3,
                     )
                 }
         }

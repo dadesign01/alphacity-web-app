@@ -7,6 +7,12 @@ struct HomeView: View {
     var onNavigateToMyPage: (() -> Void)?
     var onNavigateToProgramList: (() -> Void)?
     var onNavigateToEventHighlight: (() -> Void)?
+    var onNavigateToMap: (() -> Void)?
+    var onNavigateToStamp: (() -> Void)?
+    var onNavigateToCoupons: (() -> Void)?
+    var onProgramClick: ((ProgramData) -> Void)?
+    var onGuestRestricted: (() -> Void)?
+    var isGuest: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,24 +36,36 @@ struct HomeView: View {
                     // 오늘의 프로그램
                     ProgramSectionView(
                         programs: viewModel.programs,
-                        onSeeAllTapped: { onNavigateToProgramList?() }
+                        onSeeAllTapped: { onNavigateToProgramList?() },
+                        onProgramTapped: { program in onProgramClick?(program) }
                     )
 
                     // 알파시티 이벤트
                     EventSectionView(
                         events: viewModel.events,
-                        onSeeAllTapped: { onNavigateToEventHighlight?() }
+                        onSeeAllTapped: { onNavigateToEventHighlight?() },
+                        onEventTapped: { onNavigateToEventHighlight?() }
                     )
 
                     // 나의 스탬프 진행률
                     StampProgressSectionView(
                         stampCount: viewModel.userStampCount,
-                        totalStamps: viewModel.totalStampCount
+                        totalStamps: viewModel.totalStampCount,
+                        onStampTapped: {
+                            if isGuest { onGuestRestricted?() } else { onNavigateToStamp?() }
+                        }
                     )
 
                     // 지도보기 + 쿠폰함 + Footer (gray background area)
                     VStack(spacing: 0) {
-                        QuickMenuSectionView()
+                        QuickMenuSectionView(
+                            onMapTapped: {
+                                if isGuest { onGuestRestricted?() } else { onNavigateToMap?() }
+                            },
+                            onCouponTapped: {
+                                if isGuest { onGuestRestricted?() } else { onNavigateToCoupons?() }
+                            }
+                        )
 
                         Text("© 2026 Alpha Stamp. All rights reserved.")
                             .font(AppFont.regular(11))
@@ -158,6 +176,7 @@ private struct BannerCarouselView: View {
 private struct ProgramSectionView: View {
     let programs: [ProgramData]
     var onSeeAllTapped: (() -> Void)?
+    var onProgramTapped: ((ProgramData) -> Void)?
 
     private static let fallbackPrograms: [(image: String, name: String, tag: String)] = [
         ("ProgramImg1", "알파시티 카페", "#카페"),
@@ -195,9 +214,11 @@ private struct ProgramSectionView: View {
                         ForEach(programs, id: \.id) { program in
                             ProgramCardView(
                                 image: "ProgramImg1",
+                                imageUrl: program.imageUrl,
                                 name: program.name,
                                 tag: "#\(program.status == "in_progress" ? "진행중" : "예정")"
                             )
+                            .onTapGesture { onProgramTapped?(program) }
                         }
                     }
                 }
@@ -211,16 +232,31 @@ private struct ProgramSectionView: View {
 
 private struct ProgramCardView: View {
     let image: String
+    var imageUrl: String? = nil
     let name: String
     let tag: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Image(image)
-                .resizable()
-                .scaledToFill()
+            if let imageUrl = imageUrl, !imageUrl.isEmpty {
+                let fullURL = imageUrl.hasPrefix("http") ? imageUrl : "\(APIClient.serverURL)\(imageUrl)"
+                AsyncImage(url: URL(string: fullURL)) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img.resizable().scaledToFill()
+                    default:
+                        Image(image).resizable().scaledToFill()
+                    }
+                }
                 .frame(width: 168, height: 168)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                Image(image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 168, height: 168)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
 
             Text(name)
                 .font(AppFont.medium(14))
@@ -242,6 +278,7 @@ private struct ProgramCardView: View {
 private struct EventSectionView: View {
     let events: [EventData]
     var onSeeAllTapped: (() -> Void)?
+    var onEventTapped: (() -> Void)?
 
     private static let fallbackEvents: [(image: String, name: String, date: String, tags: [(text: String, color: String, border: String)])] = [
         ("EventImg2", "갤럭시탭 추첨 이벤트", "26.04.02 ~ 26.06.05", [
@@ -301,6 +338,7 @@ private struct EventSectionView: View {
                             let dateStr = "\(formatDate(event.startDate)) ~ \(formatDate(event.endDate))"
                             EventCardView(
                                 image: "EventImg2",
+                                imageUrl: event.imageUrl,
                                 name: event.name,
                                 date: dateStr,
                                 tags: [
@@ -308,6 +346,7 @@ private struct EventSectionView: View {
                                     ("#\(event.reward ?? "보상")", "5182FF", "5182FF"),
                                 ]
                             )
+                            .onTapGesture { onEventTapped?() }
                         }
                     }
                 }
@@ -321,6 +360,7 @@ private struct EventSectionView: View {
 
 private struct EventCardView: View {
     let image: String
+    var imageUrl: String? = nil
     let name: String
     let date: String
     let tags: [(text: String, color: String, border: String)]
@@ -332,11 +372,25 @@ private struct EventCardView: View {
                     .fill(Color(hex: "D9D9D9"))
                     .frame(width: 131, height: 131)
 
-                Image(image)
-                    .resizable()
-                    .scaledToFill()
+                if let imageUrl = imageUrl, !imageUrl.isEmpty {
+                    let fullURL = imageUrl.hasPrefix("http") ? imageUrl : "\(APIClient.serverURL)\(imageUrl)"
+                    AsyncImage(url: URL(string: fullURL)) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().scaledToFill()
+                        default:
+                            Image(image).resizable().scaledToFill()
+                        }
+                    }
                     .frame(width: 168, height: 168)
                     .clipped()
+                } else {
+                    Image(image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 168, height: 168)
+                        .clipped()
+                }
             }
             .frame(width: 168, height: 168)
 
@@ -386,6 +440,7 @@ private struct TagChip: View {
 private struct StampProgressSectionView: View {
     let stampCount: Int
     let totalStamps: Int
+    var onStampTapped: (() -> Void)?
 
     private var progress: Double {
         guard totalStamps > 0 else { return 0 }
@@ -442,7 +497,7 @@ private struct StampProgressSectionView: View {
                 Spacer().frame(height: 16)
 
                 // Button inside card
-                Button(action: {}) {
+                Button(action: { onStampTapped?() }) {
                     Text("나의 스탬프 보러가기  >")
                         .font(AppFont.semibold(16))
                         .foregroundColor(.white)
@@ -463,10 +518,13 @@ private struct StampProgressSectionView: View {
 // MARK: - Quick Menu (지도보기 + 쿠폰함)
 
 private struct QuickMenuSectionView: View {
+    var onMapTapped: (() -> Void)?
+    var onCouponTapped: (() -> Void)?
+
     var body: some View {
         HStack(spacing: 10) {
-            QuickMenuCard(title: "지도보기", image: "IconMapview")
-            QuickMenuCard(title: "쿠폰함", image: "IconCoupon")
+            QuickMenuCard(title: "지도보기", image: "IconMapview", onTapped: onMapTapped)
+            QuickMenuCard(title: "쿠폰함", image: "IconCoupon", onTapped: onCouponTapped)
         }
         .padding(.horizontal, 20)
         .padding(.top, 28)
@@ -476,9 +534,10 @@ private struct QuickMenuSectionView: View {
 private struct QuickMenuCard: View {
     let title: String
     let image: String
+    var onTapped: (() -> Void)?
 
     var body: some View {
-        Button(action: {}) {
+        Button(action: { onTapped?() }) {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color.white)
@@ -510,5 +569,5 @@ private struct QuickMenuCard: View {
 }
 
 #Preview {
-    HomeView(onNavigateToMyPage: {}, onNavigateToProgramList: {})
+    HomeView()
 }

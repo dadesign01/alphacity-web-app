@@ -11,6 +11,8 @@ struct MyPageView: View {
     @State private var showEditProfile = false
     @State private var showSettings = false
     @State private var showStoreRegister = false
+    @State private var showMyCoupons = false
+    @State private var showStampExchange = false
     var onLogout: () -> Void
 
     private var nickname: String {
@@ -38,6 +40,10 @@ struct MyPageView: View {
             SettingsView(onBackTapped: { showSettings = false })
         } else if showStoreRegister {
             StoreRegisterView(onBackTapped: { showStoreRegister = false })
+        } else if showMyCoupons {
+            MyCouponsView(onBackTapped: { showMyCoupons = false })
+        } else if showStampExchange {
+            StampExchangeView(onBackTapped: { showStampExchange = false })
         } else {
         ScrollView {
             VStack(spacing: 0) {
@@ -70,55 +76,59 @@ struct MyPageView: View {
                 // === Stats Cards ===
                 HStack(spacing: 12) {
                     // 획득 스탬프 (Gradient Blue)
-                    ZStack(alignment: .topLeading) {
-                        RoundedRectangle(cornerRadius: 15)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color(hex: "6092FF"),
-                                        Color(hex: "2563EB"),
-                                        Color(hex: "1551D3"),
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+                    Button { showStampExchange = true } label: {
+                        ZStack(alignment: .topLeading) {
+                            RoundedRectangle(cornerRadius: 15)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(hex: "6092FF"),
+                                            Color(hex: "2563EB"),
+                                            Color(hex: "1551D3"),
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
                                 )
-                            )
-                            .frame(height: 90)
+                                .frame(height: 90)
 
-                        VStack {
-                            Text("획득 스탬프")
-                                .font(AppFont.medium(14))
-                                .foregroundColor(.white.opacity(0.9))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Spacer()
-                            Text("\(stampCount)")
-                                .font(AppFont.extraBold(33))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
+                            VStack {
+                                Text("획득 스탬프")
+                                    .font(AppFont.medium(14))
+                                    .foregroundColor(.white.opacity(0.9))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Spacer()
+                                Text("\(stampCount)")
+                                    .font(AppFont.extraBold(33))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                            .padding(16)
+                            .frame(height: 90)
                         }
-                        .padding(16)
-                        .frame(height: 90)
                     }
 
                     // 보유 쿠폰 (White)
-                    ZStack(alignment: .topLeading) {
-                        RoundedRectangle(cornerRadius: 15)
-                            .fill(Color.white)
-                            .frame(height: 90)
+                    Button { showMyCoupons = true } label: {
+                        ZStack(alignment: .topLeading) {
+                            RoundedRectangle(cornerRadius: 15)
+                                .fill(Color.white)
+                                .frame(height: 90)
 
-                        VStack {
-                            Text("보유 쿠폰")
-                                .font(AppFont.medium(14))
-                                .foregroundColor(Color(hex: "121212").opacity(0.8))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Spacer()
-                            Text("\(couponCount)")
-                                .font(AppFont.extraBold(33))
-                                .foregroundColor(AppColor.primary)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
+                            VStack {
+                                Text("보유 쿠폰")
+                                    .font(AppFont.medium(14))
+                                    .foregroundColor(Color(hex: "121212").opacity(0.8))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Spacer()
+                                Text("\(couponCount)")
+                                    .font(AppFont.extraBold(33))
+                                    .foregroundColor(AppColor.primary)
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                            .padding(16)
+                            .frame(height: 90)
                         }
-                        .padding(16)
-                        .frame(height: 90)
                     }
                 }
                 .padding(.horizontal, 20)

@@ -34,7 +34,7 @@ final class HomeViewModel: ObservableObject {
 
             do {
                 let fetchedPrograms = try await programsTask
-                programs = fetchedPrograms
+                programs = filterTodayPrograms(fetchedPrograms)
             } catch {
                 print("[HomeVM] 프로그램 로드 실패: \(error)")
             }
@@ -65,5 +65,21 @@ final class HomeViewModel: ObservableObject {
 
             isLoading = false
         }
+    }
+
+    private func filterTodayPrograms(_ programs: [ProgramData]) -> [ProgramData] {
+        let today = Date()
+        let parser = DateFormatter()
+        parser.dateFormat = "yyyy-MM-dd"
+
+        let filtered = programs.filter { program in
+            if program.status == "in_progress" { return true }
+            guard let start = parser.date(from: String(program.startDate.prefix(10))),
+                  let end = parser.date(from: String(program.endDate.prefix(10))) else {
+                return true // 파싱 실패 시 포함
+            }
+            return today >= start && today <= end
+        }
+        return filtered.isEmpty ? programs : filtered // 필터 결과 없으면 전체 표시
     }
 }

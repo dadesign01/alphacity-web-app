@@ -64,8 +64,12 @@ export default function EventsPage() {
   };
 
   const handleSubmit = async () => {
-    if (!form.programId || !form.name || !form.type || !form.startDate || !form.endDate) {
-      alert('소속 행사, 이벤트명, 유형, 시작일, 종료일은 필수입니다');
+    if (!editingId && !form.programId) {
+      alert('소속 행사를 선택해주세요');
+      return;
+    }
+    if (!form.name || !form.type || !form.startDate || !form.endDate) {
+      alert('이벤트명, 유형, 시작일, 종료일은 필수입니다');
       return;
     }
 

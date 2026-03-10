@@ -12,6 +12,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -50,7 +53,9 @@ class HomeViewModel @Inject constructor(
 
             val programsDeferred = async {
                 homeRepository.getPrograms()
-                    .onSuccess { _programs.value = it }
+                    .onSuccess { programs ->
+                        _programs.value = filterTodayPrograms(programs)
+                    }
                     .onFailure { Log.e("HomeViewModel", "프로그램 로드 실패", it) }
             }
 
@@ -80,5 +85,20 @@ class HomeViewModel @Inject constructor(
 
             _isLoading.value = false
         }
+    }
+
+    private fun filterTodayPrograms(programs: List<ProgramItem>): List<ProgramItem> {
+        val today = Date()
+        val parser = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return programs.filter { program ->
+            if (program.status == "in_progress") return@filter true
+            try {
+                val start = parser.parse(program.startDate.take(10))
+                val end = parser.parse(program.endDate.take(10))
+                start != null && end != null && !today.before(start) && !today.after(end)
+            } catch (_: Exception) {
+                true // 파싱 실패 시 포함
+            }
+        }.ifEmpty { programs } // 필터 결과 없으면 전체 표시
     }
 }

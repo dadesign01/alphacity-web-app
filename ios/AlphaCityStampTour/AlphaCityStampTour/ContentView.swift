@@ -67,6 +67,9 @@ struct ContentView: View {
                     deepLinkProgramId: $deepLinkProgramId,
                     onLogout: {
                         currentScreen = .login
+                    },
+                    onNavigateToRegister: {
+                        currentScreen = .register
                     }
                 )
             }

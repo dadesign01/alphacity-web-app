@@ -78,6 +78,33 @@ struct LoginView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
 
+                // 3회 이상 실패 시 비밀번호 찾기 안내
+                if viewModel.showForgotPasswordHint {
+                    Spacer().frame(height: 12)
+
+                    HStack {
+                        Text("로그인에 3회 이상 실패했습니다.")
+                            .font(AppFont.medium(13))
+                            .foregroundStyle(Color(hex: "795548"))
+
+                        Spacer()
+
+                        Button(action: onForgotPasswordTapped) {
+                            Text("비밀번호 찾기")
+                                .font(AppFont.semibold(13))
+                                .foregroundStyle(AppColor.primary)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color(hex: "FFF8E1"))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(hex: "FFB74D"), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+
                 Spacer().frame(height: 12)
 
                 // 비회원으로 계속하기 버튼

@@ -14,6 +14,8 @@ final class LoginViewModel: ObservableObject {
     @Published var error: String?
     @Published var isLoggedIn = false
     @Published var user: UserData?
+    @Published var failureCount = 0
+    @Published var showForgotPasswordHint = false
 
     private let authRepository = AuthRepository.shared
 
@@ -35,6 +37,10 @@ final class LoginViewModel: ObservableObject {
                 user = data.user
             } catch {
                 self.error = error.localizedDescription
+                failureCount += 1
+                if failureCount >= 3 {
+                    showForgotPasswordHint = true
+                }
             }
             isLoading = false
         }

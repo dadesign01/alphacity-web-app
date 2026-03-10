@@ -45,6 +45,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.border
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -181,6 +182,42 @@ fun LoginScreen(
                     ),
                     color = Color(0xFFF8F8F8),
                 )
+            }
+
+            // 3회 이상 실패 시 비밀번호 찾기 안내
+            if (uiState.showForgotPasswordHint) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Color(0xFFFFB74D), RoundedCornerShape(8.dp))
+                        .background(Color(0xFFFFF8E1), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "로그인에 3회 이상 실패했습니다.",
+                            style = androidx.compose.ui.text.TextStyle(
+                                fontFamily = Pretendard,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 13.sp,
+                            ),
+                            color = Color(0xFF795548),
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = "비밀번호 찾기",
+                            style = androidx.compose.ui.text.TextStyle(
+                                fontFamily = Pretendard,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp,
+                            ),
+                            color = Primary,
+                            modifier = Modifier.clickable { onForgotPasswordClick() },
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
