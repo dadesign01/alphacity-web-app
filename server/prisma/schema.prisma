@@ -96,6 +96,10 @@ model Event {
   winnerCount      Int         @default(0) @map("winner_count")
   participantLimit Int         @default(0) @map("participant_limit")
   status           EventStatus @default(scheduled)
+  price            Int?
+  duration         Int?
+  capacity         Int?
+  location         String?     @db.VarChar(500)
   createdAt        DateTime    @default(now()) @map("created_at")
 
   program      Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
@@ -107,6 +111,7 @@ model Event {
 enum EventType {
   raffle
   first_come
+  experience
 }
 
 enum EventStatus {
@@ -164,6 +169,7 @@ model Mission {
   programId   Int?        @map("program_id")
   question    String?     @db.Text
   answer      String?     @db.VarChar(500)
+  options     String?     @db.Text
   stayMinutes Int?        @map("stay_minutes")
   createdAt   DateTime    @default(now()) @map("created_at")
 

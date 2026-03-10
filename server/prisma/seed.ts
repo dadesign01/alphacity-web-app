@@ -306,6 +306,71 @@ async function main() {
       },
     ],
   });
+  // 체험 이벤트
+  await prisma.event.createMany({
+    data: [
+      {
+        programId: program1.id,
+        name: '도자기 만들기',
+        description: '전통 도예 기법으로 나만의 도자기를\n만들어 보세요.',
+        imageUrl: '/uploads/event_img_1.png',
+        type: 'experience',
+        startDate: new Date('2026-02-01'),
+        endDate: new Date('2026-03-31'),
+        participantLimit: 0,
+        status: 'in_progress',
+        price: 15000,
+        duration: 90,
+        capacity: 10,
+        location: '알파시티 2로 33 공예 체험관',
+      },
+      {
+        programId: program2.id,
+        name: '천연비누 원데이 클래스',
+        description: '천연 재료로 만드는 나만의 향기가득\n비누 만들기 원데이 클래스',
+        imageUrl: '/uploads/event_img_2.png',
+        type: 'experience',
+        startDate: new Date('2026-02-01'),
+        endDate: new Date('2026-03-31'),
+        participantLimit: 0,
+        status: 'in_progress',
+        price: 12000,
+        duration: 60,
+        capacity: 8,
+        location: '알파시티 2로 33 DIY 공방',
+      },
+      {
+        programId: program3.id,
+        name: '3D 프린팅 액티비티',
+        description: '3D 프린터로 나의 상상을 현실화하는\n나만의 작품을 뽐내보세요.',
+        imageUrl: '/uploads/event_img_3.png',
+        type: 'experience',
+        startDate: new Date('2026-02-01'),
+        endDate: new Date('2026-03-31'),
+        participantLimit: 0,
+        status: 'in_progress',
+        price: 0,
+        duration: 120,
+        capacity: 6,
+        location: '알파시티 2로 33 3D 프린팅 스튜디오',
+      },
+      {
+        programId: program1.id,
+        name: '수제 브레드 원데이 클래스',
+        description: '유명 베이커리 카페 제빵사가 알려주는\n맛있는 빵 레시피! 제빵 체험해보세요.',
+        imageUrl: '/uploads/event_img_1.png',
+        type: 'experience',
+        startDate: new Date('2026-02-01'),
+        endDate: new Date('2026-03-31'),
+        participantLimit: 0,
+        status: 'in_progress',
+        price: 18000,
+        duration: 100,
+        capacity: 12,
+        location: '알파시티 2로 33 ABC 베이커리',
+      },
+    ],
+  });
   console.log('Events created');
 
   // 장소
@@ -321,7 +386,7 @@ async function main() {
   await prisma.mission.createMany({
     data: [
       { name: '포토존 인증', type: 'location_auth', placeId: places[3].id },
-      { name: '프로그램 퀴즈', type: 'quiz', question: '프로그램 시작 연도는?', answer: '2025' },
+      { name: '프로그램 퀴즈', type: 'quiz', question: '프로그램 시작 연도는?', answer: '2025', options: JSON.stringify(['2023', '2024', '2025', '2026']) },
       { name: '푸드코트 체류', type: 'stay_time', placeId: places[1].id, stayMinutes: 5 },
     ],
   });

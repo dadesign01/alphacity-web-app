@@ -45,14 +45,25 @@ struct MissionData: Decodable, Identifiable {
     let programId: Int?
     let question: String?
     let answer: String?
+    let options: [String]?
     let stayMinutes: Int?
     let place: MissionPlace?
+    let isCompleted: Bool?
 
     struct MissionPlace: Decodable {
         let name: String
         let latitude: Double?
         let longitude: Double?
     }
+}
+
+// MARK: - 미션 완료 결과
+
+struct MissionCompletionData: Decodable {
+    let id: Int
+    let missionId: Int
+    let userId: Int
+    let completedAt: String?
 }
 
 // MARK: - 이벤트
@@ -73,6 +84,10 @@ struct EventData: Decodable, Identifiable {
     let program: EventProgram?
     let isParticipated: Bool?
     let myRaffleNumber: Int?
+    let price: Int?
+    let duration: Int?
+    let capacity: Int?
+    let location: String?
 
     struct EventProgram: Decodable {
         let name: String

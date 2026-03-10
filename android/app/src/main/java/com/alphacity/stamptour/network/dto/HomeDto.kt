@@ -53,6 +53,10 @@ data class EventItem(
     val program: EventProgram? = null,
     val isParticipated: Boolean? = null,
     val myRaffleNumber: Int? = null,
+    val price: Int? = null,
+    val duration: Int? = null,
+    val capacity: Int? = null,
+    val location: String? = null,
 )
 
 @Serializable
@@ -100,8 +104,18 @@ data class MissionItem(
     val programId: Int? = null,
     val question: String? = null,
     val answer: String? = null,
+    val options: List<String>? = null,
     val stayMinutes: Int? = null,
     val place: MissionPlace? = null,
+    val isCompleted: Boolean? = null,
+)
+
+@Serializable
+data class MissionCompletionResult(
+    val id: Int,
+    val missionId: Int,
+    val userId: Int,
+    val completedAt: String? = null,
 )
 
 @Serializable

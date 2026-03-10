@@ -15,14 +15,18 @@ interface EventItem {
   winnerCount: number;
   participantLimit: number;
   status: string;
+  price: number | null;
+  duration: number | null;
+  capacity: number | null;
+  location: string | null;
   program: { name: string };
   _count: { participants: number };
 }
 
-const TYPE_MAP: Record<string, string> = { raffle: '추첨', first_come: '선착순' };
+const TYPE_MAP: Record<string, string> = { raffle: '추첨', first_come: '선착순', experience: '체험' };
 const STATUS_MAP: Record<string, string> = { scheduled: '예정', in_progress: '진행중', ended: '종료' };
 
-const defaultForm = { programId: 0, name: '', description: '', imageUrl: '', type: 'raffle', startDate: '', endDate: '', reward: '', winnerCount: 0, participantLimit: 100, status: 'scheduled' };
+const defaultForm = { programId: 0, name: '', description: '', imageUrl: '', type: 'raffle', startDate: '', endDate: '', reward: '', winnerCount: 0, participantLimit: 100, status: 'scheduled', price: 0, duration: 0, capacity: 0, location: '' };
 
 export default function EventsPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -108,6 +112,10 @@ export default function EventsPage() {
       winnerCount: event.winnerCount || 0,
       participantLimit: event.participantLimit,
       status: event.status,
+      price: event.price || 0,
+      duration: event.duration || 0,
+      capacity: event.capacity || 0,
+      location: event.location || '',
     });
     setShowForm(true);
   };
@@ -204,18 +212,42 @@ export default function EventsPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                   <option value="raffle">추첨</option>
                   <option value="first_come">선착순</option>
+                  <option value="experience">체험</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">참여 제한</label>
-                <input type="number" value={form.participantLimit} onChange={(e) => setForm({ ...form, participantLimit: Number(e.target.value) })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">당첨자 수</label>
-                <input type="number" value={form.winnerCount} onChange={(e) => setForm({ ...form, winnerCount: Number(e.target.value) })}
-                  placeholder="0" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-              </div>
+              {form.type !== 'experience' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">참여 제한</label>
+                    <input type="number" value={form.participantLimit} onChange={(e) => setForm({ ...form, participantLimit: Number(e.target.value) })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">당첨자 수</label>
+                    <input type="number" value={form.winnerCount} onChange={(e) => setForm({ ...form, winnerCount: Number(e.target.value) })}
+                      placeholder="0" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
+                </>
+              )}
+              {form.type === 'experience' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">가격 (원)</label>
+                    <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+                      placeholder="0 = 무료" min="0" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">체험 시간 (분)</label>
+                    <input type="number" value={form.duration} onChange={(e) => setForm({ ...form, duration: Number(e.target.value) })}
+                      placeholder="90" min="0" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">1회 정원</label>
+                    <input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })}
+                      placeholder="10" min="0" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
+                </>
+              )}
               {editingId && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">상태</label>
@@ -228,6 +260,13 @@ export default function EventsPage() {
                 </div>
               )}
             </div>
+            {form.type === 'experience' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">체험 장소</label>
+                <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  placeholder="알파시티 2로 33 공예 체험관" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">시작일</label>
@@ -240,11 +279,13 @@ export default function EventsPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">보상</label>
-              <input type="text" value={form.reward} onChange={(e) => setForm({ ...form, reward: e.target.value })}
-                placeholder="보상 내용" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-            </div>
+            {form.type !== 'experience' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">보상</label>
+                <input type="text" value={form.reward} onChange={(e) => setForm({ ...form, reward: e.target.value })}
+                  placeholder="보상 내용" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+            )}
             <div className="flex gap-2">
               <button onClick={handleSubmit}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">{editingId ? '수정' : '등록'}</button>
@@ -284,7 +325,7 @@ export default function EventsPage() {
                   <div className="flex flex-col gap-1">
                     <span className="text-sm font-medium text-gray-900">{event.name}</span>
                     <span className={`inline-flex w-fit px-2 py-0.5 text-xs rounded-full ${
-                      event.type === 'raffle' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'
+                      event.type === 'raffle' ? 'bg-purple-100 text-purple-800' : event.type === 'experience' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
                     }`}>
                       {TYPE_MAP[event.type] || event.type}
                     </span>

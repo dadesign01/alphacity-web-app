@@ -24,6 +24,9 @@ class EventHighlightViewModel @Inject constructor(
     private val _firstComeEvents = MutableStateFlow<List<EventItem>>(emptyList())
     val firstComeEvents: StateFlow<List<EventItem>> = _firstComeEvents
 
+    private val _experienceEvents = MutableStateFlow<List<EventItem>>(emptyList())
+    val experienceEvents: StateFlow<List<EventItem>> = _experienceEvents
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -35,6 +38,7 @@ class EventHighlightViewModel @Inject constructor(
                     _allEvents.value = events
                     _raffleEvents.value = events.filter { it.type == "raffle" }
                     _firstComeEvents.value = events.filter { it.type == "first_come" }
+                    _experienceEvents.value = events.filter { it.type == "experience" }
                 }
                 .onFailure { Log.e("EventHighlightVM", "이벤트 로드 실패", it) }
             _isLoading.value = false

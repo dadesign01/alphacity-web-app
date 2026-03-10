@@ -14,6 +14,9 @@ npm install
 echo ">>> Generating Prisma client..."
 npx prisma generate
 
+echo ">>> Syncing database schema..."
+npx prisma db push
+
 echo ">>> Building..."
 npm run build
 

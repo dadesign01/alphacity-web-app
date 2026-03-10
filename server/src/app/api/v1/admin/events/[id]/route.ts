@@ -33,6 +33,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         ...(body.winnerCount !== undefined && { winnerCount: body.winnerCount }),
         ...(body.participantLimit !== undefined && { participantLimit: body.participantLimit }),
         ...(body.status && { status: body.status }),
+        ...(body.price !== undefined && { price: body.price || null }),
+        ...(body.duration !== undefined && { duration: body.duration || null }),
+        ...(body.capacity !== undefined && { capacity: body.capacity || null }),
+        ...(body.location !== undefined && { location: body.location || null }),
       },
     });
     return successResponse(event, '이벤트가 수정되었습니다');

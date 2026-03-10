@@ -44,52 +44,6 @@ private enum class EventTab(val title: String) {
     EXPERIENCE("체험"),
 }
 
-// ── Mock Data for Experience tab (no DB type for this) ──
-
-private data class ExperienceEvent(
-    val imageRes: Int,
-    val title: String,
-    val description: String,
-    val timeInfo: String,
-    val location: String,
-    val price: String,
-)
-
-private val mockExperienceEvents = listOf(
-    ExperienceEvent(
-        imageRes = R.drawable.event_img_1,
-        title = "도자기 만들기",
-        description = "전통 도예 기법으로 나만의 도자기를\n만들어 보세요.",
-        timeInfo = "체험 시간 : 90분 | 1회 10명 정원",
-        location = "알파시티 2로 33 공예 체험관",
-        price = "15,000원",
-    ),
-    ExperienceEvent(
-        imageRes = R.drawable.event_img_2,
-        title = "천연비누 원데이 클래스",
-        description = "천연 재료로 만드는 나만의 향기가득\n비누 만들기 원데이 클래스",
-        timeInfo = "체험 시간 : 60분 | 1회 8명 정원",
-        location = "알파시티 2로 33 DIY 공방",
-        price = "12,000원",
-    ),
-    ExperienceEvent(
-        imageRes = R.drawable.event_img_3,
-        title = "3D 프린팅 액티비티",
-        description = "3D 프린터로 나의 상상을 현실화하는\n나만의 작품을 뽐내보세요.",
-        timeInfo = "체험 시간 : 120분 | 1회 6명 정원",
-        location = "알파시티 2로 33 3D 프린팅 스튜디오",
-        price = "무료",
-    ),
-    ExperienceEvent(
-        imageRes = R.drawable.event_img_4,
-        title = "수제 브레드 원데이 클래스",
-        description = "유명 베이커리 카페 제빵사가 알려주는\n맛있는 빵 레시피! 제빵 체험해보세요.",
-        timeInfo = "체험 시간 : 100분 | 1회 12명 정원",
-        location = "알파시티 2로 33 ABC 베이커리",
-        price = "18,000원",
-    ),
-)
-
 // ── Main Screen ──
 
 @Composable
@@ -102,6 +56,7 @@ fun EventHighlightScreen(
     var selectedEventType by remember { mutableStateOf("") }
     val raffleEvents by viewModel.raffleEvents.collectAsState()
     val firstComeEvents by viewModel.firstComeEvents.collectAsState()
+    val experienceEvents by viewModel.experienceEvents.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.fetchEvents()
@@ -110,6 +65,15 @@ fun EventHighlightScreen(
     if (selectedEventId > 0) {
         if (selectedEventType == "raffle") {
             RaffleEventDetailScreen(
+                eventId = selectedEventId,
+                onBackClick = {
+                    selectedEventId = -1
+                    selectedEventType = ""
+                    viewModel.fetchEvents()
+                },
+            )
+        } else if (selectedEventType == "experience") {
+            ExperienceEventDetailScreen(
                 eventId = selectedEventId,
                 onBackClick = {
                     selectedEventId = -1
@@ -165,7 +129,13 @@ fun EventHighlightScreen(
                             selectedEventType = event.type
                         },
                     )
-                    EventTab.EXPERIENCE -> ExperienceTabContent()
+                    EventTab.EXPERIENCE -> ExperienceTabContent(
+                        events = experienceEvents,
+                        onEventClick = { event ->
+                            selectedEventId = event.id
+                            selectedEventType = event.type
+                        },
+                    )
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -622,37 +592,84 @@ private fun FirstComeEventItem(event: EventItem) {
     }
 }
 
-// ── 체험 탭 (mock data - no DB type) ──
+// ── 체험 탭 ──
 
 @Composable
-private fun ExperienceTabContent() {
-    mockExperienceEvents.forEachIndexed { index, event ->
-        ExperienceEventItem(event = event)
-        if (index < mockExperienceEvents.lastIndex) {
-            Divider(
-                color = Color(0xFFB5B5B5),
-                thickness = 0.5.dp,
-                modifier = Modifier.padding(horizontal = 20.dp),
-            )
+private fun ExperienceTabContent(
+    events: List<EventItem>,
+    onEventClick: (EventItem) -> Unit = {},
+) {
+    if (events.isEmpty()) {
+        EmptyContent()
+    } else {
+        events.forEachIndexed { index, event ->
+            Box(modifier = Modifier.clickable { onEventClick(event) }) {
+                ExperienceEventItem(event = event)
+            }
+            if (index < events.lastIndex) {
+                Divider(
+                    color = Color(0xFFB5B5B5),
+                    thickness = 0.5.dp,
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ExperienceEventItem(event: ExperienceEvent) {
+private fun ExperienceEventItem(event: EventItem) {
+    val timeInfo = buildString {
+        if (event.duration != null) append("체험 시간 : ${event.duration}분")
+        if (event.capacity != null) {
+            if (isNotEmpty()) append(" | ")
+            append("1회 ${event.capacity}명 정원")
+        }
+    }
+
+    val priceText = when {
+        event.price == null -> ""
+        event.price == 0 -> "무료"
+        else -> "${NumberFormat.getNumberInstance(Locale.KOREA).format(event.price)}원"
+    }
+
     Row(
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(17.dp),
     ) {
-        Image(
-            painter = painterResource(id = event.imageRes),
-            contentDescription = event.title,
+        // 이미지
+        Box(
             modifier = Modifier
                 .width(130.dp)
                 .height(168.dp)
                 .clip(RoundedCornerShape(22.dp)),
-            contentScale = ContentScale.Crop,
-        )
+        ) {
+            val imageUrl = event.imageUrl
+            if (!imageUrl.isNullOrBlank()) {
+                val fullUrl = if (imageUrl.startsWith("http")) imageUrl else BuildConfig.SERVER_URL + imageUrl
+                AsyncImage(
+                    model = fullUrl,
+                    contentDescription = event.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFFFF3E0)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = event.name.take(1),
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 32.sp,
+                        color = Color(0xFFE67E22),
+                    )
+                }
+            }
+        }
 
         Column(
             modifier = Modifier
@@ -660,72 +677,77 @@ private fun ExperienceEventItem(event: ExperienceEvent) {
                 .height(168.dp),
         ) {
             Text(
-                text = event.title,
+                text = event.name,
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.Medium,
                 fontSize = 16.sp,
                 color = Color(0xFF121212),
             )
 
-            Spacer(modifier = Modifier.height(9.dp))
-
-            Text(
-                text = event.description,
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                color = Color(0xFF595959),
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = event.timeInfo,
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                color = Color(0xFF828282),
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(Color(0xFFF8F8F8))
-                    .padding(horizontal = 6.dp, vertical = 3.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.icon_location_pin),
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
+            if (!event.description.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(9.dp))
                 Text(
-                    text = event.location,
+                    text = event.description,
                     fontFamily = Pretendard,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Normal,
                     fontSize = 12.sp,
-                    color = Color(0xFF8F8F8F),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 16.sp,
+                    color = Color(0xFF595959),
                 )
+            }
+
+            if (timeInfo.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = timeInfo,
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    color = Color(0xFF828282),
+                )
+            }
+
+            if (!event.location.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(Color(0xFFF8F8F8))
+                        .padding(horizontal = 6.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.icon_location_pin),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = event.location,
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp,
+                        color = Color(0xFF8F8F8F),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Text(
-                text = event.price,
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = Primary,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.End,
-            )
+            if (priceText.isNotEmpty()) {
+                Text(
+                    text = priceText,
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Primary,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End,
+                )
+            }
         }
     }
 }

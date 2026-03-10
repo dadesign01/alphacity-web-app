@@ -11,6 +11,7 @@ interface Mission {
   program: { id: number; name: string } | null;
   question: string | null;
   answer: string | null;
+  options: string | null;
   stayMinutes: number | null;
   _count: { completions: number };
 }
@@ -30,7 +31,7 @@ const TYPE_MAP: Record<string, string> = { quiz: '퀴즈', location_auth: '위�
 const TYPE_TO_FORM: Record<string, string> = { quiz: 'quiz', location_auth: 'location', stay_time: 'stay' };
 const FORM_TO_TYPE: Record<string, string> = { quiz: 'quiz', location: 'location_auth', stay: 'stay_time' };
 
-const EMPTY_FORM = { name: '', placeId: 0, programId: 0, question: '', answer: '', stayMinutes: 5 };
+const EMPTY_FORM = { name: '', placeId: 0, programId: 0, question: '', answer: '', options: ['', '', '', ''], stayMinutes: 5 };
 
 export default function MissionsPage() {
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -65,12 +66,17 @@ export default function MissionsPage() {
   const openEditForm = (mission: Mission) => {
     setEditingId(mission.id);
     setMissionType(TYPE_TO_FORM[mission.type] || 'quiz');
+    let parsedOptions = ['', '', '', ''];
+    if (mission.options) {
+      try { parsedOptions = JSON.parse(mission.options); } catch { /* ignore */ }
+    }
     setForm({
       name: mission.name,
       placeId: mission.place?.id || 0,
       programId: mission.program?.id || 0,
       question: mission.question || '',
       answer: mission.answer || '',
+      options: parsedOptions,
       stayMinutes: mission.stayMinutes || 5,
     });
     setShowForm(true);
@@ -92,6 +98,7 @@ export default function MissionsPage() {
           programId: form.programId || null,
           question: missionType === 'quiz' ? form.question : null,
           answer: missionType === 'quiz' ? form.answer : null,
+          options: missionType === 'quiz' ? JSON.stringify(form.options.filter(o => o.trim())) : null,
           stayMinutes: missionType === 'stay' ? form.stayMinutes : null,
         }),
       });
@@ -186,6 +193,29 @@ export default function MissionsPage() {
                   <input type="text" value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })}
                     placeholder="퀴즈 질문을 입력하세요"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">보기 (객관식)</label>
+                  <div className="space-y-2">
+                    {form.options.map((opt, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500 w-6">{idx + 1}.</span>
+                        <input type="text" value={opt}
+                          onChange={(e) => {
+                            const newOptions = [...form.options];
+                            newOptions[idx] = e.target.value;
+                            setForm({ ...form, options: newOptions });
+                          }}
+                          placeholder={`보기 ${idx + 1}`}
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                      </div>
+                    ))}
+                    {form.options.length < 6 && (
+                      <button type="button" onClick={() => setForm({ ...form, options: [...form.options, ''] })}
+                        className="text-sm text-blue-600 hover:text-blue-700">+ 보기 추가</button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">정답도 보기에 포함되어야 합니다</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">정답</label>

@@ -11,6 +11,7 @@ import com.alphacity.stamptour.network.dto.SocialLoginRequest
 import com.alphacity.stamptour.network.dto.BannerItem
 import com.alphacity.stamptour.network.dto.EventItem
 import com.alphacity.stamptour.network.dto.EventParticipationResult
+import com.alphacity.stamptour.network.dto.MissionCompletionResult
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StampItem
@@ -88,6 +89,10 @@ interface ApiService {
     // 프로그램 미션
     @GET("programs/{id}/missions")
     suspend fun getProgramMissions(@Path("id") programId: Int): ApiResponse<List<MissionItem>>
+
+    // 미션 완료
+    @POST("missions/{id}/complete")
+    suspend fun completeMission(@Path("id") missionId: Int, @Body body: Map<String, String> = emptyMap()): ApiResponse<MissionCompletionResult>
 
     // 상점 등록
     @POST("stores/register")

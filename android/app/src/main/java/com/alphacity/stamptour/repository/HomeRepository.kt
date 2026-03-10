@@ -5,6 +5,7 @@ import com.alphacity.stamptour.network.TokenManager
 import com.alphacity.stamptour.network.dto.BannerItem
 import com.alphacity.stamptour.network.dto.EventItem
 import com.alphacity.stamptour.network.dto.EventParticipationResult
+import com.alphacity.stamptour.network.dto.MissionCompletionResult
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StampItem
@@ -139,6 +140,17 @@ class HomeRepository @Inject constructor(
             val response = apiService.getProgramMissions(programId)
             if (response.success && response.data != null) Result.success(response.data)
             else Result.failure(Exception(response.error?.message ?: "미션 로드 실패"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun completeMission(missionId: Int, answer: String? = null): Result<MissionCompletionResult> {
+        return try {
+            val body = if (answer != null) mapOf("answer" to answer) else emptyMap()
+            val response = apiService.completeMission(missionId, body)
+            if (response.success && response.data != null) Result.success(response.data)
+            else Result.failure(Exception(response.error?.message ?: "미션 완료 실패"))
         } catch (e: Exception) {
             Result.failure(e)
         }

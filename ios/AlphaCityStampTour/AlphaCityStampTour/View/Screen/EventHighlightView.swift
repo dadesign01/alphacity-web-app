@@ -14,53 +14,6 @@ private enum EventTab: Int, CaseIterable {
     }
 }
 
-// MARK: - Mock Data for Experience tab (no DB type)
-
-private struct ExperienceEvent: Identifiable {
-    let id = UUID()
-    let image: String
-    let title: String
-    let description: String
-    let timeInfo: String
-    let location: String
-    let price: String
-}
-
-private let mockExperienceEvents: [ExperienceEvent] = [
-    ExperienceEvent(
-        image: "EventImg1",
-        title: "도자기 만들기",
-        description: "전통 도예 기법으로 나만의 도자기를\n만들어 보세요.",
-        timeInfo: "체험 시간 : 90분 | 1회 10명 정원",
-        location: "알파시티 2로 33 공예 체험관",
-        price: "15,000원"
-    ),
-    ExperienceEvent(
-        image: "EventImg2",
-        title: "천연비누 원데이 클래스",
-        description: "천연 재료로 만드는 나만의 향기가득\n비누 만들기 원데이 클래스",
-        timeInfo: "체험 시간 : 60분 | 1회 8명 정원",
-        location: "알파시티 2로 33 DIY 공방",
-        price: "12,000원"
-    ),
-    ExperienceEvent(
-        image: "EventImg3",
-        title: "3D 프린팅 액티비티",
-        description: "3D 프린터로 나의 상상을 현실화하는\n나만의 작품을 뽐내보세요.",
-        timeInfo: "체험 시간 : 120분 | 1회 6명 정원",
-        location: "알파시티 2로 33 3D 프린팅 스튜디오",
-        price: "무료"
-    ),
-    ExperienceEvent(
-        image: "EventImg4",
-        title: "수제 브레드 원데이 클래스",
-        description: "유명 베이커리 카페 제빵사가 알려주는\n맛있는 빵 레시피! 제빵 체험해보세요.",
-        timeInfo: "체험 시간 : 100분 | 1회 12명 정원",
-        location: "알파시티 2로 33 ABC 베이커리",
-        price: "18,000원"
-    ),
-]
-
 // MARK: - Main View
 
 struct EventHighlightView: View {
@@ -75,6 +28,12 @@ struct EventHighlightView: View {
             if let eventId = selectedEventId, let eventType = selectedEventType {
                 if eventType == "raffle" {
                     RaffleEventDetailView(eventId: eventId, onBackTapped: {
+                        selectedEventId = nil
+                        selectedEventType = nil
+                        viewModel.fetchEvents()
+                    })
+                } else if eventType == "experience" {
+                    ExperienceEventDetailView(eventId: eventId, onBackTapped: {
                         selectedEventId = nil
                         selectedEventType = nil
                         viewModel.fetchEvents()
@@ -115,7 +74,10 @@ struct EventHighlightView: View {
                                     selectedEventType = event.type
                                 })
                             case .experience:
-                                ExperienceTabContent()
+                                ExperienceTabContent(events: viewModel.experienceEvents, onEventTapped: { event in
+                                    selectedEventId = event.id
+                                    selectedEventType = event.type
+                                })
                             }
 
                             Spacer().frame(minHeight: 40)
@@ -486,14 +448,22 @@ private struct FirstComeEventItem: View {
 // MARK: - 체험 탭
 
 private struct ExperienceTabContent: View {
+    let events: [EventData]
+    var onEventTapped: ((EventData) -> Void)?
+
     var body: some View {
-        LazyVStack(spacing: 0) {
-            ForEach(Array(mockExperienceEvents.enumerated()), id: \.element.id) { index, event in
-                ExperienceEventItem(event: event)
-                if index < mockExperienceEvents.count - 1 {
-                    Divider()
-                        .background(Color(hex: "B5B5B5"))
-                        .padding(.horizontal, 20)
+        if events.isEmpty {
+            EmptyContentView()
+        } else {
+            LazyVStack(spacing: 0) {
+                ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
+                    ExperienceEventItem(event: event)
+                        .onTapGesture { onEventTapped?(event) }
+                    if index < events.count - 1 {
+                        Divider()
+                            .background(Color(hex: "B5B5B5"))
+                            .padding(.horizontal, 20)
+                    }
                 }
             }
         }
@@ -501,63 +471,113 @@ private struct ExperienceTabContent: View {
 }
 
 private struct ExperienceEventItem: View {
-    let event: ExperienceEvent
+    let event: EventData
+
+    private var timeInfo: String {
+        var parts: [String] = []
+        if let duration = event.duration { parts.append("체험 시간 : \(duration)분") }
+        if let capacity = event.capacity { parts.append("1회 \(capacity)명 정원") }
+        return parts.joined(separator: " | ")
+    }
+
+    private var priceText: String {
+        guard let price = event.price else { return "" }
+        if price == 0 { return "무료" }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        return (formatter.string(from: NSNumber(value: price)) ?? "\(price)") + "원"
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 17) {
-            Image(event.image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 130, height: 168)
-                .clipShape(RoundedRectangle(cornerRadius: 22))
+            // 이미지
+            ZStack {
+                if let imageUrl = event.imageUrl, !imageUrl.isEmpty {
+                    let fullURL = imageUrl.hasPrefix("http") ? imageUrl : "\(APIClient.serverURL)\(imageUrl)"
+                    AsyncImage(url: URL(string: fullURL)) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 130, height: 168)
+                                .clipped()
+                        default:
+                            experiencePlaceholder
+                        }
+                    }
+                } else {
+                    experiencePlaceholder
+                }
+            }
+            .frame(width: 130, height: 168)
+            .clipShape(RoundedRectangle(cornerRadius: 22))
 
             VStack(alignment: .leading, spacing: 0) {
-                Text(event.title)
+                Text(event.name)
                     .font(AppFont.medium(16))
                     .foregroundColor(Color(hex: "121212"))
 
-                Text(event.description)
-                    .font(AppFont.regular(12))
-                    .foregroundColor(Color(hex: "595959"))
-                    .lineSpacing(4)
-                    .padding(.top, 9)
-
-                Text(event.timeInfo)
-                    .font(AppFont.regular(12))
-                    .foregroundColor(Color(hex: "828282"))
-                    .padding(.top, 6)
-
-                HStack(spacing: 3) {
-                    Image("icon_location_pin")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 20, height: 20)
-                    Text(event.location)
-                        .font(AppFont.medium(12))
-                        .foregroundColor(Color(hex: "8F8F8F"))
-                        .lineLimit(1)
+                if let description = event.description, !description.isEmpty {
+                    Text(description)
+                        .font(AppFont.regular(12))
+                        .foregroundColor(Color(hex: "595959"))
+                        .lineSpacing(4)
+                        .padding(.top, 9)
                 }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(
-                    RoundedRectangle(cornerRadius: 7)
-                        .fill(Color(hex: "F8F8F8"))
-                )
-                .padding(.top, 8)
+
+                if !timeInfo.isEmpty {
+                    Text(timeInfo)
+                        .font(AppFont.regular(12))
+                        .foregroundColor(Color(hex: "828282"))
+                        .padding(.top, 6)
+                }
+
+                if let location = event.location, !location.isEmpty {
+                    HStack(spacing: 3) {
+                        Image("icon_location_pin")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 20, height: 20)
+                        Text(location)
+                            .font(AppFont.medium(12))
+                            .foregroundColor(Color(hex: "8F8F8F"))
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7)
+                            .fill(Color(hex: "F8F8F8"))
+                    )
+                    .padding(.top, 8)
+                }
 
                 Spacer()
 
-                HStack {
-                    Spacer()
-                    Text(event.price)
-                        .font(AppFont.bold(18))
-                        .foregroundColor(AppColor.primary)
+                if !priceText.isEmpty {
+                    HStack {
+                        Spacer()
+                        Text(priceText)
+                            .font(AppFont.bold(18))
+                            .foregroundColor(AppColor.primary)
+                    }
                 }
             }
             .frame(height: 168)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
+    }
+
+    private var experiencePlaceholder: some View {
+        ZStack {
+            Color(hex: "FFF3E0")
+            Text(String(event.name.prefix(1)))
+                .font(AppFont.bold(32))
+                .foregroundColor(Color(hex: "E67E22"))
+        }
+        .frame(width: 130, height: 168)
     }
 }
 

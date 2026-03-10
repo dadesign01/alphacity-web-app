@@ -69,7 +69,11 @@ final class EventDetailViewModel: ObservableObject {
                         status: updated.status,
                         program: updated.program,
                         isParticipated: true,
-                        myRaffleNumber: result.raffleNumber
+                        myRaffleNumber: result.raffleNumber,
+                        price: updated.price,
+                        duration: updated.duration,
+                        capacity: updated.capacity,
+                        location: updated.location
                     )
                 }
                 message = "참여 완료!"

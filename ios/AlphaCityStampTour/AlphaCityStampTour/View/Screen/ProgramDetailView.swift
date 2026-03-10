@@ -11,6 +11,10 @@ struct ProgramDetailView: View {
     var onNavigateToMap: ((Double, Double) -> Void)?
     @StateObject private var viewModel = ProgramDetailViewModel()
     @State private var showShareSheet = false
+    @State private var showMissionSheet = false
+    @State private var selectedMission: MissionData?
+    @State private var showMissionRestrictionAlert = false
+    @State private var missionRestrictionMessage = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -177,11 +181,19 @@ struct ProgramDetailView: View {
                             .padding(.horizontal, 20)
                             .padding(.top, 14)
 
-                        Text("참여 가능 미션")
-                            .font(AppFont.semibold(14))
-                            .foregroundColor(Color(hex: "121212"))
-                            .padding(.horizontal, 20)
-                            .padding(.top, 14)
+                        HStack {
+                            Text("참여 가능 미션")
+                                .font(AppFont.semibold(14))
+                                .foregroundColor(Color(hex: "121212"))
+                            Spacer()
+                            Button(action: { showMissionSheet = true }) {
+                                Text("미션 참여하기")
+                                    .font(AppFont.semibold(12))
+                                    .foregroundColor(AppColor.primary)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
 
                         if viewModel.isMissionsLoading {
                             HStack {
@@ -332,6 +344,65 @@ struct ProgramDetailView: View {
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: [shareText])
+        }
+        .sheet(isPresented: $showMissionSheet) {
+            MissionSelectionSheet(
+                missions: viewModel.missions,
+                category: program.category ?? "",
+                onSelectMission: { mission in
+                    showMissionSheet = false
+                    let cat = program.category ?? ""
+                    // 세미나: 체류시간만 가능
+                    if cat == "seminar" && mission.type != "stay_time" {
+                        missionRestrictionMessage = "해당 프로그램은 체류시간 미션만 참여 가능합니다."
+                        showMissionRestrictionAlert = true
+                        return
+                    }
+                    // 비세미나: 체류시간 불가
+                    if cat != "seminar" && mission.type == "stay_time" {
+                        missionRestrictionMessage = "해당 장소는 체류시간 미션 대상이 아닙니다. 다른 미션을 선택해주세요."
+                        showMissionRestrictionAlert = true
+                        return
+                    }
+                    selectedMission = mission
+                },
+                onDismiss: { showMissionSheet = false }
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .fullScreenCover(item: $selectedMission) { mission in
+            missionView(for: mission)
+        }
+        .alert("알림", isPresented: $showMissionRestrictionAlert) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(missionRestrictionMessage)
+        }
+    }
+
+    @ViewBuilder
+    private func missionView(for mission: MissionData) -> some View {
+        switch mission.type {
+        case "quiz":
+            QuizMissionView(
+                mission: mission,
+                onDismiss: { selectedMission = nil },
+                onCompleted: { viewModel.fetchMissions(programId: program.id) }
+            )
+        case "location_auth":
+            LocationMissionView(
+                mission: mission,
+                onDismiss: { selectedMission = nil },
+                onCompleted: { viewModel.fetchMissions(programId: program.id) }
+            )
+        case "stay_time":
+            StayTimeMissionView(
+                mission: mission,
+                onDismiss: { selectedMission = nil },
+                onCompleted: { viewModel.fetchMissions(programId: program.id) }
+            )
+        default:
+            EmptyView()
         }
     }
 
@@ -535,6 +606,10 @@ private struct MissionCardView: View {
         }
     }
 
+    private var isCompleted: Bool {
+        mission.isCompleted == true
+    }
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
@@ -550,6 +625,16 @@ private struct MissionCardView: View {
                         .padding(.vertical, 2)
                         .background(enabled ? typeColor : Color(hex: "AAAAAA"))
                         .clipShape(RoundedRectangle(cornerRadius: 100))
+
+                    if isCompleted {
+                        Text("완료")
+                            .font(AppFont.semibold(10))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(Color(hex: "16A34A"))
+                            .clipShape(RoundedRectangle(cornerRadius: 100))
+                    }
                 }
 
                 if let detail = detail, !detail.isEmpty {
@@ -560,13 +645,196 @@ private struct MissionCardView: View {
                 }
             }
             Spacer()
+
+            if isCompleted {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(Color(hex: "16A34A"))
+                    .font(.system(size: 18))
+            }
         }
         .padding(12)
-        .background(enabled ? Color(hex: "F8F9FA") : Color(hex: "F0F0F0"))
+        .background(isCompleted ? Color(hex: "F0FFF4") : (enabled ? Color(hex: "F8F9FA") : Color(hex: "F0F0F0")))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal, 20)
         .padding(.vertical, 2)
         .opacity(enabled ? 1.0 : 0.5)
+    }
+}
+
+// MARK: - Mission Selection Sheet
+
+struct MissionSelectionSheet: View {
+    let missions: [MissionData]
+    let category: String
+    var onSelectMission: ((MissionData) -> Void)?
+    var onDismiss: (() -> Void)?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Handle bar
+            RoundedRectangle(cornerRadius: 3)
+                .fill(Color(hex: "D1D5DB"))
+                .frame(width: 40, height: 5)
+                .padding(.top, 12)
+
+            // Header
+            HStack {
+                Text("미션 선택")
+                    .font(AppFont.semibold(18))
+                    .foregroundColor(Color(hex: "121212"))
+                Spacer()
+                Button(action: { onDismiss?() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color(hex: "828282"))
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+
+            Text("참여할 미션을 선택하세요")
+                .font(AppFont.regular(13))
+                .foregroundColor(Color(hex: "828282"))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
+
+            Divider()
+                .padding(.top, 16)
+
+            // Mission list
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 8) {
+                    ForEach(missions) { mission in
+                        let isAvailable = isMissionAvailable(mission)
+                        let isCompleted = mission.isCompleted == true
+
+                        Button(action: {
+                            if !isCompleted {
+                                onSelectMission?(mission)
+                            }
+                        }) {
+                            HStack(spacing: 12) {
+                                // 아이콘
+                                Image(systemName: missionIcon(mission.type))
+                                    .font(.system(size: 20))
+                                    .foregroundColor(isCompleted ? Color(hex: "16A34A") : missionColor(mission.type))
+                                    .frame(width: 40, height: 40)
+                                    .background(
+                                        Circle().fill(isCompleted ? Color(hex: "F0FFF4") : missionBgColor(mission.type))
+                                    )
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 6) {
+                                        Text(mission.name)
+                                            .font(AppFont.medium(14))
+                                            .foregroundColor(Color(hex: "121212"))
+
+                                        Text(missionTypeLabel(mission.type))
+                                            .font(AppFont.semibold(10))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 1)
+                                            .background(missionColor(mission.type))
+                                            .clipShape(RoundedRectangle(cornerRadius: 100))
+                                    }
+
+                                    if let detail = missionDetail(mission) {
+                                        Text(detail)
+                                            .font(AppFont.regular(12))
+                                            .foregroundColor(Color(hex: "888888"))
+                                            .lineLimit(1)
+                                    }
+                                }
+
+                                Spacer()
+
+                                if isCompleted {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(Color(hex: "16A34A"))
+                                        .font(.system(size: 20))
+                                } else if !isAvailable {
+                                    Image(systemName: "lock.fill")
+                                        .foregroundColor(Color(hex: "CCCCCC"))
+                                        .font(.system(size: 16))
+                                } else {
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(Color(hex: "CCCCCC"))
+                                        .font(.system(size: 14))
+                                }
+                            }
+                            .padding(14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(isCompleted ? Color(hex: "F0FFF4") : Color(hex: "F8F9FA"))
+                            )
+                            .opacity(isAvailable || isCompleted ? 1.0 : 0.5)
+                        }
+                        .disabled(isCompleted)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 40)
+            }
+        }
+        .background(Color.white)
+    }
+
+    private func isMissionAvailable(_ mission: MissionData) -> Bool {
+        if category == "seminar" {
+            return mission.type == "stay_time"
+        } else {
+            return mission.type == "quiz" || mission.type == "location_auth"
+        }
+    }
+
+    private func missionIcon(_ type: String) -> String {
+        switch type {
+        case "quiz": return "questionmark.circle"
+        case "location_auth": return "mappin.circle"
+        case "stay_time": return "timer"
+        default: return "star.circle"
+        }
+    }
+
+    private func missionColor(_ type: String) -> Color {
+        switch type {
+        case "quiz": return Color(hex: "2563EB")
+        case "location_auth": return Color(hex: "16A34A")
+        case "stay_time": return Color(hex: "D97706")
+        default: return Color(hex: "6B7280")
+        }
+    }
+
+    private func missionBgColor(_ type: String) -> Color {
+        switch type {
+        case "quiz": return Color(hex: "EFF6FF")
+        case "location_auth": return Color(hex: "F0FFF4")
+        case "stay_time": return Color(hex: "FFFBEB")
+        default: return Color(hex: "F3F4F6")
+        }
+    }
+
+    private func missionTypeLabel(_ type: String) -> String {
+        switch type {
+        case "quiz": return "퀴즈"
+        case "location_auth": return "위치 인증"
+        case "stay_time": return "체류시간"
+        default: return type
+        }
+    }
+
+    private func missionDetail(_ mission: MissionData) -> String? {
+        switch mission.type {
+        case "quiz": return mission.question
+        case "location_auth": return mission.place?.name
+        case "stay_time":
+            let place = mission.place?.name ?? ""
+            let mins = mission.stayMinutes ?? 0
+            return "\(place) \(mins)분"
+        default: return nil
+        }
     }
 }
 

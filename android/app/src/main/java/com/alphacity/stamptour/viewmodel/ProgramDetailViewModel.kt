@@ -42,7 +42,17 @@ class ProgramDetailViewModel @Inject constructor(
     private var tts: TextToSpeech? = null
 
     fun checkParticipation(program: ProgramItem) {
+        // 먼저 로컬 데이터로 빠르게 표시
         _isParticipated.value = program.events?.any { it.isParticipated == true } == true
+
+        // 서버에서 최신 데이터 조회
+        if (!tokenManager.isLoggedIn) return
+        viewModelScope.launch {
+            homeRepository.getProgramById(program.id)
+                .onSuccess { fresh ->
+                    _isParticipated.value = fresh.events?.any { it.isParticipated == true } == true
+                }
+        }
     }
 
     fun participate(program: ProgramItem) {

@@ -24,8 +24,23 @@ final class ProgramDetailViewModel: NSObject, ObservableObject, AVSpeechSynthesi
     }
 
     func checkParticipation(program: ProgramData) {
-        guard let events = program.events else { return }
-        isParticipated = events.contains { $0.isParticipated == true }
+        // 먼저 로컬 데이터로 빠르게 표시
+        if let events = program.events {
+            isParticipated = events.contains { $0.isParticipated == true }
+        }
+
+        // 서버에서 최신 데이터 조회
+        guard TokenManager.shared.isLoggedIn else { return }
+        Task {
+            do {
+                let fresh = try await repository.fetchProgramById(program.id)
+                if let events = fresh.events {
+                    isParticipated = events.contains { $0.isParticipated == true }
+                }
+            } catch {
+                // 실패 시 로컬 데이터 유지
+            }
+        }
     }
 
     func participate(program: ProgramData) {

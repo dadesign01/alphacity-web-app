@@ -29,6 +29,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         ...(body.programId !== undefined && { programId: body.programId }),
         ...(body.question !== undefined && { question: body.question }),
         ...(body.answer !== undefined && { answer: body.answer }),
+        ...(body.options !== undefined && { options: body.options }),
         ...(body.stayMinutes !== undefined && { stayMinutes: body.stayMinutes }),
       },
     });

@@ -20,7 +20,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { programId, name, description, imageUrl, type, startDate, endDate, reward, winnerCount, participantLimit } = body;
+    const { programId, name, description, imageUrl, type, startDate, endDate, reward, winnerCount, participantLimit, price, duration, capacity, location } = body;
 
     if (!programId || !name || !type || !startDate || !endDate) {
       return errorResponse('INVALID_INPUT', '필수 항목을 모두 입력하세요');
@@ -35,9 +35,13 @@ export async function POST(request: NextRequest) {
         type,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
-        reward,
+        reward: reward || null,
         winnerCount: winnerCount || 0,
         participantLimit: participantLimit || 0,
+        price: price || null,
+        duration: duration || null,
+        capacity: capacity || null,
+        location: location || null,
       },
     });
 

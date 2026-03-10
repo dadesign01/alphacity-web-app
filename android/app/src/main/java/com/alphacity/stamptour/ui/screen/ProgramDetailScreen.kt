@@ -7,13 +7,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
@@ -22,11 +24,9 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.VolumeUp
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -78,6 +78,10 @@ fun ProgramDetailScreen(
     val isParticipated by viewModel.isParticipated.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val message by viewModel.message.collectAsState()
+    var showMissionSheet by remember { mutableStateOf(false) }
+    var selectedMission by remember { mutableStateOf<MissionItem?>(null) }
+    var showRestrictionAlert by remember { mutableStateOf(false) }
+    var restrictionMessage by remember { mutableStateOf("") }
 
     LaunchedEffect(program) {
         viewModel.checkParticipation(program)
@@ -298,14 +302,29 @@ fun ProgramDetailScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
                 )
 
-                Text(
-                    text = "참여 가능 미션",
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    color = Color(0xFF121212),
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "참여 가능 미션",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        color = Color(0xFF121212),
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = "미션 참여하기",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp,
+                        color = Primary,
+                        modifier = Modifier.clickable { showMissionSheet = true },
+                    )
+                }
                 Spacer(modifier = Modifier.height(10.dp))
 
                 val missions by viewModel.missions.collectAsState()
@@ -505,6 +524,66 @@ fun ProgramDetailScreen(
             }
         }
     }
+
+    // 미션 제한 알림
+    if (showRestrictionAlert) {
+        AlertDialog(
+            onDismissRequest = { showRestrictionAlert = false },
+            title = { Text("알림", fontFamily = Pretendard, fontWeight = FontWeight.SemiBold) },
+            text = { Text(restrictionMessage, fontFamily = Pretendard) },
+            confirmButton = {
+                TextButton(onClick = { showRestrictionAlert = false }) {
+                    Text("확인", fontFamily = Pretendard, color = Primary)
+                }
+            },
+        )
+    }
+
+    // 미션 선택 바텀시트
+    if (showMissionSheet) {
+        val missions by viewModel.missions.collectAsState()
+        MissionSelectionBottomSheet(
+            missions = missions,
+            category = program.category ?: "",
+            onSelectMission = { mission ->
+                showMissionSheet = false
+                val cat = program.category ?: ""
+                if (cat == "seminar" && mission.type != "stay_time") {
+                    restrictionMessage = "해당 프로그램은 체류시간 미션만 참여 가능합니다."
+                    showRestrictionAlert = true
+                    return@MissionSelectionBottomSheet
+                }
+                if (cat != "seminar" && mission.type == "stay_time") {
+                    restrictionMessage = "해당 장소는 체류시간 미션 대상이 아닙니다. 다른 미션을 선택해주세요."
+                    showRestrictionAlert = true
+                    return@MissionSelectionBottomSheet
+                }
+                selectedMission = mission
+            },
+            onDismiss = { showMissionSheet = false },
+        )
+    }
+
+    // 미션 참여 전체화면
+    selectedMission?.let { mission ->
+        when (mission.type) {
+            "quiz" -> QuizMissionScreen(
+                mission = mission,
+                onDismiss = { selectedMission = null },
+                onCompleted = { viewModel.fetchMissions(program.id) },
+            )
+            "location_auth" -> LocationMissionScreen(
+                mission = mission,
+                onDismiss = { selectedMission = null },
+                onCompleted = { viewModel.fetchMissions(program.id) },
+            )
+            "stay_time" -> StayTimeMissionScreen(
+                mission = mission,
+                onDismiss = { selectedMission = null },
+                onCompleted = { viewModel.fetchMissions(program.id) },
+            )
+        }
+    }
 }
 
 // MARK: - Header
@@ -636,13 +715,14 @@ private fun MissionCard(mission: MissionItem, enabled: Boolean) {
         "stay_time" -> Color(0xFFD97706)
         else -> Color(0xFF6B7280)
     }
+    val isCompleted = mission.isCompleted == true
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(if (enabled) Color(0xFFF8F9FA) else Color(0xFFF0F0F0))
+            .background(if (isCompleted) Color(0xFFF0FFF4) else if (enabled) Color(0xFFF8F9FA) else Color(0xFFF0F0F0))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -666,6 +746,19 @@ private fun MissionCard(mission: MissionItem, enabled: Boolean) {
                         .background(if (enabled) typeColor else Color(0xFFAAAAAA))
                         .padding(horizontal = 8.dp, vertical = 2.dp),
                 )
+                if (isCompleted) {
+                    Text(
+                        text = "완료",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 10.sp,
+                        color = Color.White,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(100.dp))
+                            .background(Color(0xFF16A34A))
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                    )
+                }
             }
             val detail = when (mission.type) {
                 "quiz" -> mission.question
@@ -684,6 +777,132 @@ private fun MissionCard(mission: MissionItem, enabled: Boolean) {
                     maxLines = 1,
                 )
             }
+        }
+        if (isCompleted) {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = "완료",
+                tint = Color(0xFF16A34A),
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+// MARK: - Mission Selection Bottom Sheet
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MissionSelectionBottomSheet(
+    missions: List<MissionItem>,
+    category: String,
+    onSelectMission: (MissionItem) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = Color.White,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+            Text("미션 선택", fontFamily = Pretendard, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = Color(0xFF121212))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("참여할 미션을 선택하세요", fontFamily = Pretendard, fontSize = 13.sp, color = Color(0xFF828282))
+            Spacer(modifier = Modifier.height(16.dp))
+            Divider(color = Color(0xFFE2E2E2))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            missions.forEach { mission ->
+                val isAvailable = if (category == "seminar") mission.type == "stay_time" else mission.type == "quiz" || mission.type == "location_auth"
+                val isCompleted = mission.isCompleted == true
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isCompleted) Color(0xFFF0FFF4) else Color(0xFFF8F9FA))
+                        .then(if (!isCompleted) Modifier.clickable { onSelectMission(mission) } else Modifier)
+                        .padding(14.dp)
+                        .then(if (!isAvailable && !isCompleted) Modifier.alpha(0.5f) else Modifier),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // 아이콘
+                    val iconVector = when (mission.type) {
+                        "quiz" -> Icons.Outlined.CalendarMonth
+                        "location_auth" -> Icons.Default.LocationOn
+                        "stay_time" -> Icons.Outlined.Timer
+                        else -> Icons.Outlined.CalendarMonth
+                    }
+                    val missionColor = when (mission.type) {
+                        "quiz" -> Color(0xFF2563EB)
+                        "location_auth" -> Color(0xFF16A34A)
+                        "stay_time" -> Color(0xFFD97706)
+                        else -> Color(0xFF6B7280)
+                    }
+                    val bgColor = when (mission.type) {
+                        "quiz" -> Color(0xFFEFF6FF)
+                        "location_auth" -> Color(0xFFF0FFF4)
+                        "stay_time" -> Color(0xFFFFFBEB)
+                        else -> Color(0xFFF3F4F6)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(if (isCompleted) Color(0xFFF0FFF4) else bgColor),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(iconVector, null, tint = if (isCompleted) Color(0xFF16A34A) else missionColor, modifier = Modifier.size(20.dp))
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(mission.name, fontFamily = Pretendard, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color(0xFF121212))
+                            val typeLabel = when (mission.type) {
+                                "quiz" -> "퀴즈"
+                                "location_auth" -> "위치 인증"
+                                "stay_time" -> "체류시간"
+                                else -> mission.type
+                            }
+                            Text(
+                                text = typeLabel,
+                                fontFamily = Pretendard,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 10.sp,
+                                color = Color.White,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(100.dp))
+                                    .background(missionColor)
+                                    .padding(horizontal = 6.dp, vertical = 1.dp),
+                            )
+                        }
+                        val detail = when (mission.type) {
+                            "quiz" -> mission.question
+                            "location_auth" -> mission.place?.name
+                            "stay_time" -> "${mission.place?.name ?: ""} ${mission.stayMinutes ?: 0}분"
+                            else -> null
+                        }
+                        if (!detail.isNullOrBlank()) {
+                            Text(detail, fontFamily = Pretendard, fontSize = 12.sp, color = Color(0xFF888888), maxLines = 1, modifier = Modifier.padding(top = 2.dp))
+                        }
+                    }
+
+                    if (isCompleted) {
+                        Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF16A34A), modifier = Modifier.size(20.dp))
+                    } else if (!isAvailable) {
+                        Icon(Icons.Default.Lock, null, tint = Color(0xFFCCCCCC), modifier = Modifier.size(16.dp))
+                    } else {
+                        Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFCCCCCC), modifier = Modifier.size(20.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

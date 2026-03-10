@@ -52,6 +52,19 @@ final class HomeRepository {
     }
 
     func fetchProgramMissions(programId: Int) async throws -> [MissionData] {
-        return try await client.request(path: "programs/\(programId)/missions")
+        return try await client.request(path: "programs/\(programId)/missions", authenticated: true)
+    }
+
+    func completeMission(missionId: Int, answer: String? = nil) async throws -> MissionCompletionData {
+        var body: [String: String]? = nil
+        if let answer = answer {
+            body = ["answer": answer]
+        }
+        return try await client.request(
+            path: "missions/\(missionId)/complete",
+            method: "POST",
+            body: body,
+            authenticated: true
+        )
     }
 }
