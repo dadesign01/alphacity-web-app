@@ -35,8 +35,12 @@ final class HomeRepository {
         return try await client.request(path: "users/me", authenticated: true)
     }
 
-    func participateInEvent(eventId: Int) async throws {
-        let _: EmptyData = try await client.request(
+    func fetchEventDetail(eventId: Int) async throws -> EventData {
+        return try await client.request(path: "events/\(eventId)", authenticated: true)
+    }
+
+    func participateInEvent(eventId: Int) async throws -> EventParticipationData {
+        return try await client.request(
             path: "events/\(eventId)/participate",
             method: "POST",
             authenticated: true

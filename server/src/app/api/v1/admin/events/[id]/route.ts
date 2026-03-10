@@ -30,6 +30,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         ...(body.startDate && { startDate: new Date(body.startDate) }),
         ...(body.endDate && { endDate: new Date(body.endDate) }),
         ...(body.reward !== undefined && { reward: body.reward }),
+        ...(body.winnerCount !== undefined && { winnerCount: body.winnerCount }),
         ...(body.participantLimit !== undefined && { participantLimit: body.participantLimit }),
         ...(body.status && { status: body.status }),
       },

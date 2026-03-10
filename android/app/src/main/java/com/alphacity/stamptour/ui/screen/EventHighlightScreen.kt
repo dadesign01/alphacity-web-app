@@ -12,6 +12,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -97,6 +98,8 @@ fun EventHighlightScreen(
     viewModel: EventHighlightViewModel = hiltViewModel(),
 ) {
     var selectedTab by remember { mutableStateOf(EventTab.RAFFLE) }
+    var selectedEventId by remember { mutableStateOf(-1) }
+    var selectedEventType by remember { mutableStateOf("") }
     val raffleEvents by viewModel.raffleEvents.collectAsState()
     val firstComeEvents by viewModel.firstComeEvents.collectAsState()
 
@@ -104,51 +107,85 @@ fun EventHighlightScreen(
         viewModel.fetchEvents()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White),
-    ) {
-        // Header
-        EventHighlightHeader(onBackClick = onBackClick)
-
-        Divider(color = Color(0xFFE2E2E2), thickness = 1.dp)
-
-        // Tab Bar (outside scroll to ensure clickability)
-        EventTabBar(
-            selectedTab = selectedTab,
-            onTabSelected = { selectedTab = it },
-        )
-
-        // Content (scrollable)
+    if (selectedEventId > 0) {
+        if (selectedEventType == "raffle") {
+            RaffleEventDetailScreen(
+                eventId = selectedEventId,
+                onBackClick = {
+                    selectedEventId = -1
+                    selectedEventType = ""
+                    viewModel.fetchEvents()
+                },
+            )
+        } else {
+            FirstComeEventDetailScreen(
+                eventId = selectedEventId,
+                onBackClick = {
+                    selectedEventId = -1
+                    selectedEventType = ""
+                    viewModel.fetchEvents()
+                },
+            )
+        }
+    } else {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .background(Color.White),
         ) {
-            when (selectedTab) {
-                EventTab.RAFFLE -> RaffleTabContent(events = raffleEvents)
-                EventTab.FIRST_COME -> FirstComeTabContent(events = firstComeEvents)
-                EventTab.EXPERIENCE -> ExperienceTabContent()
-            }
+            // Header
+            EventHighlightHeader(onBackClick = onBackClick)
 
-            Spacer(modifier = Modifier.weight(1f))
+            Divider(color = Color(0xFFE2E2E2), thickness = 1.dp)
 
-            // Footer
+            // Tab Bar (outside scroll to ensure clickability)
+            EventTabBar(
+                selectedTab = selectedTab,
+                onTabSelected = { selectedTab = it },
+            )
+
+            // Content (scrollable)
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFF9F9F9))
-                    .padding(vertical = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
             ) {
-                Text(
-                    text = "© 2026 Alpha Stamp. All rights reserved.",
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 10.sp,
-                    color = Color(0xFF8F8F8F),
-                )
+                when (selectedTab) {
+                    EventTab.RAFFLE -> RaffleTabContent(
+                        events = raffleEvents,
+                        onEventClick = { event ->
+                            selectedEventId = event.id
+                            selectedEventType = event.type
+                        },
+                    )
+                    EventTab.FIRST_COME -> FirstComeTabContent(
+                        events = firstComeEvents,
+                        onEventClick = { event ->
+                            selectedEventId = event.id
+                            selectedEventType = event.type
+                        },
+                    )
+                    EventTab.EXPERIENCE -> ExperienceTabContent()
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Footer
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFF9F9F9))
+                        .padding(vertical = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = "© 2026 Alpha Stamp. All rights reserved.",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 10.sp,
+                        color = Color(0xFF8F8F8F),
+                    )
+                }
             }
         }
     }
@@ -225,12 +262,17 @@ private fun EventTabBar(
 // ── 추첨 이벤트 탭 ──
 
 @Composable
-private fun RaffleTabContent(events: List<EventItem>) {
+private fun RaffleTabContent(
+    events: List<EventItem>,
+    onEventClick: (EventItem) -> Unit = {},
+) {
     if (events.isEmpty()) {
         EmptyContent()
     } else {
         events.forEachIndexed { index, event ->
-            RaffleEventCard(event = event)
+            Box(modifier = Modifier.clickable { onEventClick(event) }) {
+                RaffleEventCard(event = event)
+            }
             if (index < events.lastIndex) {
                 Divider(
                     color = Color(0xFFB5B5B5),
@@ -414,12 +456,17 @@ private fun RaffleEventCard(event: EventItem) {
 // ── 선착순 사은품 탭 ──
 
 @Composable
-private fun FirstComeTabContent(events: List<EventItem>) {
+private fun FirstComeTabContent(
+    events: List<EventItem>,
+    onEventClick: (EventItem) -> Unit = {},
+) {
     if (events.isEmpty()) {
         EmptyContent()
     } else {
         events.forEachIndexed { index, event ->
-            FirstComeEventItem(event = event)
+            Box(modifier = Modifier.clickable { onEventClick(event) }) {
+                FirstComeEventItem(event = event)
+            }
             if (index < events.lastIndex) {
                 Divider(
                     color = Color(0xFFB5B5B5),
@@ -433,16 +480,37 @@ private fun FirstComeTabContent(events: List<EventItem>) {
 
 @Composable
 private fun FirstComeEventItem(event: EventItem) {
-    val isOpen = event.status != "ended"
+    val remaining = maxOf(event.participantLimit - event.participantCount, 0)
+    val isSoldOut = remaining <= 0
+    val isOpen = event.status != "ended" && !isSoldOut
     val progress = if (event.participantLimit > 0) {
         event.participantCount.toFloat() / event.participantLimit.toFloat()
     } else 0f
 
     Column(
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+        modifier = Modifier
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .alpha(if (isSoldOut) 0.5f else 1f),
     ) {
-        // 상태 배지 + 제목
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // 유형 태그 + 상태 배지 + 제목
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(Color(0xFFEDF7FF))
+                    .padding(horizontal = 10.dp, vertical = 3.dp),
+            ) {
+                Text(
+                    text = "선착순",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 11.sp,
+                    color = Primary,
+                )
+            }
             Box(
                 modifier = Modifier
                     .clip(CircleShape)
@@ -450,14 +518,13 @@ private fun FirstComeEventItem(event: EventItem) {
                     .padding(horizontal = 10.dp, vertical = 3.dp),
             ) {
                 Text(
-                    text = if (isOpen) "참여 가능" else "마  감",
+                    text = if (isOpen) "진행중" else "마감",
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 11.sp,
                     color = Color.White,
                 )
             }
-            Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = event.name,
                 fontFamily = Pretendard,
@@ -510,14 +577,14 @@ private fun FirstComeEventItem(event: EventItem) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 참여수량 + 수치
+        // 잔여수량 + 수치
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "참여수량",
+                text = "잔여수량",
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.Normal,
                 fontSize = 10.sp,
@@ -525,12 +592,12 @@ private fun FirstComeEventItem(event: EventItem) {
                 color = Color(0xFF595959),
             )
             Text(
-                text = "${event.participantCount}/${event.participantLimit}",
+                text = "${remaining}/${event.participantLimit}명",
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.sp,
                 lineHeight = 16.sp,
-                color = Primary,
+                color = if (isSoldOut) Color(0xFF8F8F8F) else Primary,
             )
         }
 

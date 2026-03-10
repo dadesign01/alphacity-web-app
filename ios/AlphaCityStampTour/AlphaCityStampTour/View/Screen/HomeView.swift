@@ -570,7 +570,16 @@ private struct StampProgressSectionView: View {
                         .foregroundColor(AppColor.primary)
                 }
 
-                Spacer().frame(height: 20)
+                Spacer().frame(height: 6)
+
+                HStack {
+                    Spacer()
+                    Text("\(stampCount) / \(totalStamps)")
+                        .font(AppFont.medium(14))
+                        .foregroundColor(Color(hex: "888888"))
+                }
+
+                Spacer().frame(height: 14)
 
                 // Progress Bar + Character
                 GeometryReader { geometry in

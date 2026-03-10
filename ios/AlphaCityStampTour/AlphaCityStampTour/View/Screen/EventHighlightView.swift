@@ -67,52 +67,78 @@ struct EventHighlightView: View {
     var onBackTapped: (() -> Void)?
     @StateObject private var viewModel = EventHighlightViewModel()
     @State private var selectedTab: EventTab = .raffle
+    @State private var selectedEventId: Int? = nil
+    @State private var selectedEventType: String? = nil
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            EventHighlightHeader(onBackTapped: onBackTapped)
-
-            Divider()
-                .foregroundColor(Color(hex: "E2E2E2"))
-
-            // Tab Bar (outside scroll to ensure clickability)
-            EventTabBarView(
-                selectedTab: selectedTab,
-                onTabSelected: { selectedTab = $0 }
-            )
-
-            // Content (scrollable)
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
-                    switch selectedTab {
-                    case .raffle:
-                        RaffleTabContent(events: viewModel.raffleEvents)
-                    case .firstCome:
-                        FirstComeTabContent(events: viewModel.firstComeEvents)
-                    case .experience:
-                        ExperienceTabContent()
-                    }
-
-                    Spacer().frame(minHeight: 40)
-
-                    // Footer
-                    VStack {
-                        Text("© 2026 Alpha Stamp. All rights reserved.")
-                            .font(AppFont.regular(10))
-                            .foregroundColor(Color(hex: "8F8F8F"))
-                            .padding(.vertical, 20)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .background(AppColor.background)
+        ZStack {
+            if let eventId = selectedEventId, let eventType = selectedEventType {
+                if eventType == "raffle" {
+                    RaffleEventDetailView(eventId: eventId, onBackTapped: {
+                        selectedEventId = nil
+                        selectedEventType = nil
+                        viewModel.fetchEvents()
+                    })
+                } else {
+                    FirstComeEventDetailView(eventId: eventId, onBackTapped: {
+                        selectedEventId = nil
+                        selectedEventType = nil
+                        viewModel.fetchEvents()
+                    })
                 }
-                .frame(minHeight: UIScreen.main.bounds.height - 180)
+            } else {
+                VStack(spacing: 0) {
+                    // Header
+                    EventHighlightHeader(onBackTapped: onBackTapped)
+
+                    Divider()
+                        .foregroundColor(Color(hex: "E2E2E2"))
+
+                    // Tab Bar (outside scroll to ensure clickability)
+                    EventTabBarView(
+                        selectedTab: selectedTab,
+                        onTabSelected: { selectedTab = $0 }
+                    )
+
+                    // Content (scrollable)
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 0) {
+                            switch selectedTab {
+                            case .raffle:
+                                RaffleTabContent(events: viewModel.raffleEvents, onEventTapped: { event in
+                                    selectedEventId = event.id
+                                    selectedEventType = event.type
+                                })
+                            case .firstCome:
+                                FirstComeTabContent(events: viewModel.firstComeEvents, onEventTapped: { event in
+                                    selectedEventId = event.id
+                                    selectedEventType = event.type
+                                })
+                            case .experience:
+                                ExperienceTabContent()
+                            }
+
+                            Spacer().frame(minHeight: 40)
+
+                            // Footer
+                            VStack {
+                                Text("© 2026 Alpha Stamp. All rights reserved.")
+                                    .font(AppFont.regular(10))
+                                    .foregroundColor(Color(hex: "8F8F8F"))
+                                    .padding(.vertical, 20)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .background(AppColor.background)
+                        }
+                        .frame(minHeight: UIScreen.main.bounds.height - 180)
+                    }
+                }
+                .background(Color.white)
+                .navigationBarHidden(true)
+                .onAppear {
+                    viewModel.fetchEvents()
+                }
             }
-        }
-        .background(Color.white)
-        .navigationBarHidden(true)
-        .onAppear {
-            viewModel.fetchEvents()
         }
     }
 }
@@ -178,6 +204,7 @@ private struct EventTabBarView: View {
 
 private struct RaffleTabContent: View {
     let events: [EventData]
+    var onEventTapped: ((EventData) -> Void)?
 
     var body: some View {
         if events.isEmpty {
@@ -186,6 +213,7 @@ private struct RaffleTabContent: View {
             LazyVStack(spacing: 0) {
                 ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
                     RaffleEventCard(event: event)
+                        .onTapGesture { onEventTapped?(event) }
                     if index < events.count - 1 {
                         Divider()
                             .background(Color(hex: "B5B5B5"))
@@ -330,6 +358,7 @@ private struct RaffleEventCard: View {
 
 private struct FirstComeTabContent: View {
     let events: [EventData]
+    var onEventTapped: ((EventData) -> Void)?
 
     var body: some View {
         if events.isEmpty {
@@ -338,6 +367,7 @@ private struct FirstComeTabContent: View {
             LazyVStack(spacing: 0) {
                 ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
                     FirstComeEventItem(event: event)
+                        .onTapGesture { onEventTapped?(event) }
                     if index < events.count - 1 {
                         Divider()
                             .background(Color(hex: "B5B5B5"))
@@ -352,7 +382,11 @@ private struct FirstComeTabContent: View {
 private struct FirstComeEventItem: View {
     let event: EventData
 
-    private var isOpen: Bool { event.status != "ended" }
+    private var remaining: Int {
+        max(event.participantLimit - (event.participantCount ?? 0), 0)
+    }
+    private var isSoldOut: Bool { remaining <= 0 }
+    private var isOpen: Bool { event.status != "ended" && !isSoldOut }
     private var progress: CGFloat {
         guard event.participantLimit > 0 else { return 0 }
         return CGFloat(event.participantCount ?? 0) / CGFloat(event.participantLimit)
@@ -360,9 +394,18 @@ private struct FirstComeEventItem: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // 상태 배지 + 제목
-            HStack(spacing: 10) {
-                Text(isOpen ? "참여 가능" : "마  감")
+            // 유형 태그 + 상태 배지 + 제목
+            HStack(spacing: 8) {
+                Text("선착순")
+                    .font(AppFont.semibold(11))
+                    .foregroundColor(AppColor.primary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule().fill(Color(hex: "EDF7FF"))
+                    )
+
+                Text(isOpen ? "진행중" : "마감")
                     .font(AppFont.semibold(11))
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
@@ -407,15 +450,15 @@ private struct FirstComeEventItem: View {
                 .padding(.top, 8)
             }
 
-            // 참여수량
+            // 잔여수량
             HStack {
-                Text("참여수량")
+                Text("잔여수량")
                     .font(AppFont.regular(10))
                     .foregroundColor(Color(hex: "595959"))
                 Spacer()
-                Text("\(event.participantCount ?? 0)/\(event.participantLimit)")
+                Text("\(remaining)/\(event.participantLimit)명")
                     .font(AppFont.bold(12))
-                    .foregroundColor(AppColor.primary)
+                    .foregroundColor(isSoldOut ? Color(hex: "8F8F8F") : AppColor.primary)
             }
             .padding(.top, 12)
 
@@ -436,6 +479,7 @@ private struct FirstComeEventItem: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
+        .opacity(isSoldOut ? 0.5 : 1.0)
     }
 }
 

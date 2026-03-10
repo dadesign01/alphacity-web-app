@@ -10,6 +10,7 @@ import com.alphacity.stamptour.network.dto.SendCodeRequest
 import com.alphacity.stamptour.network.dto.SocialLoginRequest
 import com.alphacity.stamptour.network.dto.BannerItem
 import com.alphacity.stamptour.network.dto.EventItem
+import com.alphacity.stamptour.network.dto.EventParticipationResult
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StampItem
@@ -72,9 +73,13 @@ interface ApiService {
     @GET("users/me")
     suspend fun getUserProfile(): ApiResponse<UserProfile>
 
+    // 이벤트 상세
+    @GET("events/{id}")
+    suspend fun getEventDetail(@Path("id") eventId: Int): ApiResponse<EventItem>
+
     // 이벤트 참여
     @POST("events/{id}/participate")
-    suspend fun participateInEvent(@Path("id") eventId: Int): ApiResponse<Unit>
+    suspend fun participateInEvent(@Path("id") eventId: Int): ApiResponse<EventParticipationResult>
 
     // 프로그램 상세
     @GET("programs/{id}")

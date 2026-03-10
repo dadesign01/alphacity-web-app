@@ -4,6 +4,7 @@ import com.alphacity.stamptour.network.ApiService
 import com.alphacity.stamptour.network.TokenManager
 import com.alphacity.stamptour.network.dto.BannerItem
 import com.alphacity.stamptour.network.dto.EventItem
+import com.alphacity.stamptour.network.dto.EventParticipationResult
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StampItem
@@ -94,11 +95,24 @@ class HomeRepository @Inject constructor(
         }
     }
 
-    suspend fun participateInEvent(eventId: Int): Result<Unit> {
+    suspend fun getEventDetail(eventId: Int): Result<EventItem> {
+        return try {
+            val response = apiService.getEventDetail(eventId)
+            if (response.success && response.data != null) {
+                Result.success(response.data)
+            } else {
+                Result.failure(Exception(response.error?.message ?: "이벤트 로드 실패"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun participateInEvent(eventId: Int): Result<EventParticipationResult> {
         return try {
             val response = apiService.participateInEvent(eventId)
-            if (response.success) {
-                Result.success(Unit)
+            if (response.success && response.data != null) {
+                Result.success(response.data)
             } else {
                 Result.failure(Exception(response.error?.message ?: "참여 실패"))
             }

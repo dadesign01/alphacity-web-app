@@ -696,7 +696,19 @@ private fun StampProgressSection(stampCount: Int = 0, totalStamps: Int = 10, onS
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "$stampCount / $totalStamps",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                color = Color(0xFF888888),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End,
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Progress bar + character
             BoxWithConstraints(

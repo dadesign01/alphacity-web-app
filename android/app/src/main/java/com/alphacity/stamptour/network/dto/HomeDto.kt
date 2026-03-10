@@ -46,11 +46,22 @@ data class EventItem(
     val startDate: String,
     val endDate: String,
     val reward: String? = null,
+    val winnerCount: Int? = null,
     val participantLimit: Int = 0,
     val participantCount: Int = 0,
     val status: String,
     val program: EventProgram? = null,
     val isParticipated: Boolean? = null,
+    val myRaffleNumber: Int? = null,
+)
+
+@Serializable
+data class EventParticipationResult(
+    val id: Int,
+    val eventId: Int,
+    val userId: Int,
+    val raffleNumber: Int? = null,
+    val joinedAt: String,
 )
 
 @Serializable

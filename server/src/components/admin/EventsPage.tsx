@@ -12,6 +12,7 @@ interface EventItem {
   startDate: string;
   endDate: string;
   reward: string | null;
+  winnerCount: number;
   participantLimit: number;
   status: string;
   program: { name: string };
@@ -21,7 +22,7 @@ interface EventItem {
 const TYPE_MAP: Record<string, string> = { raffle: '추첨', first_come: '선착순' };
 const STATUS_MAP: Record<string, string> = { scheduled: '예정', in_progress: '진행중', ended: '종료' };
 
-const defaultForm = { programId: 0, name: '', description: '', imageUrl: '', type: 'raffle', startDate: '', endDate: '', reward: '', participantLimit: 100, status: 'scheduled' };
+const defaultForm = { programId: 0, name: '', description: '', imageUrl: '', type: 'raffle', startDate: '', endDate: '', reward: '', winnerCount: 0, participantLimit: 100, status: 'scheduled' };
 
 export default function EventsPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -104,6 +105,7 @@ export default function EventsPage() {
       startDate: event.startDate.slice(0, 10),
       endDate: event.endDate.slice(0, 10),
       reward: event.reward || '',
+      winnerCount: event.winnerCount || 0,
       participantLimit: event.participantLimit,
       status: event.status,
     });
@@ -195,7 +197,7 @@ export default function EventsPage() {
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">유형</label>
                 <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
@@ -208,6 +210,11 @@ export default function EventsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">참여 제한</label>
                 <input type="number" value={form.participantLimit} onChange={(e) => setForm({ ...form, participantLimit: Number(e.target.value) })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">당첨자 수</label>
+                <input type="number" value={form.winnerCount} onChange={(e) => setForm({ ...form, winnerCount: Number(e.target.value) })}
+                  placeholder="0" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
               {editingId && (
                 <div>

@@ -66,15 +66,27 @@ struct EventData: Decodable, Identifiable {
     let startDate: String
     let endDate: String
     let reward: String?
+    let winnerCount: Int?
     let participantLimit: Int
     let participantCount: Int?
     let status: String
     let program: EventProgram?
     let isParticipated: Bool?
+    let myRaffleNumber: Int?
 
     struct EventProgram: Decodable {
         let name: String
     }
+}
+
+// MARK: - 이벤트 참여 결과
+
+struct EventParticipationData: Decodable {
+    let id: Int
+    let eventId: Int
+    let userId: Int
+    let raffleNumber: Int?
+    let joinedAt: String
 }
 
 // MARK: - 스탬프

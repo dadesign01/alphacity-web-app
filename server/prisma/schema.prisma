@@ -91,6 +91,7 @@ model Event {
   startDate        DateTime    @map("start_date") @db.Date
   endDate          DateTime    @map("end_date") @db.Date
   reward           String?     @db.VarChar(255)
+  winnerCount      Int         @default(0) @map("winner_count")
   participantLimit Int         @default(0) @map("participant_limit")
   status           EventStatus @default(scheduled)
   createdAt        DateTime    @default(now()) @map("created_at")
@@ -113,10 +114,11 @@ enum EventStatus {
 }
 
 model EventParticipant {
-  id       Int      @id @default(autoincrement())
-  eventId  Int      @map("event_id")
-  userId   Int      @map("user_id")
-  joinedAt DateTime @default(now()) @map("joined_at")
+  id           Int      @id @default(autoincrement())
+  eventId      Int      @map("event_id")
+  userId       Int      @map("user_id")
+  raffleNumber Int?     @map("raffle_number")
+  joinedAt     DateTime @default(now()) @map("joined_at")
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
