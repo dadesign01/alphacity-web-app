@@ -20,6 +20,8 @@ struct ProgramData: Decodable, Identifiable {
     let name: String
     let description: String?
     let category: String?
+    let subcategory: String?
+    let hasCoupon: Bool?
     let imageUrl: String?
     let operatingHours: String?
     let location: String?

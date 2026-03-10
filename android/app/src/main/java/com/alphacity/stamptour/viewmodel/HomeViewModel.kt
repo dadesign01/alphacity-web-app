@@ -37,6 +37,15 @@ class HomeViewModel @Inject constructor(
     private val _userStampCount = MutableStateFlow(0)
     val userStampCount: StateFlow<Int> = _userStampCount
 
+    private val _foodPrograms = MutableStateFlow<List<ProgramItem>>(emptyList())
+    val foodPrograms: StateFlow<List<ProgramItem>> = _foodPrograms
+
+    private val _exhibitionPrograms = MutableStateFlow<List<ProgramItem>>(emptyList())
+    val exhibitionPrograms: StateFlow<List<ProgramItem>> = _exhibitionPrograms
+
+    private val _seminarPrograms = MutableStateFlow<List<ProgramItem>>(emptyList())
+    val seminarPrograms: StateFlow<List<ProgramItem>> = _seminarPrograms
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -71,10 +80,31 @@ class HomeViewModel @Inject constructor(
                     .onFailure { Log.e("HomeViewModel", "스탬프 로드 실패", it) }
             }
 
+            val foodDeferred = async {
+                homeRepository.getProgramsByCategory("food")
+                    .onSuccess { _foodPrograms.value = it.take(4) }
+                    .onFailure { Log.e("HomeViewModel", "맛집 프로그램 로드 실패", it) }
+            }
+
+            val exhibitionDeferred = async {
+                homeRepository.getProgramsByCategory("exhibition")
+                    .onSuccess { _exhibitionPrograms.value = it.take(4) }
+                    .onFailure { Log.e("HomeViewModel", "전시 프로그램 로드 실패", it) }
+            }
+
+            val seminarDeferred = async {
+                homeRepository.getProgramsByCategory("seminar")
+                    .onSuccess { _seminarPrograms.value = it.take(4) }
+                    .onFailure { Log.e("HomeViewModel", "세미나 프로그램 로드 실패", it) }
+            }
+
             bannersDeferred.await()
             programsDeferred.await()
             eventsDeferred.await()
             stampsDeferred.await()
+            foodDeferred.await()
+            exhibitionDeferred.await()
+            seminarDeferred.await()
 
             // 로그인 상태면 유저 프로필도 가져오기
             if (homeRepository.isLoggedIn) {

@@ -8,6 +8,8 @@ interface Program {
   name: string;
   description?: string;
   category: string;
+  subcategory?: string;
+  hasCoupon?: boolean;
   imageUrl?: string;
   operatingHours?: string;
   location?: string;
@@ -40,6 +42,8 @@ interface FormState {
   name: string;
   description: string;
   category: string;
+  subcategory: string;
+  hasCoupon: boolean;
   imageUrl: string;
   operatingHours: string;
   location: string;
@@ -52,6 +56,8 @@ const EMPTY_FORM: FormState = {
   name: '',
   description: '',
   category: 'exhibition',
+  subcategory: '',
+  hasCoupon: false,
   imageUrl: '',
   operatingHours: '',
   location: '',
@@ -91,6 +97,8 @@ export default function ProgramsPage() {
       name: program.name,
       description: program.description || '',
       category: program.category,
+      subcategory: program.subcategory || '',
+      hasCoupon: program.hasCoupon || false,
       imageUrl: program.imageUrl || '',
       operatingHours: program.operatingHours || '',
       location: program.location || '',
@@ -183,6 +191,22 @@ export default function ProgramsPage() {
                   <option value="seminar">세미나</option>
                   <option value="food">맛집</option>
                 </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">소분류</label>
+                <input type="text" value={form.subcategory} onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
+                  placeholder="예: 카페, 베이커리, 레스토랑"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">쿠폰 사용 가능</label>
+                <label className="flex items-center gap-3 h-[42px] cursor-pointer">
+                  <input type="checkbox" checked={form.hasCoupon} onChange={(e) => setForm({ ...form, hasCoupon: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+                  <span className="text-sm text-gray-700">이 행사에서 쿠폰을 제공합니다</span>
+                </label>
               </div>
             </div>
             <div>

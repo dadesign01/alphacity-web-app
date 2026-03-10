@@ -28,6 +28,7 @@ struct MainTabView: View {
     var onNavigateToRegister: () -> Void = {}
     @State private var selectedTab: Tab = .home
     @State private var showProgramList = false
+    @State private var programListCategory: String? = nil
     @State private var showEventHighlight = false
     @State private var showMyCoupons = false
     @State private var selectedProgram: ProgramData? = nil
@@ -46,7 +47,8 @@ struct MainTabView: View {
             )
         } else if showProgramList {
             ProgramListView(
-                onBackTapped: { showProgramList = false },
+                initialCategory: programListCategory,
+                onBackTapped: { showProgramList = false; programListCategory = nil },
                 onProgramTapped: { program in selectedProgram = program }
             )
         } else if showEventHighlight {
@@ -69,6 +71,10 @@ struct MainTabView: View {
                             else { selectedTab = .mypage }
                         },
                         onNavigateToProgramList: { showProgramList = true },
+                        onNavigateToProgramListWithCategory: { category in
+                            programListCategory = category
+                            showProgramList = true
+                        },
                         onNavigateToEventHighlight: { showEventHighlight = true },
                         onNavigateToMap: { selectedTab = .map },
                         onNavigateToStamp: { selectedTab = .stamp },

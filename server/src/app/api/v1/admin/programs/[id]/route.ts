@@ -26,6 +26,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         ...(body.name && { name: body.name }),
         ...(body.description !== undefined && { description: body.description }),
         ...(body.category && { category: body.category }),
+        ...(body.subcategory !== undefined && { subcategory: body.subcategory }),
+        ...(body.hasCoupon !== undefined && { hasCoupon: body.hasCoupon }),
         ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
         ...(body.operatingHours !== undefined && { operatingHours: body.operatingHours }),
         ...(body.location !== undefined && { location: body.location }),

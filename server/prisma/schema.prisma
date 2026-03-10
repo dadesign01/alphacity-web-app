@@ -30,6 +30,8 @@ model Program {
   latitude         Decimal?         @db.Decimal(10, 7)
   longitude        Decimal?         @db.Decimal(10, 7)
   speaker          String?          @db.VarChar(255)
+  subcategory      String?          @db.VarChar(50)
+  hasCoupon        Boolean          @default(false) @map("has_coupon")
   startDate        DateTime         @map("start_date") @db.Date
   endDate          DateTime         @map("end_date") @db.Date
   status           ProgramStatus    @default(scheduled)

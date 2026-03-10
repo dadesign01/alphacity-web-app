@@ -35,13 +35,18 @@ import java.util.Locale
 fun ProgramListScreen(
     onBackClick: () -> Unit = {},
     onProgramClick: (ProgramItem) -> Unit = {},
+    initialCategory: String? = null,
     viewModel: ProgramListViewModel = hiltViewModel(),
 ) {
     val programs by viewModel.programs.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
     LaunchedEffect(Unit) {
-        viewModel.fetchPrograms()
+        if (initialCategory != null) {
+            viewModel.selectCategory(initialCategory)
+        } else {
+            viewModel.fetchPrograms()
+        }
     }
 
     Column(
@@ -219,46 +224,80 @@ private fun ProgramListCard(
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 12.dp),
     ) {
-        // Thumbnail image
-        val imageUrl = program.imageUrl
-        if (!imageUrl.isNullOrBlank()) {
-            val fullUrl = if (imageUrl.startsWith("http")) imageUrl else BuildConfig.SERVER_URL + imageUrl
-            AsyncImage(
-                model = fullUrl,
-                contentDescription = program.name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp)
-                    .clip(RoundedCornerShape(22.dp)),
-                contentScale = ContentScale.Crop,
-            )
-        } else {
-            // Placeholder image
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xFFE8E8E8)),
-                contentAlignment = Alignment.Center,
-            ) {
+        // Thumbnail image with coupon badge
+        Box(modifier = Modifier.fillMaxWidth()) {
+            val imageUrl = program.imageUrl
+            if (!imageUrl.isNullOrBlank()) {
+                val fullUrl = if (imageUrl.startsWith("http")) imageUrl else BuildConfig.SERVER_URL + imageUrl
+                AsyncImage(
+                    model = fullUrl,
+                    contentDescription = program.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                        .clip(RoundedCornerShape(22.dp)),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                // Placeholder image
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(Color(0xFFE8E8E8)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = program.name.take(1),
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 32.sp,
+                        color = Color(0xFFB5B5B5),
+                    )
+                }
+            }
+
+            // Coupon badge overlay
+            if (program.hasCoupon == true) {
                 Text(
-                    text = program.name.take(1),
+                    text = "쿠폰",
                     fontFamily = Pretendard,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 32.sp,
-                    color = Color(0xFFB5B5B5),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 10.sp,
+                    color = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 10.dp, end = 10.dp)
+                        .clip(RoundedCornerShape(100.dp))
+                        .background(Color(0xFFFF6B35))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Status badge + Title row
+        // Subcategory tag + Status badge + Title row
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // Subcategory tag
+            if (!program.subcategory.isNullOrBlank()) {
+                Text(
+                    text = program.subcategory,
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.sp,
+                    color = Color(0xFF555555),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(100.dp))
+                        .background(Color(0xFFF0F0F0))
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                )
+            }
+
             // Status badge
             val (badgeText, badgeBgColor, badgeTextColor) = getStatusBadge(program.status, isSeminar)
             Text(

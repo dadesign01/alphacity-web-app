@@ -48,6 +48,7 @@ fun MainScreen(
 ) {
     var selectedTab by remember { mutableStateOf(BottomTab.HOME) }
     var showProgramList by remember { mutableStateOf(false) }
+    var programListCategory by remember { mutableStateOf<String?>(null) }
     var showEventHighlight by remember { mutableStateOf(false) }
     var showMyCoupons by remember { mutableStateOf(false) }
     var selectedProgram by remember { mutableStateOf<ProgramItem?>(null) }
@@ -79,8 +80,9 @@ fun MainScreen(
 
     if (showProgramList) {
         ProgramListScreen(
-            onBackClick = { showProgramList = false },
+            onBackClick = { showProgramList = false; programListCategory = null },
             onProgramClick = { program -> selectedProgram = program },
+            initialCategory = programListCategory,
         )
         return
     }
@@ -120,6 +122,10 @@ fun MainScreen(
                         else selectedTab = BottomTab.MYPAGE
                     },
                     onNavigateToProgramList = { showProgramList = true },
+                    onNavigateToProgramListWithCategory = { category ->
+                        programListCategory = category
+                        showProgramList = true
+                    },
                     onNavigateToEventHighlight = { showEventHighlight = true },
                     onNavigateToMap = { selectedTab = BottomTab.MAP },
                     onNavigateToStamp = { selectedTab = BottomTab.STAMP },

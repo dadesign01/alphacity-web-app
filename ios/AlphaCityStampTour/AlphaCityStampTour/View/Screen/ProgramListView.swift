@@ -7,6 +7,7 @@ import SwiftUI
 
 struct ProgramListView: View {
     @StateObject private var viewModel = ProgramListViewModel()
+    var initialCategory: String? = nil
     var onBackTapped: (() -> Void)?
     var onProgramTapped: ((ProgramData) -> Void)?
 
@@ -69,7 +70,11 @@ struct ProgramListView: View {
         }
         .background(Color.white)
         .onAppear {
-            viewModel.fetchPrograms()
+            if let category = initialCategory {
+                viewModel.selectCategory(category)
+            } else {
+                viewModel.fetchPrograms()
+            }
         }
     }
 }
@@ -152,32 +157,58 @@ private struct ProgramListCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Thumbnail image
-            if let imageUrl = program.imageUrl, !imageUrl.isEmpty {
-                let fullURL = imageUrl.hasPrefix("http") ? imageUrl : "\(APIClient.serverURL)\(imageUrl)"
-                AsyncImage(url: URL(string: fullURL)) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 130)
-                            .clipped()
-                    default:
-                        placeholderImage
+            // Thumbnail image with coupon badge
+            ZStack(alignment: .topTrailing) {
+                if let imageUrl = program.imageUrl, !imageUrl.isEmpty {
+                    let fullURL = imageUrl.hasPrefix("http") ? imageUrl : "\(APIClient.serverURL)\(imageUrl)"
+                    AsyncImage(url: URL(string: fullURL)) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 130)
+                                .clipped()
+                        default:
+                            placeholderImage
+                        }
                     }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 22))
-            } else {
-                placeholderImage
                     .clipShape(RoundedRectangle(cornerRadius: 22))
+                } else {
+                    placeholderImage
+                        .clipShape(RoundedRectangle(cornerRadius: 22))
+                }
+
+                // Coupon badge overlay
+                if program.hasCoupon == true {
+                    Text("쿠폰")
+                        .font(AppFont.semibold(10))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color(hex: "FF6B35"))
+                        .clipShape(RoundedRectangle(cornerRadius: 100))
+                        .padding(.top, 10)
+                        .padding(.trailing, 10)
+                }
             }
 
             Spacer().frame(height: 12)
 
-            // Status badge + Title
+            // Subcategory tag + Status badge + Title
             HStack(spacing: 8) {
+                // Subcategory tag
+                if let subcategory = program.subcategory, !subcategory.isEmpty {
+                    Text(subcategory)
+                        .font(AppFont.medium(11))
+                        .foregroundColor(Color(hex: "555555"))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(hex: "F0F0F0"))
+                        .clipShape(RoundedRectangle(cornerRadius: 100))
+                }
+
                 let badge = statusBadge
                 Text(badge.text)
                     .font(AppFont.semibold(11))

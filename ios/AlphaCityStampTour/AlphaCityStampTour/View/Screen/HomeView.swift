@@ -6,6 +6,7 @@ struct HomeView: View {
     private let bannerTimer = Timer.publish(every: 4, on: .main, in: .common).autoconnect()
     var onNavigateToMyPage: (() -> Void)?
     var onNavigateToProgramList: (() -> Void)?
+    var onNavigateToProgramListWithCategory: ((String) -> Void)?
     var onNavigateToEventHighlight: (() -> Void)?
     var onNavigateToMap: (() -> Void)?
     var onNavigateToStamp: (() -> Void)?
@@ -37,6 +38,28 @@ struct HomeView: View {
                     ProgramSectionView(
                         programs: viewModel.programs,
                         onSeeAllTapped: { onNavigateToProgramList?() },
+                        onProgramTapped: { program in onProgramClick?(program) }
+                    )
+
+                    // 카테고리별 프로그램
+                    CategorySectionView(
+                        title: "맛집",
+                        programs: viewModel.foodPrograms,
+                        onSeeAllTapped: { onNavigateToProgramListWithCategory?("food") },
+                        onProgramTapped: { program in onProgramClick?(program) }
+                    )
+
+                    CategorySectionView(
+                        title: "전시",
+                        programs: viewModel.exhibitionPrograms,
+                        onSeeAllTapped: { onNavigateToProgramListWithCategory?("exhibition") },
+                        onProgramTapped: { program in onProgramClick?(program) }
+                    )
+
+                    CategorySectionView(
+                        title: "세미나",
+                        programs: viewModel.seminarPrograms,
+                        onSeeAllTapped: { onNavigateToProgramListWithCategory?("seminar") },
                         onProgramTapped: { program in onProgramClick?(program) }
                     )
 
@@ -270,6 +293,86 @@ private struct ProgramCardView: View {
             .padding(.top, 4)
         }
         .frame(width: 168)
+    }
+}
+
+// MARK: - 카테고리별 프로그램
+
+private struct CategorySectionView: View {
+    let title: String
+    let programs: [ProgramData]
+    var onSeeAllTapped: (() -> Void)?
+    var onProgramTapped: ((ProgramData) -> Void)?
+
+    @State private var currentIndex = 0
+
+    var body: some View {
+        if programs.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text(title)
+                        .font(AppFont.semibold(18))
+                        .foregroundColor(Color(hex: "121212"))
+                    Spacer()
+                    Button(action: { onSeeAllTapped?() }) {
+                        Text("보러가기  >")
+                            .font(AppFont.regular(11))
+                            .foregroundColor(Color(hex: "121212"))
+                    }
+                }
+                .padding(.horizontal, 20)
+
+                TabView(selection: $currentIndex) {
+                    ForEach(Array(programs.enumerated()), id: \.element.id) { index, program in
+                        ZStack(alignment: .bottomLeading) {
+                            if let imageUrl = program.imageUrl, !imageUrl.isEmpty {
+                                let fullURL = imageUrl.hasPrefix("http") ? imageUrl : "\(APIClient.serverURL)\(imageUrl)"
+                                AsyncImage(url: URL(string: fullURL)) { phase in
+                                    switch phase {
+                                    case .success(let img):
+                                        img.resizable().scaledToFill()
+                                    default:
+                                        Image("ProgramImg1").resizable().scaledToFill()
+                                    }
+                                }
+                                .frame(height: 180)
+                                .clipped()
+                            } else {
+                                Image("ProgramImg1")
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(height: 180)
+                                    .clipped()
+                            }
+
+                            // Gradient overlay
+                            LinearGradient(
+                                gradient: Gradient(colors: [.clear, .black.opacity(0.6)]),
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                            .frame(height: 60)
+
+                            Text(program.name)
+                                .font(AppFont.semibold(16))
+                                .foregroundColor(.white)
+                                .padding(.leading, 16)
+                                .padding(.bottom, 14)
+                        }
+                        .frame(height: 180)
+                        .clipShape(RoundedRectangle(cornerRadius: 15))
+                        .onTapGesture { onProgramTapped?(program) }
+                        .tag(index)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: 180)
+                .padding(.horizontal, 20)
+            }
+            .padding(.top, 28)
+        }
     }
 }
 
