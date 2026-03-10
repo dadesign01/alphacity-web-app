@@ -16,12 +16,14 @@ import {
   Users,
   Bell,
   Settings as SettingsIcon,
+  Link2,
 } from 'lucide-react';
 
 const menuItems = [
   { path: '/admin', label: '대시보드', icon: LayoutDashboard },
   { path: '/admin/banners', label: '배너 관리', icon: ImageIcon },
   { path: '/admin/programs', label: '행사 관리', icon: Calendar },
+  { path: '/admin/program-mapping', label: '프로그램 연결 설정', icon: Link2 },
   { path: '/admin/events', label: '이벤트 관리', icon: CalendarCheck },
   { path: '/admin/places', label: '지도 / 장소 관리', icon: Map },
   { path: '/admin/missions', label: '미션 관리', icon: Target },

@@ -134,7 +134,8 @@ private struct StampHeaderView: View {
                             .stroke(Color(hex: "EBEBEB"), lineWidth: 1)
                     )
             }
-            .padding(.horizontal, 15)
+            .padding(.leading, 15)
+            .padding(.trailing, 20)
             .padding(.vertical, 12)
 
             Divider()

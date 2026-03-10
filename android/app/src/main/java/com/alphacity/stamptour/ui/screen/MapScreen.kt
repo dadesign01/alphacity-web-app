@@ -192,7 +192,7 @@ private fun MapHeader(onProfileClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .padding(horizontal = 15.dp, vertical = 12.dp),
+            .padding(start = 15.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(

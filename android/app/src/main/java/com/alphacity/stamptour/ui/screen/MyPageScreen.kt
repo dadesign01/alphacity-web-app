@@ -39,6 +39,12 @@ fun MyPageScreen(
     var showMyCoupons by remember { mutableStateOf(false) }
     var showStampExchange by remember { mutableStateOf(false) }
 
+    val userProfile by viewModel.userProfile.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.fetchProfile()
+    }
+
     if (showActivityHistory) {
         ActivityHistoryScreen(onBackClick = { showActivityHistory = false })
         return
@@ -72,12 +78,6 @@ fun MyPageScreen(
     if (showStampExchange) {
         StampExchangeScreen(onBackClick = { showStampExchange = false })
         return
-    }
-
-    val userProfile by viewModel.userProfile.collectAsState()
-
-    LaunchedEffect(Unit) {
-        viewModel.fetchProfile()
     }
 
     val nickname = userProfile?.nickname ?: "게스트"
