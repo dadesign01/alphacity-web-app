@@ -35,12 +35,14 @@ model Program {
   startDate        DateTime         @map("start_date") @db.Date
   endDate          DateTime         @map("end_date") @db.Date
   status           ProgramStatus    @default(scheduled)
+  phone            String?          @db.VarChar(20)
   autoNotification Boolean          @default(true) @map("auto_notification")
   collectStats     Boolean          @default(true) @map("collect_stats")
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
 
-  events Event[]
+  events   Event[]
+  missions Mission[]
 
   @@map("programs")
 }
@@ -154,12 +156,14 @@ model Mission {
   name        String      @db.VarChar(255)
   type        MissionType
   placeId     Int?        @map("place_id")
+  programId   Int?        @map("program_id")
   question    String?     @db.Text
   answer      String?     @db.VarChar(500)
   stayMinutes Int?        @map("stay_minutes")
   createdAt   DateTime    @default(now()) @map("created_at")
 
   place       Place?              @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  program     Program?            @relation(fields: [programId], references: [id], onDelete: SetNull)
   completions MissionCompletion[]
 
   @@map("missions")

@@ -26,6 +26,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         ...(body.name && { name: body.name }),
         ...(body.type && { type: body.type }),
         ...(body.placeId !== undefined && { placeId: body.placeId }),
+        ...(body.programId !== undefined && { programId: body.programId }),
         ...(body.question !== undefined && { question: body.question }),
         ...(body.answer !== undefined && { answer: body.answer }),
         ...(body.stayMinutes !== undefined && { stayMinutes: body.stayMinutes }),

@@ -4,11 +4,11 @@
 //
 
 import SwiftUI
-import MapKit
 
 struct ProgramDetailView: View {
     let program: ProgramData
     var onBackTapped: (() -> Void)?
+    var onNavigateToMap: ((Double, Double) -> Void)?
     @StateObject private var viewModel = ProgramDetailViewModel()
     @State private var showShareSheet = false
 
@@ -70,6 +70,14 @@ struct ProgramDetailView: View {
                             )
                         }
 
+                        if let phone = program.phone, !phone.isEmpty {
+                            DetailInfoRow(
+                                systemIcon: "phone.fill",
+                                assetIcon: nil,
+                                text: phone
+                            )
+                        }
+
                         if let hours = program.operatingHours, !hours.isEmpty {
                             DetailInfoRow(
                                 systemIcon: "clock",
@@ -103,11 +111,31 @@ struct ProgramDetailView: View {
 
                     // "소개" section
                     if let description = program.description, !description.isEmpty {
-                        Text("소개")
-                            .font(AppFont.semibold(14))
-                            .foregroundColor(Color(hex: "121212"))
-                            .padding(.horizontal, 20)
-                            .padding(.top, 14)
+                        HStack(spacing: 8) {
+                            Text("소개")
+                                .font(AppFont.semibold(14))
+                                .foregroundColor(Color(hex: "121212"))
+
+                            if !isFood {
+                                Button(action: {
+                                    if viewModel.isSpeaking {
+                                        viewModel.stopSpeaking()
+                                    } else if let desc = program.description {
+                                        viewModel.speakDescription(desc)
+                                    }
+                                }) {
+                                    Image(systemName: viewModel.isSpeaking ? "stop.fill" : "speaker.wave.2.fill")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 16, height: 16)
+                                        .foregroundColor(AppColor.primary)
+                                }
+                            }
+
+                            Spacer()
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
 
                         Text(description)
                             .font(AppFont.regular(12))
@@ -142,6 +170,48 @@ struct ProgramDetailView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 3)
 
+                    // 참여 가능 미션 section (exhibition/seminar only)
+                    if !isFood {
+                        Divider()
+                            .background(Color(hex: "B5B5B5"))
+                            .padding(.horizontal, 20)
+                            .padding(.top, 14)
+
+                        Text("참여 가능 미션")
+                            .font(AppFont.semibold(14))
+                            .foregroundColor(Color(hex: "121212"))
+                            .padding(.horizontal, 20)
+                            .padding(.top, 14)
+
+                        if viewModel.isMissionsLoading {
+                            HStack {
+                                Spacer()
+                                ProgressView()
+                                Spacer()
+                            }
+                            .padding(20)
+                        } else {
+                            let available = viewModel.availableMissions(for: program.category ?? "")
+                            let disabled = viewModel.disabledMissions(for: program.category ?? "")
+
+                            ForEach(available) { mission in
+                                MissionCardView(mission: mission, enabled: true)
+                            }
+
+                            if !disabled.isEmpty {
+                                Text(viewModel.disabledMessage(for: program.category ?? ""))
+                                    .font(AppFont.regular(11))
+                                    .foregroundColor(Color(hex: "DC2626"))
+                                    .padding(.horizontal, 20)
+                                    .padding(.top, 8)
+
+                                ForEach(disabled) { mission in
+                                    MissionCardView(mission: mission, enabled: false)
+                                }
+                            }
+                        }
+                    }
+
                     Spacer().frame(height: 30)
 
                     // Message banner
@@ -157,7 +227,10 @@ struct ProgramDetailView: View {
                     if isFood {
                         // Food: "지도에서 보기" + Share button
                         HStack(spacing: 11) {
-                            Button(action: { openInMaps() }) {
+                            Button(action: {
+                                guard let lat = program.latitude, let lng = program.longitude else { return }
+                                onNavigateToMap?(lat, lng)
+                            }) {
                                 HStack(spacing: 8) {
                                     Image(systemName: "map")
                                         .resizable()
@@ -194,9 +267,36 @@ struct ProgramDetailView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 40)
                     } else {
-                        // Program/Seminar: "참여하기" button (right-aligned, compact)
-                        HStack {
-                            Spacer()
+                        // Program/Seminar: "지도에서 보기" + "참여하기"
+                        HStack(spacing: 11) {
+                            // "지도에서 보기" button
+                            Button(action: {
+                                guard let lat = program.latitude, let lng = program.longitude else { return }
+                                onNavigateToMap?(lat, lng)
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "map")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 20, height: 20)
+                                    Text("지도에서 보기")
+                                        .font(AppFont.medium(16))
+                                        .tracking(-0.32)
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color(hex: "6092FF"), Color(hex: "2563EB"), Color(hex: "1551D3")],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            }
+
+                            // "참여하기" button
                             Button(action: { viewModel.participate(program: program) }) {
                                 Group {
                                     if viewModel.isLoading {
@@ -228,21 +328,14 @@ struct ProgramDetailView: View {
         .background(Color.white)
         .onAppear {
             viewModel.checkParticipation(program: program)
+            viewModel.fetchMissions(programId: program.id)
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: [shareText])
         }
     }
 
-    // MARK: - Actions
-
-    private func openInMaps() {
-        guard let location = program.location, !location.isEmpty else { return }
-        let encoded = location.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? location
-        if let url = URL(string: "maps://?q=\(encoded)") {
-            UIApplication.shared.open(url)
-        }
-    }
+    // MARK: - Helpers
 
     private var shareText: String {
         "\(program.name) - 알파시티 스탬프 투어\nalphacity://program/\(program.id)"
@@ -406,6 +499,77 @@ struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
+// MARK: - Mission Card
+
+private struct MissionCardView: View {
+    let mission: MissionData
+    let enabled: Bool
+
+    private var typeLabel: String {
+        switch mission.type {
+        case "quiz": return "퀴즈"
+        case "location_auth": return "위치 인증"
+        case "stay_time": return "체류시간"
+        default: return mission.type
+        }
+    }
+
+    private var typeColor: Color {
+        switch mission.type {
+        case "quiz": return Color(hex: "2563EB")
+        case "location_auth": return Color(hex: "16A34A")
+        case "stay_time": return Color(hex: "D97706")
+        default: return Color(hex: "6B7280")
+        }
+    }
+
+    private var detail: String? {
+        switch mission.type {
+        case "quiz": return mission.question
+        case "location_auth": return mission.place?.name
+        case "stay_time":
+            let place = mission.place?.name ?? ""
+            let mins = mission.stayMinutes ?? 0
+            return "\(place) \(mins)분"
+        default: return nil
+        }
+    }
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(mission.name)
+                        .font(AppFont.medium(13))
+                        .foregroundColor(Color(hex: "121212"))
+
+                    Text(typeLabel)
+                        .font(AppFont.semibold(10))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(enabled ? typeColor : Color(hex: "AAAAAA"))
+                        .clipShape(RoundedRectangle(cornerRadius: 100))
+                }
+
+                if let detail = detail, !detail.isEmpty {
+                    Text(detail)
+                        .font(AppFont.regular(11))
+                        .foregroundColor(Color(hex: "888888"))
+                        .lineLimit(1)
+                }
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(enabled ? Color(hex: "F8F9FA") : Color(hex: "F0F0F0"))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 20)
+        .padding(.vertical, 2)
+        .opacity(enabled ? 1.0 : 0.5)
+    }
+}
+
 #Preview {
     ProgramDetailView(
         program: ProgramData(
@@ -413,11 +577,14 @@ struct ShareSheet: UIViewControllerRepresentable {
             name: "현대 AI 모빌리티 혁신 전시 2026",
             description: "2026, 새로워진 현대의 AI 기술로\n자율주행부터 스마트 이동 기술까지, 미래 모빌리티를 경험하세요.",
             category: "exhibition",
+            subcategory: nil,
+            hasCoupon: nil,
             imageUrl: nil,
             operatingHours: "10:00 - 18:00",
             location: "알파시티 2로 33 태왕알파시티 3층 AI 체험존",
             latitude: 35.842,
             longitude: 128.690,
+            phone: nil,
             speaker: nil,
             startDate: "2026-01-15",
             endDate: "2026-01-31",

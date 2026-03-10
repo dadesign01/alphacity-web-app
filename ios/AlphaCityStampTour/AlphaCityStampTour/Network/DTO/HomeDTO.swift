@@ -27,11 +27,32 @@ struct ProgramData: Decodable, Identifiable {
     let location: String?
     let latitude: Double?
     let longitude: Double?
+    let phone: String?
     let speaker: String?
     let startDate: String
     let endDate: String
     let status: String
     let events: [EventData]?
+}
+
+// MARK: - 미션
+
+struct MissionData: Decodable, Identifiable {
+    let id: Int
+    let name: String
+    let type: String
+    let placeId: Int?
+    let programId: Int?
+    let question: String?
+    let answer: String?
+    let stayMinutes: Int?
+    let place: MissionPlace?
+
+    struct MissionPlace: Decodable {
+        let name: String
+        let latitude: Double?
+        let longitude: Double?
+    }
 }
 
 // MARK: - 이벤트

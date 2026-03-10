@@ -13,6 +13,9 @@ interface Program {
   imageUrl?: string;
   operatingHours?: string;
   location?: string;
+  phone?: string;
+  latitude?: number;
+  longitude?: number;
   speaker?: string;
   startDate: string;
   endDate: string;
@@ -47,6 +50,9 @@ interface FormState {
   imageUrl: string;
   operatingHours: string;
   location: string;
+  phone: string;
+  latitude: string;
+  longitude: string;
   speaker: string;
   startDate: string;
   endDate: string;
@@ -61,6 +67,9 @@ const EMPTY_FORM: FormState = {
   imageUrl: '',
   operatingHours: '',
   location: '',
+  phone: '',
+  latitude: '',
+  longitude: '',
   speaker: '',
   startDate: '',
   endDate: '',
@@ -102,6 +111,9 @@ export default function ProgramsPage() {
       imageUrl: program.imageUrl || '',
       operatingHours: program.operatingHours || '',
       location: program.location || '',
+      phone: program.phone || '',
+      latitude: program.latitude?.toString() || '',
+      longitude: program.longitude?.toString() || '',
       speaker: program.speaker || '',
       startDate: program.startDate.split('T')[0],
       endDate: program.endDate.split('T')[0],
@@ -118,7 +130,11 @@ export default function ProgramsPage() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          latitude: form.latitude ? parseFloat(form.latitude) : undefined,
+          longitude: form.longitude ? parseFloat(form.longitude) : undefined,
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -226,6 +242,26 @@ export default function ProgramsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">장소</label>
                 <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
                   placeholder="예: 알파시티 2로 33 태왕알파시티 3층"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">연락처</label>
+                <input type="text" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="예: 051-123-4567"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">위도</label>
+                <input type="number" step="0.0000001" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+                  placeholder="예: 35.8420000"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">경도</label>
+                <input type="number" step="0.0000001" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+                  placeholder="예: 128.6900000"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
             </div>

@@ -10,6 +10,7 @@ import com.alphacity.stamptour.network.dto.SendCodeRequest
 import com.alphacity.stamptour.network.dto.SocialLoginRequest
 import com.alphacity.stamptour.network.dto.BannerItem
 import com.alphacity.stamptour.network.dto.EventItem
+import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StampItem
 import com.alphacity.stamptour.network.dto.StoreData
@@ -78,6 +79,10 @@ interface ApiService {
     // 프로그램 상세
     @GET("programs/{id}")
     suspend fun getProgramById(@Path("id") programId: Int): ApiResponse<ProgramItem>
+
+    // 프로그램 미션
+    @GET("programs/{id}/missions")
+    suspend fun getProgramMissions(@Path("id") programId: Int): ApiResponse<List<MissionItem>>
 
     // 상점 등록
     @POST("stores/register")

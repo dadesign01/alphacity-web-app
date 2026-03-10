@@ -46,4 +46,8 @@ final class HomeRepository {
     func fetchProgramById(_ id: Int) async throws -> ProgramData {
         return try await client.request(path: "programs/\(id)", authenticated: true)
     }
+
+    func fetchProgramMissions(programId: Int) async throws -> [MissionData] {
+        return try await client.request(path: "programs/\(programId)/missions")
+    }
 }

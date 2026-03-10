@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, category, subcategory, hasCoupon, imageUrl, operatingHours, location, speaker, startDate, endDate, status } = body;
+    const { name, description, category, subcategory, hasCoupon, imageUrl, operatingHours, location, speaker, phone, latitude, longitude, startDate, endDate, status } = body;
 
     if (!name || !startDate || !endDate) {
       return errorResponse('INVALID_INPUT', '행사명, 시작일, 종료일은 필수입니다');
@@ -48,6 +48,9 @@ export async function POST(request: NextRequest) {
         operatingHours,
         location,
         speaker,
+        phone,
+        ...(latitude !== undefined && { latitude }),
+        ...(longitude !== undefined && { longitude }),
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         status: status || 'scheduled',

@@ -125,6 +125,9 @@ fun MapScreen(
     onProgramClick: (ProgramItem) -> Unit = {},
     onNavigateToMyPage: () -> Unit = {},
     viewModel: MapViewModel = hiltViewModel(),
+    focusLat: Double? = null,
+    focusLng: Double? = null,
+    onFocusConsumed: () -> Unit = {},
 ) {
     val filteredPrograms by viewModel.filteredPrograms.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
@@ -144,6 +147,9 @@ fun MapScreen(
             KakaoMapContent(
                 programs = filteredPrograms,
                 onProgramClick = onProgramClick,
+                focusLat = focusLat,
+                focusLng = focusLng,
+                onFocusConsumed = onFocusConsumed,
             )
 
             // Category filter tabs
@@ -225,6 +231,9 @@ private fun MapHeader(onProfileClick: () -> Unit) {
 private fun KakaoMapContent(
     programs: List<ProgramItem>,
     onProgramClick: (ProgramItem) -> Unit,
+    focusLat: Double? = null,
+    focusLng: Double? = null,
+    onFocusConsumed: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -325,6 +334,19 @@ private fun KakaoMapContent(
             currentClusters.addAll(
                 addClusteredMarkers(map, programs, currentZoomLevel, context)
             )
+        }
+    }
+
+    LaunchedEffect(focusLat, focusLng) {
+        if (focusLat != null && focusLng != null) {
+            kakaoMapRef?.let { map ->
+                val pos = LatLng.from(focusLat, focusLng)
+                map.moveCamera(
+                    CameraUpdateFactory.newCenterPosition(pos, 17),
+                    CameraAnimation.from(500),
+                )
+            }
+            onFocusConsumed()
         }
     }
 }

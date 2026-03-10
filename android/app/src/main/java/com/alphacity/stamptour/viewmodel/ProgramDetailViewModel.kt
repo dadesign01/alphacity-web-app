@@ -1,14 +1,18 @@
 package com.alphacity.stamptour.viewmodel
 
+import android.content.Context
+import android.speech.tts.TextToSpeech
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.alphacity.stamptour.network.TokenManager
+import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.repository.HomeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -25,6 +29,17 @@ class ProgramDetailViewModel @Inject constructor(
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message
+
+    private val _missions = MutableStateFlow<List<MissionItem>>(emptyList())
+    val missions: StateFlow<List<MissionItem>> = _missions
+
+    private val _isMissionsLoading = MutableStateFlow(false)
+    val isMissionsLoading: StateFlow<Boolean> = _isMissionsLoading
+
+    private val _isSpeaking = MutableStateFlow(false)
+    val isSpeaking: StateFlow<Boolean> = _isSpeaking
+
+    private var tts: TextToSpeech? = null
 
     fun checkParticipation(program: ProgramItem) {
         _isParticipated.value = program.events?.any { it.isParticipated == true } == true
@@ -73,5 +88,69 @@ class ProgramDetailViewModel @Inject constructor(
 
     fun clearMessage() {
         _message.value = null
+    }
+
+    fun fetchMissions(programId: Int) {
+        _isMissionsLoading.value = true
+        viewModelScope.launch {
+            homeRepository.getProgramMissions(programId)
+                .onSuccess { _missions.value = it }
+                .onFailure { _missions.value = emptyList() }
+            _isMissionsLoading.value = false
+        }
+    }
+
+    fun getAvailableMissions(category: String?): List<MissionItem> {
+        return if (category == "seminar") {
+            _missions.value.filter { it.type == "stay_time" }
+        } else {
+            _missions.value.filter { it.type == "quiz" || it.type == "location_auth" }
+        }
+    }
+
+    fun getDisabledMissions(category: String?): List<MissionItem> {
+        return if (category == "seminar") {
+            _missions.value.filter { it.type != "stay_time" }
+        } else {
+            _missions.value.filter { it.type != "quiz" && it.type != "location_auth" }
+        }
+    }
+
+    fun getDisabledMessage(category: String?): String {
+        return if (category == "seminar") {
+            "해당 프로그램에서는 체류시간 미션만 참여 가능합니다"
+        } else {
+            "해당 프로그램에서는 다른 미션을 선택해주세요"
+        }
+    }
+
+    fun initTts(context: Context) {
+        if (tts != null) return
+        tts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                tts?.language = Locale.KOREAN
+            }
+        }
+    }
+
+    fun speakDescription(text: String) {
+        if (_isSpeaking.value) {
+            stopSpeaking()
+        } else {
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "program_description")
+            _isSpeaking.value = true
+        }
+    }
+
+    fun stopSpeaking() {
+        tts?.stop()
+        _isSpeaking.value = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
     }
 }

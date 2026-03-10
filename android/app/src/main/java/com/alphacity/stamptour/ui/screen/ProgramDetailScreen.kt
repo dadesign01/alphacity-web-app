@@ -16,16 +16,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -42,6 +46,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.alphacity.stamptour.BuildConfig
 import com.alphacity.stamptour.R
+import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
@@ -65,6 +70,7 @@ private val GradientGray = Brush.linearGradient(
 fun ProgramDetailScreen(
     program: ProgramItem,
     onBackClick: () -> Unit = {},
+    onNavigateToMap: (lat: Double, lng: Double) -> Unit = { _, _ -> },
     viewModel: ProgramDetailViewModel = hiltViewModel(),
 ) {
     val isFood = program.category == "food"
@@ -75,6 +81,11 @@ fun ProgramDetailScreen(
 
     LaunchedEffect(program) {
         viewModel.checkParticipation(program)
+        viewModel.fetchMissions(program.id)
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.initTts(context)
     }
 
     Column(
@@ -184,6 +195,12 @@ fun ProgramDetailScreen(
                         text = program.speaker,
                     )
                 }
+                if (!program.phone.isNullOrBlank()) {
+                    DetailInfoRow(
+                        icon = Icons.Filled.Phone,
+                        text = program.phone,
+                    )
+                }
                 DetailInfoRow(
                     icon = Icons.Outlined.CalendarMonth,
                     text = formatDetailDate(program.startDate, program.endDate),
@@ -199,14 +216,33 @@ fun ProgramDetailScreen(
 
             // "소개" section
             if (!program.description.isNullOrBlank()) {
-                Text(
-                    text = "소개",
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    color = Color(0xFF121212),
+                Row(
                     modifier = Modifier.padding(horizontal = 20.dp),
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "소개",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        color = Color(0xFF121212),
+                    )
+                    if (!isFood) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        val isSpeaking by viewModel.isSpeaking.collectAsState()
+                        Icon(
+                            imageVector = if (isSpeaking) Icons.Filled.Stop else Icons.Outlined.VolumeUp,
+                            contentDescription = if (isSpeaking) "TTS 중지" else "TTS 재생",
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clickable {
+                                    if (isSpeaking) viewModel.stopSpeaking()
+                                    else program.description?.let { viewModel.speakDescription(it) }
+                                },
+                            tint = Primary,
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = program.description,
@@ -254,6 +290,59 @@ fun ProgramDetailScreen(
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
 
+            // "참여 가능 미션" section (exhibition/seminar only)
+            if (!isFood) {
+                Divider(
+                    color = Color(0xFFB5B5B5),
+                    thickness = 0.5.dp,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                )
+
+                Text(
+                    text = "참여 가능 미션",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = Color(0xFF121212),
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                val missions by viewModel.missions.collectAsState()
+                val isMissionsLoading by viewModel.isMissionsLoading.collectAsState()
+
+                if (isMissionsLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Primary, strokeWidth = 2.dp)
+                    }
+                } else {
+                    val available = viewModel.getAvailableMissions(program.category)
+                    val disabled = viewModel.getDisabledMissions(program.category)
+
+                    available.forEach { mission ->
+                        MissionCard(mission = mission, enabled = true)
+                    }
+
+                    if (disabled.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = viewModel.getDisabledMessage(program.category),
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 11.sp,
+                            color = Color(0xFFDC2626),
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                        )
+                        disabled.forEach { mission ->
+                            MissionCard(mission = mission, enabled = false)
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(30.dp))
 
             // Message banner
@@ -287,10 +376,9 @@ fun ProgramDetailScreen(
                             .clip(RoundedCornerShape(8.dp))
                             .background(GradientBlue)
                             .clickable {
-                                // Open in Google Maps
-                                val location = program.location ?: return@clickable
-                                val uri = Uri.parse("geo:0,0?q=${Uri.encode(location)}")
-                                context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                                val lat = program.latitude ?: return@clickable
+                                val lng = program.longitude ?: return@clickable
+                                onNavigateToMap(lat, lng)
                             },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -339,14 +427,49 @@ fun ProgramDetailScreen(
                     }
                 }
             } else {
-                // Program/Seminar: "참여하기" (right-aligned, compact)
+                // Program/Seminar: "지도에서 보기" + "참여하기"
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
                         .padding(bottom = 40.dp),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.spacedBy(11.dp),
                 ) {
+                    // "지도에서 보기" button
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(GradientBlue)
+                            .clickable {
+                                val lat = program.latitude ?: return@clickable
+                                val lng = program.longitude ?: return@clickable
+                                onNavigateToMap(lat, lng)
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Map,
+                                contentDescription = "지도",
+                                modifier = Modifier.size(20.dp),
+                                tint = Color.White,
+                            )
+                            Text(
+                                text = "지도에서 보기",
+                                fontFamily = Pretendard,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 16.sp,
+                                color = Color.White,
+                            )
+                        }
+                    }
+
+                    // "참여하기" button
                     Box(
                         modifier = Modifier
                             .width(101.dp)
@@ -494,5 +617,73 @@ private fun formatDetailDate(startDate: String, endDate: String): String {
         "${start?.let { display.format(it) } ?: startDate} ~ ${end?.let { display.format(it) } ?: endDate}"
     } catch (_: Exception) {
         "${startDate.take(10)} ~ ${endDate.take(10)}"
+    }
+}
+
+// MARK: - Mission Card
+
+@Composable
+private fun MissionCard(mission: MissionItem, enabled: Boolean) {
+    val typeLabel = when (mission.type) {
+        "quiz" -> "퀴즈"
+        "location_auth" -> "위치 인증"
+        "stay_time" -> "체류시간"
+        else -> mission.type
+    }
+    val typeColor = when (mission.type) {
+        "quiz" -> Color(0xFF2563EB)
+        "location_auth" -> Color(0xFF16A34A)
+        "stay_time" -> Color(0xFFD97706)
+        else -> Color(0xFF6B7280)
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (enabled) Color(0xFFF8F9FA) else Color(0xFFF0F0F0))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f).then(if (!enabled) Modifier.alpha(0.5f) else Modifier)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = mission.name,
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp,
+                    color = Color(0xFF121212),
+                )
+                Text(
+                    text = typeLabel,
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 10.sp,
+                    color = Color.White,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(100.dp))
+                        .background(if (enabled) typeColor else Color(0xFFAAAAAA))
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                )
+            }
+            val detail = when (mission.type) {
+                "quiz" -> mission.question
+                "location_auth" -> mission.place?.name
+                "stay_time" -> "${mission.place?.name ?: ""} ${mission.stayMinutes ?: 0}분"
+                else -> null
+            }
+            if (!detail.isNullOrBlank()) {
+                Text(
+                    text = detail,
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 11.sp,
+                    color = Color(0xFF888888),
+                    modifier = Modifier.padding(top = 3.dp),
+                    maxLines = 1,
+                )
+            }
+        }
     }
 }

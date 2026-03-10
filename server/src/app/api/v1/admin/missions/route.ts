@@ -7,6 +7,7 @@ export async function GET() {
     const missions = await prisma.mission.findMany({
       include: {
         place: { select: { name: true } },
+        program: { select: { id: true, name: true } },
         _count: { select: { completions: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -20,14 +21,14 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, type, placeId, question, answer, stayMinutes } = body;
+    const { name, type, placeId, programId, question, answer, stayMinutes } = body;
 
     if (!name || !type) {
       return errorResponse('INVALID_INPUT', '미션명과 유형은 필수입니다');
     }
 
     const mission = await prisma.mission.create({
-      data: { name, type, placeId, question, answer, stayMinutes },
+      data: { name, type, placeId, programId, question, answer, stayMinutes },
     });
 
     return successResponse(mission, '미션이 등록되었습니다');

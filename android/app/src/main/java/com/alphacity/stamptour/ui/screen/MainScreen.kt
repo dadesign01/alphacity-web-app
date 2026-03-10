@@ -53,6 +53,8 @@ fun MainScreen(
     var showMyCoupons by remember { mutableStateOf(false) }
     var selectedProgram by remember { mutableStateOf<ProgramItem?>(null) }
     var showGuestDialog by remember { mutableStateOf(false) }
+    var mapFocusLat by remember { mutableStateOf<Double?>(null) }
+    var mapFocusLng by remember { mutableStateOf<Double?>(null) }
 
     val isGuest = !tokenManager.isLoggedIn
     val deepLinkProgram by deepLinkViewModel.program.collectAsState()
@@ -74,6 +76,12 @@ fun MainScreen(
         ProgramDetailScreen(
             program = program,
             onBackClick = { selectedProgram = null },
+            onNavigateToMap = { lat, lng ->
+                selectedProgram = null
+                mapFocusLat = lat
+                mapFocusLng = lng
+                selectedTab = BottomTab.MAP
+            },
         )
         return
     }
@@ -140,6 +148,9 @@ fun MainScreen(
                         if (isGuest) showGuestDialog = true
                         else selectedTab = BottomTab.MYPAGE
                     },
+                    focusLat = mapFocusLat,
+                    focusLng = mapFocusLng,
+                    onFocusConsumed = { mapFocusLat = null; mapFocusLng = null },
                 )
                 BottomTab.STAMP -> StampScreen()
                 BottomTab.MYPAGE -> MyPageScreen(onLogout = onLogout)

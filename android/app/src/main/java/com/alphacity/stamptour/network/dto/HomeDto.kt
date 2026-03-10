@@ -30,6 +30,7 @@ data class ProgramItem(
     val startDate: String,
     val endDate: String,
     val status: String,
+    val phone: String? = null,
     val events: List<EventItem>? = null,
 )
 
@@ -75,6 +76,28 @@ data class UserStampItem(
     val id: Int,
     val stampId: Int,
     val collectedAt: String? = null,
+)
+
+// === 미션 ===
+
+@Serializable
+data class MissionItem(
+    val id: Int,
+    val name: String,
+    val type: String,
+    val placeId: Int? = null,
+    val programId: Int? = null,
+    val question: String? = null,
+    val answer: String? = null,
+    val stayMinutes: Int? = null,
+    val place: MissionPlace? = null,
+)
+
+@Serializable
+data class MissionPlace(
+    val name: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )
 
 // === 유저 프로필 ===

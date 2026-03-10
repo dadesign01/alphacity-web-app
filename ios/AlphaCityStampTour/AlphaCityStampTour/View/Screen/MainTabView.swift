@@ -33,6 +33,8 @@ struct MainTabView: View {
     @State private var showMyCoupons = false
     @State private var selectedProgram: ProgramData? = nil
     @State private var showGuestDialog = false
+    @State private var mapFocusLat: Double? = nil
+    @State private var mapFocusLng: Double? = nil
 
     private var isGuest: Bool { !TokenManager.shared.isLoggedIn }
 
@@ -43,6 +45,12 @@ struct MainTabView: View {
                 onBackTapped: {
                     selectedProgram = nil
                     deepLinkProgramId = nil
+                },
+                onNavigateToMap: { lat, lng in
+                    selectedProgram = nil
+                    mapFocusLat = lat
+                    mapFocusLng = lng
+                    selectedTab = .map
                 }
             )
         } else if showProgramList {
@@ -86,7 +94,9 @@ struct MainTabView: View {
                 case .map:
                     MapContentView(
                         onProgramTapped: { program in selectedProgram = program },
-                        onProfileTap: { selectedTab = .mypage }
+                        onProfileTap: { selectedTab = .mypage },
+                        focusLat: $mapFocusLat,
+                        focusLng: $mapFocusLng
                     )
                 case .stamp:
                     StampView()

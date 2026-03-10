@@ -69,6 +69,8 @@ struct MapContentView: View {
     @StateObject private var viewModel = MapViewModel()
     var onProgramTapped: ((ProgramData) -> Void)? = nil
     var onProfileTap: (() -> Void)? = nil
+    @Binding var focusLat: Double?
+    @Binding var focusLng: Double?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -86,7 +88,9 @@ struct MapContentView: View {
                         if let program = viewModel.filteredPrograms.first(where: { $0.id == programId }) {
                             onProgramTapped?(program)
                         }
-                    }
+                    },
+                    focusLat: $focusLat,
+                    focusLng: $focusLng
                 )
 
                 // Category filter tabs
@@ -132,6 +136,8 @@ struct MapContentView: View {
 struct KakaoMapRepresentable: UIViewRepresentable {
     let programs: [ProgramData]
     var onMarkerTapped: ((Int) -> Void)?
+    @Binding var focusLat: Double?
+    @Binding var focusLng: Double?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(programs: programs, onMarkerTapped: onMarkerTapped)
@@ -147,6 +153,14 @@ struct KakaoMapRepresentable: UIViewRepresentable {
         context.coordinator.programs = programs
         context.coordinator.onMarkerTapped = onMarkerTapped
         context.coordinator.updateMarkers()
+
+        if let lat = focusLat, let lng = focusLng {
+            context.coordinator.moveCameraTo(lat: lat, lng: lng)
+            DispatchQueue.main.async {
+                focusLat = nil
+                focusLng = nil
+            }
+        }
     }
 
     // MARK: - MapWrapperView
@@ -280,6 +294,13 @@ struct KakaoMapRepresentable: UIViewRepresentable {
 
         func terrainDidTapped(kakaoMap: KakaoMap, position: MapPoint) {
             // 빈 영역 탭 - 무시
+        }
+
+        func moveCameraTo(lat: Double, lng: Double) {
+            guard let map = kakaoMap else { return }
+            let pos = MapPoint(longitude: lng, latitude: lat)
+            let cameraUpdate = CameraUpdate.make(target: pos, zoomLevel: 17, mapView: map)
+            map.moveCamera(cameraUpdate, callback: nil)
         }
 
         func updateMarkers() {
