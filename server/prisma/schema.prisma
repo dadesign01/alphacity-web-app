@@ -43,6 +43,8 @@ model Program {
 
   events   Event[]
   missions Mission[]
+  stamps   Stamp[]
+  coupons  Coupon[]
 
   @@map("programs")
 }
@@ -141,6 +143,7 @@ model Place {
   createdAt   DateTime      @default(now()) @map("created_at")
 
   missions Mission[]
+  stamps   Stamp[]
 
   @@map("places")
 }
@@ -196,8 +199,12 @@ model Stamp {
   conditionType   StampCondition @map("condition_type")
   conditionDetail String?        @map("condition_detail") @db.Text
   imageUrl        String?        @map("image_url") @db.VarChar(500)
+  programId       Int?           @map("program_id")
+  placeId         Int?           @map("place_id")
   createdAt       DateTime       @default(now()) @map("created_at")
 
+  program    Program?    @relation(fields: [programId], references: [id], onDelete: SetNull)
+  place      Place?      @relation(fields: [placeId], references: [id], onDelete: SetNull)
   userStamps UserStamp[]
 
   @@map("stamps")
@@ -231,8 +238,10 @@ model Coupon {
   requiredStamps Int      @default(0) @map("required_stamps")
   validUntil     DateTime @map("valid_until") @db.Date
   imageUrl       String?  @map("image_url") @db.VarChar(500)
+  programId      Int?     @map("program_id")
   createdAt      DateTime @default(now()) @map("created_at")
 
+  program     Program?     @relation(fields: [programId], references: [id], onDelete: SetNull)
   userCoupons UserCoupon[]
 
   @@map("coupons")

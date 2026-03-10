@@ -1,37 +1,77 @@
 'use client';
 
-import { Plus, Edit, Trash2, X, Save } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Plus, Upload, Edit, Trash2, X, Save } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface StampItem {
   id: number;
   name: string;
   conditionType: string;
   conditionDetail: string | null;
+  imageUrl: string | null;
+  program: { id: number; name: string } | null;
+  place: { id: number; name: string } | null;
   _count: { userStamps: number };
 }
+
+interface OptionItem { id: number; name: string; }
 
 const CONDITION_MAP: Record<string, string> = {
   mission_complete: '미션 완료', event_participate: '이벤트 참여', place_visit: '장소 방문', quiz_correct: '퀴즈 정답',
 };
 
-const EMPTY_FORM = { name: '', conditionType: 'mission_complete', conditionDetail: '' };
+const EMPTY_FORM = { name: '', conditionType: 'mission_complete', conditionDetail: '', programId: 0, placeId: 0 };
 
 export default function StampsPage() {
   const [stamps, setStamps] = useState<StampItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [programs, setPrograms] = useState<OptionItem[]>([]);
+  const [places, setPlaces] = useState<OptionItem[]>([]);
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchStamps = () => {
     fetch('/api/v1/admin/stamps').then((r) => r.json()).then((d) => { if (d.success) setStamps(d.data); });
   };
 
-  useEffect(() => { fetchStamps(); }, []);
+  useEffect(() => {
+    fetchStamps();
+    fetch('/api/v1/admin/programs').then((r) => r.json()).then((d) => {
+      if (d.success) setPrograms(d.data.map((p: OptionItem) => ({ id: p.id, name: p.name })));
+    });
+    fetch('/api/v1/admin/places').then((r) => r.json()).then((d) => {
+      if (d.success) setPlaces(d.data.map((p: OptionItem) => ({ id: p.id, name: p.name })));
+    });
+  }, []);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/v1/admin/upload', { method: 'POST', body: formData });
+      const json = await res.json();
+      if (json.success) {
+        setImageUrl(json.data.imageUrl);
+      } else {
+        alert(json.error?.message || '업로드 실패');
+      }
+    } catch {
+      alert('업로드 중 오류가 발생했습니다');
+    }
+    setUploading(false);
+  };
 
   const openCreateForm = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setImageUrl('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setShowForm(true);
   };
 
@@ -41,7 +81,10 @@ export default function StampsPage() {
       name: stamp.name,
       conditionType: stamp.conditionType,
       conditionDetail: stamp.conditionDetail || '',
+      programId: stamp.program?.id || 0,
+      placeId: stamp.place?.id || 0,
     });
+    setImageUrl(stamp.imageUrl || '');
     setShowForm(true);
   };
 
@@ -54,13 +97,19 @@ export default function StampsPage() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          programId: form.programId || null,
+          placeId: form.placeId || null,
+          imageUrl: imageUrl || null,
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setShowForm(false);
         setEditingId(null);
         setForm(EMPTY_FORM);
+        setImageUrl('');
         fetchStamps();
       } else {
         alert(`${isEdit ? '수정' : '등록'} 실패: ${data.error?.message || '알 수 없는 오류'}`);
@@ -116,6 +165,24 @@ export default function StampsPage() {
                 placeholder="스탬프 이름을 입력하세요"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">연결된 프로그램</label>
+                <select value={form.programId} onChange={(e) => setForm({ ...form, programId: Number(e.target.value) })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value={0}>선택 안 함</option>
+                  {programs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">연결된 장소</label>
+                <select value={form.placeId} onChange={(e) => setForm({ ...form, placeId: Number(e.target.value) })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value={0}>선택 안 함</option>
+                  {places.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">발급 조건 설정</label>
               <select value={form.conditionType} onChange={(e) => setForm({ ...form, conditionType: e.target.value })}
@@ -128,6 +195,25 @@ export default function StampsPage() {
               <textarea value={form.conditionDetail} onChange={(e) => setForm({ ...form, conditionDetail: e.target.value })}
                 placeholder="발급 조건에 대한 상세 설명을 입력하세요" rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">스탬프 이미지</label>
+              <div className="flex items-center gap-4">
+                <label className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer inline-block">
+                  <Upload className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+                  <p className="text-sm text-gray-600">이미지 업로드</p>
+                  <p className="text-xs text-gray-500 mt-0.5">PNG, JPG (최대 5MB)</p>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+                </label>
+                {uploading && <span className="text-sm text-gray-500">업로드 중...</span>}
+              </div>
+              {imageUrl && (
+                <div className="mt-3 flex items-center gap-3">
+                  <img src={imageUrl} alt="미리보기" className="h-20 w-20 rounded-lg object-cover border border-gray-200" />
+                  <button onClick={() => { setImageUrl(''); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                    className="text-sm text-red-500 hover:text-red-700">삭제</button>
+                </div>
+              )}
             </div>
             <button onClick={handleSubmit}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
@@ -146,6 +232,8 @@ export default function StampsPage() {
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">스탬프명</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">프로그램</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">장소</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">발급 조건</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">발급 수</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
@@ -154,7 +242,16 @@ export default function StampsPage() {
           <tbody className="divide-y divide-gray-200">
             {stamps.map((stamp) => (
               <tr key={stamp.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm text-gray-900">{stamp.name}</td>
+                <td className="px-6 py-4 text-sm text-gray-900">
+                  <div className="flex items-center gap-3">
+                    {stamp.imageUrl && (
+                      <img src={stamp.imageUrl} alt={stamp.name} className="h-8 w-8 rounded object-cover" />
+                    )}
+                    {stamp.name}
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-600">{stamp.program?.name || '-'}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{stamp.place?.name || '-'}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{CONDITION_MAP[stamp.conditionType] || stamp.conditionType}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{stamp._count.userStamps.toLocaleString()}개</td>
                 <td className="px-6 py-4">
@@ -172,7 +269,7 @@ export default function StampsPage() {
               </tr>
             ))}
             {stamps.length === 0 && (
-              <tr><td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-500">등록된 스탬프가 없습니다</td></tr>
+              <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">등록된 스탬프가 없습니다</td></tr>
             )}
           </tbody>
         </table>

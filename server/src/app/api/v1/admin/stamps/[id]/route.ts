@@ -24,6 +24,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         ...(body.conditionType && { conditionType: body.conditionType }),
         ...(body.conditionDetail !== undefined && { conditionDetail: body.conditionDetail }),
         ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
+        ...(body.programId !== undefined && { programId: body.programId || null }),
+        ...(body.placeId !== undefined && { placeId: body.placeId || null }),
       },
     });
     return successResponse(stamp, '스탬프가 수정되었습니다');

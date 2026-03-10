@@ -5,7 +5,10 @@ import { successResponse, errorResponse } from '@/lib/api-response';
 export async function GET() {
   try {
     const coupons = await prisma.coupon.findMany({
-      include: { _count: { select: { userCoupons: true } } },
+      include: {
+        program: { select: { id: true, name: true } },
+        _count: { select: { userCoupons: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
     return successResponse(coupons);
@@ -17,7 +20,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, requiredStamps, validUntil, imageUrl } = body;
+    const { name, description, requiredStamps, validUntil, imageUrl, programId } = body;
 
     if (!name || !validUntil) {
       return errorResponse('INVALID_INPUT', '쿠폰명과 유효기간은 필수입니다');
@@ -30,6 +33,7 @@ export async function POST(request: NextRequest) {
         requiredStamps: requiredStamps || 0,
         validUntil: new Date(validUntil),
         imageUrl,
+        programId: programId || null,
       },
     });
 

@@ -25,6 +25,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         ...(body.requiredStamps !== undefined && { requiredStamps: body.requiredStamps }),
         ...(body.validUntil && { validUntil: new Date(body.validUntil) }),
         ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
+        ...(body.programId !== undefined && { programId: body.programId || null }),
       },
     });
     return successResponse(coupon, '쿠폰이 수정되었습니다');
