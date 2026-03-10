@@ -6,8 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,10 +56,6 @@ fun HomeScreen(
     val events by viewModel.events.collectAsState()
     val userStampCount by viewModel.userStampCount.collectAsState()
     val totalStampCount by viewModel.totalStampCount.collectAsState()
-    val foodPrograms by viewModel.foodPrograms.collectAsState()
-    val exhibitionPrograms by viewModel.exhibitionPrograms.collectAsState()
-    val seminarPrograms by viewModel.seminarPrograms.collectAsState()
-
     LaunchedEffect(Unit) {
         viewModel.fetchHomeData()
     }
@@ -87,28 +81,6 @@ fun HomeScreen(
             ProgramSection(
                 programs = programs,
                 onSeeAllClick = onNavigateToProgramList,
-                onProgramClick = onProgramClick,
-            )
-
-            // 카테고리별 프로그램
-            CategorySection(
-                title = "맛집",
-                programs = foodPrograms,
-                onSeeAllClick = { onNavigateToProgramListWithCategory("food") },
-                onProgramClick = onProgramClick,
-            )
-
-            CategorySection(
-                title = "전시",
-                programs = exhibitionPrograms,
-                onSeeAllClick = { onNavigateToProgramListWithCategory("exhibition") },
-                onProgramClick = onProgramClick,
-            )
-
-            CategorySection(
-                title = "세미나",
-                programs = seminarPrograms,
-                onSeeAllClick = { onNavigateToProgramListWithCategory("seminar") },
                 onProgramClick = onProgramClick,
             )
 
@@ -361,108 +333,6 @@ private fun ProgramCard(imageRes: Int, imageUrl: String? = null, name: String, t
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             TagChip(text = tag, textColor = Color(0xFFE85151), borderColor = Color(0xFFE85151))
             TagChip(text = "#쿠폰가능", textColor = Color(0xFF4C27D0), borderColor = Color(0xFF4C27D0))
-        }
-    }
-}
-
-// MARK: - 카테고리별 프로그램
-
-@Composable
-private fun CategorySection(
-    title: String,
-    programs: List<ProgramItem>,
-    onSeeAllClick: () -> Unit = {},
-    onProgramClick: (ProgramItem) -> Unit = {},
-) {
-    if (programs.isEmpty()) return
-
-    val pagerState = rememberPagerState(pageCount = { programs.size })
-
-    Column(modifier = Modifier.padding(top = 28.dp)) {
-        // Section header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = title,
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 18.sp,
-                color = Color(0xFF121212),
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "보러가기  >",
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.Normal,
-                fontSize = 11.sp,
-                color = Color(0xFF121212),
-                modifier = Modifier.clickable { onSeeAllClick() },
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Swipeable banner (manual only, no auto-scroll)
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            pageSpacing = 12.dp,
-        ) { page ->
-            val program = programs[page]
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(15.dp))
-                    .clickable { onProgramClick(program) },
-            ) {
-                if (!program.imageUrl.isNullOrEmpty()) {
-                    val fullUrl = if (program.imageUrl.startsWith("http")) program.imageUrl else BuildConfig.SERVER_URL + program.imageUrl
-                    AsyncImage(
-                        model = fullUrl,
-                        contentDescription = program.name,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                    )
-                } else {
-                    Image(
-                        painter = painterResource(id = R.drawable.program_img_1),
-                        contentDescription = program.name,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                    )
-                }
-
-                // Gradient overlay + name
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
-                            ),
-                        ),
-                )
-
-                Text(
-                    text = program.name,
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp,
-                    color = Color.White,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(start = 16.dp, bottom = 14.dp),
-                )
-            }
         }
     }
 }

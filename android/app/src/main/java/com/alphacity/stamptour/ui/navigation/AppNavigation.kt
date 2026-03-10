@@ -83,7 +83,9 @@ fun AppNavigation(deepLinkProgramId: Int? = null) {
                     }
                 },
                 onNavigateToRegister = {
-                    navController.navigate(Routes.REGISTER)
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
                 },
             )
         }

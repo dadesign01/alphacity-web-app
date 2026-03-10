@@ -224,7 +224,7 @@ fun GuestRestrictionDialog(
         },
         text = {
             Text(
-                text = "회원가입 후 이용하실 수 있습니다.\n회원가입 페이지로 이동하시겠습니까?",
+                text = "로그인 후 이용하실 수 있습니다.\n로그인 페이지로 이동하시겠습니까?",
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.Normal,
                 fontSize = 14.sp,
@@ -238,7 +238,7 @@ fun GuestRestrictionDialog(
                 shape = RoundedCornerShape(8.dp),
             ) {
                 Text(
-                    text = "회원가입",
+                    text = "로그인",
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,

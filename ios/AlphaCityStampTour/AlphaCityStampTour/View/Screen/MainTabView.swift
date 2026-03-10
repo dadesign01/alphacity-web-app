@@ -141,7 +141,7 @@ struct MainTabView: View {
         }
         .edgesIgnoringSafeArea(.bottom)
         .alert("회원 전용 기능", isPresented: $showGuestDialog) {
-            Button("회원가입") {
+            Button("로그인") {
                 showGuestDialog = false
                 onNavigateToRegister()
             }
@@ -149,7 +149,7 @@ struct MainTabView: View {
                 showGuestDialog = false
             }
         } message: {
-            Text("회원가입 후 이용하실 수 있습니다.\n회원가입 페이지로 이동하시겠습니까?")
+            Text("로그인 후 이용하실 수 있습니다.\n로그인 페이지로 이동하시겠습니까?")
         }
         .onChange(of: deepLinkProgramId) { _, newId in
             guard let programId = newId else { return }

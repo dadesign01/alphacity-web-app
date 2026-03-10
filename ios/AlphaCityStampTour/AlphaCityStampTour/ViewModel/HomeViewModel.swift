@@ -12,9 +12,7 @@ final class HomeViewModel: ObservableObject {
     @Published var events: [EventData] = []
     @Published var totalStampCount: Int = 10
     @Published var userStampCount: Int = 0
-    @Published var foodPrograms: [ProgramData] = []
-    @Published var exhibitionPrograms: [ProgramData] = []
-    @Published var seminarPrograms: [ProgramData] = []
+    @Published var userCouponCount: Int = 0
     @Published var isLoading = false
 
     private let repository = HomeRepository.shared
@@ -28,10 +26,6 @@ final class HomeViewModel: ObservableObject {
             async let programsTask = repository.fetchPrograms()
             async let eventsTask = repository.fetchEvents()
             async let stampsTask = repository.fetchStamps()
-            async let foodTask = repository.fetchProgramsByCategory("food")
-            async let exhibitionTask = repository.fetchProgramsByCategory("exhibition")
-            async let seminarTask = repository.fetchProgramsByCategory("seminar")
-
             do {
                 banners = try await bannersTask
             } catch {
@@ -59,29 +53,12 @@ final class HomeViewModel: ObservableObject {
                 print("[HomeVM] 스탬프 로드 실패: \(error)")
             }
 
-            do {
-                foodPrograms = Array(try await foodTask.prefix(4))
-            } catch {
-                print("[HomeVM] 맛집 프로그램 로드 실패: \(error)")
-            }
-
-            do {
-                exhibitionPrograms = Array(try await exhibitionTask.prefix(4))
-            } catch {
-                print("[HomeVM] 전시 프로그램 로드 실패: \(error)")
-            }
-
-            do {
-                seminarPrograms = Array(try await seminarTask.prefix(4))
-            } catch {
-                print("[HomeVM] 세미나 프로그램 로드 실패: \(error)")
-            }
-
             // 로그인 상태면 유저 프로필도 가져오기
             if TokenManager.shared.isLoggedIn {
                 do {
                     let profile = try await repository.fetchUserProfile()
                     userStampCount = profile.stampCount ?? 0
+                    userCouponCount = profile.couponCount ?? 0
                 } catch {
                     print("[HomeVM] 프로필 로드 실패: \(error)")
                 }

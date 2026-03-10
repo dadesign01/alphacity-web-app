@@ -69,7 +69,7 @@ struct ContentView: View {
                         currentScreen = .login
                     },
                     onNavigateToRegister: {
-                        currentScreen = .register
+                        currentScreen = .login
                     }
                 )
             }
