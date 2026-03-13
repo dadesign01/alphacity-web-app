@@ -253,6 +253,7 @@ model UserStamp {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   stamp Stamp @relation(fields: [stampId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, stampId])
   @@map("user_stamps")
 }
 
