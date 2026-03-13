@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +46,19 @@ fun MyPageScreen(
         viewModel.fetchProfile()
     }
 
+    // 서브화면 뒤로가기 처리 (MainScreen BackHandler가 가로채지 못하게)
+    val hasSubScreen = showActivityHistory || showEditProfile || showSettings || showStoreRegister || showMyCoupons || showStampExchange
+    BackHandler(enabled = hasSubScreen) {
+        when {
+            showEditProfile -> showEditProfile = false
+            showActivityHistory -> showActivityHistory = false
+            showSettings -> showSettings = false
+            showStoreRegister -> showStoreRegister = false
+            showMyCoupons -> showMyCoupons = false
+            showStampExchange -> showStampExchange = false
+        }
+    }
+
     if (showActivityHistory) {
         ActivityHistoryScreen(onBackClick = { showActivityHistory = false })
         return
@@ -56,6 +70,7 @@ fun MyPageScreen(
             onLogout = onLogout,
             initialNickname = userProfile?.nickname ?: "",
             initialEmail = userProfile?.email ?: "",
+            viewModel = viewModel,
         )
         return
     }

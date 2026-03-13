@@ -24,6 +24,12 @@ class MyPageViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    private val _saveSuccess = MutableStateFlow(false)
+    val saveSuccess: StateFlow<Boolean> = _saveSuccess
+
+    private val _saveError = MutableStateFlow<String?>(null)
+    val saveError: StateFlow<String?> = _saveError
+
     val isLoggedIn: Boolean
         get() = tokenManager.isLoggedIn
 
@@ -37,6 +43,25 @@ class MyPageViewModel @Inject constructor(
                 .onFailure { Log.e("MyPageViewModel", "프로필 로드 실패", it) }
             _isLoading.value = false
         }
+    }
+
+    fun updateProfile(nickname: String, password: String?) {
+        _isLoading.value = true
+        _saveError.value = null
+        viewModelScope.launch {
+            homeRepository.updateProfile(nickname, password)
+                .onSuccess { updated ->
+                    _userProfile.value = updated
+                    _saveSuccess.value = true
+                }
+                .onFailure { _saveError.value = it.message ?: "저장에 실패했습니다." }
+            _isLoading.value = false
+        }
+    }
+
+    fun clearSaveState() {
+        _saveSuccess.value = false
+        _saveError.value = null
     }
 
     fun logout() {

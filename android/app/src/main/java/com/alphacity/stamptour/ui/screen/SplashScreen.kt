@@ -151,9 +151,15 @@ fun SplashScreen(
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(modifier = Modifier.height(80.dp))
+        }
 
-            // 캐릭터 (뚜비)
+        // 캐릭터 (뚜비) + 하단 "투어 시작하기" 버튼
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 80.dp)
+        ) {
             AsyncImage(
                 model = R.raw.alphacity_splash,
                 imageLoader = gifImageLoader,
@@ -161,31 +167,30 @@ fun SplashScreen(
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.size(160.dp)
             )
-        }
 
-        // 하단 "투어 시작하기" 버튼
-        Button(
-            onClick = onStartClick,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Primary,
-                contentColor = White,
-            ),
-            shape = RoundedCornerShape(19.dp),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 80.dp)
-                .width(309.dp)
-                .height(65.dp)
-        ) {
-            Text(
-                text = "투어 시작하기",
-                style = androidx.compose.ui.text.TextStyle(
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 20.sp,
-                    letterSpacing = (-0.6).sp,
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = onStartClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Primary,
+                    contentColor = White,
                 ),
-            )
+                shape = RoundedCornerShape(19.dp),
+                modifier = Modifier
+                    .width(309.dp)
+                    .height(65.dp)
+            ) {
+                Text(
+                    text = "투어 시작하기",
+                    style = androidx.compose.ui.text.TextStyle(
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 20.sp,
+                        letterSpacing = (-0.6).sp,
+                    ),
+                )
+            }
         }
     }
 }

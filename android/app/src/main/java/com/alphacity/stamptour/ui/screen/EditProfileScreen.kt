@@ -1,5 +1,10 @@
 package com.alphacity.stamptour.ui.screen
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -17,20 +23,24 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.alphacity.stamptour.R
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
+import com.alphacity.stamptour.viewmodel.MyPageViewModel
 
 @Composable
 fun EditProfileScreen(
@@ -38,6 +48,7 @@ fun EditProfileScreen(
     onLogout: () -> Unit,
     initialNickname: String = "",
     initialEmail: String = "",
+    viewModel: MyPageViewModel? = null,
 ) {
     var nickname by remember { mutableStateOf(initialNickname) }
     var email by remember { mutableStateOf(initialEmail) }
@@ -47,6 +58,31 @@ fun EditProfileScreen(
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var addressDetail by remember { mutableStateOf("") }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val context = LocalContext.current
+    val isLoading by (viewModel?.isLoading ?: MutableStateFlow(false)).collectAsState()
+    val saveSuccess by (viewModel?.saveSuccess ?: MutableStateFlow(false)).collectAsState()
+    val saveError by (viewModel?.saveError ?: MutableStateFlow(null)).collectAsState()
+
+    // 저장 성공/실패 처리
+    LaunchedEffect(saveSuccess) {
+        if (saveSuccess) {
+            Toast.makeText(context, "저장되었습니다.", Toast.LENGTH_SHORT).show()
+            viewModel?.clearSaveState()
+            onBackClick()
+        }
+    }
+    LaunchedEffect(saveError) {
+        saveError?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel?.clearSaveState()
+        }
+    }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+    ) { uri -> uri?.let { selectedImageUri = it } }
 
     Column(
         modifier = Modifier
@@ -94,15 +130,34 @@ fun EditProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center,
             ) {
-                Box(modifier = Modifier.size(104.dp)) {
-                    Image(
-                        painter = painterResource(id = R.drawable.icon_profile),
-                        contentDescription = "프로필",
-                        modifier = Modifier
-                            .size(104.dp)
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop,
-                    )
+                Box(
+                    modifier = Modifier
+                        .size(104.dp)
+                        .clickable {
+                            imagePickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                ) {
+                    if (selectedImageUri != null) {
+                        AsyncImage(
+                            model = selectedImageUri,
+                            contentDescription = "프로필",
+                            modifier = Modifier
+                                .size(104.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop,
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.icon_profile),
+                            contentDescription = "프로필",
+                            modifier = Modifier
+                                .size(104.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop,
+                        )
+                    }
                     // Camera icon overlay
                     Box(
                         modifier = Modifier
@@ -278,16 +333,30 @@ fun EditProfileScreen(
                             )
                         )
                     )
-                    .clickable { /* TODO: save */ },
+                    .clickable(enabled = !isLoading) {
+                        if (nickname.isBlank()) {
+                            Toast.makeText(context, "닉네임을 입력해주세요.", Toast.LENGTH_SHORT).show()
+                            return@clickable
+                        }
+                        if (password.isNotBlank() && password != passwordConfirm) {
+                            Toast.makeText(context, "비밀번호가 일치하지 않습니다.", Toast.LENGTH_SHORT).show()
+                            return@clickable
+                        }
+                        viewModel?.updateProfile(nickname, password.ifBlank { null })
+                    },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "저장하기",
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp,
-                    color = Color.White,
-                )
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                } else {
+                    Text(
+                        text = "저장하기",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp,
+                        color = Color.White,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))

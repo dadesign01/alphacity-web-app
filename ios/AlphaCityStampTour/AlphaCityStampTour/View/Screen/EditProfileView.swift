@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct EditProfileView: View {
     var onBackTapped: () -> Void
@@ -19,6 +20,8 @@ struct EditProfileView: View {
     @State private var phone = ""
     @State private var address = ""
     @State private var addressDetail = ""
+    @State private var selectedPhotoItem: PhotosPickerItem? = nil
+    @State private var selectedImage: UIImage? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -48,25 +51,43 @@ struct EditProfileView: View {
                     Spacer().frame(height: 32)
 
                     // === Profile Image ===
-                    ZStack(alignment: .bottomTrailing) {
-                        Image("IconProfile")
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 104, height: 104)
-                            .clipShape(Circle())
+                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                        ZStack(alignment: .bottomTrailing) {
+                            if let selectedImage {
+                                Image(uiImage: selectedImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 104, height: 104)
+                                    .clipShape(Circle())
+                            } else {
+                                Image("IconProfile")
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 104, height: 104)
+                                    .clipShape(Circle())
+                            }
 
-                        ZStack {
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 30, height: 30)
-                                .overlay(
-                                    Circle().stroke(Color(hex: "E9E9E9"), lineWidth: 1)
-                                )
-                            Image(systemName: "camera.fill")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 14, height: 14)
-                                .foregroundColor(Color(hex: "8F8F8F"))
+                            ZStack {
+                                Circle()
+                                    .fill(Color.white)
+                                    .frame(width: 30, height: 30)
+                                    .overlay(
+                                        Circle().stroke(Color(hex: "E9E9E9"), lineWidth: 1)
+                                    )
+                                Image(systemName: "camera.fill")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 14, height: 14)
+                                    .foregroundColor(Color(hex: "8F8F8F"))
+                            }
+                        }
+                    }
+                    .onChange(of: selectedPhotoItem) { newItem in
+                        Task {
+                            if let data = try? await newItem?.loadTransferable(type: Data.self),
+                               let uiImage = UIImage(data: data) {
+                                selectedImage = uiImage
+                            }
                         }
                     }
 

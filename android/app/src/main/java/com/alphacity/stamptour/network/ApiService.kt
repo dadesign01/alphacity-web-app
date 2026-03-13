@@ -20,12 +20,14 @@ import com.alphacity.stamptour.network.dto.StoreData
 import com.alphacity.stamptour.network.dto.StoreRegisterRequest
 import com.alphacity.stamptour.network.dto.UserCouponItem
 import com.alphacity.stamptour.network.dto.TokenData
+import com.alphacity.stamptour.network.dto.UpdateProfileRequest
 import com.alphacity.stamptour.network.dto.UserProfile
 import com.alphacity.stamptour.network.dto.UserStampItem
 import com.alphacity.stamptour.network.dto.VerifyCodeRequest
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -75,6 +77,9 @@ interface ApiService {
 
     @GET("users/me")
     suspend fun getUserProfile(): ApiResponse<UserProfile>
+
+    @PUT("users/me")
+    suspend fun updateProfile(@Body request: UpdateProfileRequest): ApiResponse<UserProfile>
 
     // 이벤트 상세
     @GET("events/{id}")

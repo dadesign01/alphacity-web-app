@@ -95,7 +95,8 @@ fun EventHighlightScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White),
+                .background(Color.White)
+                .statusBarsPadding(),
         ) {
             // Header
             EventHighlightHeader(onBackClick = onBackClick)

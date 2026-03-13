@@ -1,9 +1,13 @@
 package com.alphacity.stamptour.ui.screen
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -46,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -54,6 +59,8 @@ import com.alphacity.stamptour.R
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
+import com.alphacity.stamptour.viewmodel.MapViewModel
+import com.google.android.gms.location.LocationServices
 import com.kakao.vectormap.KakaoMap
 import com.kakao.vectormap.KakaoMapReadyCallback
 import com.kakao.vectormap.LatLng
@@ -65,7 +72,6 @@ import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTextBuilder
-import com.alphacity.stamptour.viewmodel.MapViewModel
 import android.os.Handler
 import android.os.Looper
 import kotlin.math.floor
@@ -84,7 +90,6 @@ private fun clusterPrograms(programs: List<ProgramItem>, zoomLevel: Int): List<M
     val valid = programs.filter { it.latitude != null && it.longitude != null }
     if (valid.isEmpty()) return emptyList()
 
-    // 줌 18 이상이면 클러스터링 안함
     if (zoomLevel >= 18) {
         return valid.map { MapCluster(it.latitude!!, it.longitude!!, listOf(it)) }
     }
@@ -139,12 +144,10 @@ fun MapScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        // Header
         MapHeader(onProfileClick = onNavigateToMyPage)
 
         Divider(color = Color(0xFFE2E2E2), thickness = 1.dp)
 
-        // Map + Category overlay
         Box(modifier = Modifier.fillMaxSize()) {
             KakaoMapContent(
                 programs = filteredPrograms,
@@ -154,7 +157,6 @@ fun MapScreen(
                 onFocusConsumed = onFocusConsumed,
             )
 
-            // Category filter tabs
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -183,7 +185,6 @@ fun MapScreen(
             }
         }
     }
-
 }
 
 @Composable
@@ -242,9 +243,84 @@ private fun KakaoMapContent(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val mapView = remember { MapView(context) }
-    var kakaoMapRef: KakaoMap? = remember { null }
-    var currentZoomLevel = remember { 15 }
-    var currentClusters = remember { mutableListOf<MapCluster>() }
+
+    // 맵 상태 holder - remember object로 리컴포지션에도 유지됨
+    val mapState = remember {
+        object {
+            var kakaoMap: KakaoMap? = null
+            var zoomLevel: Int = 15
+        }
+    }
+    val currentClusters = remember { mutableListOf<MapCluster>() }
+
+    // 최신 programs를 ref로 유지 (zoom 체커 클로저 stale 방지)
+    val programsRef = remember { mutableListOf<ProgramItem>() }
+
+    // 현위치 마커용 상태
+    var userLat by remember { mutableStateOf<Double?>(null) }
+    var userLng by remember { mutableStateOf<Double?>(null) }
+
+    // 위치 권한 요청
+    val locationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        if (perms.values.any { it }) {
+            val fusedClient = LocationServices.getFusedLocationProviderClient(context)
+            try {
+                fusedClient.lastLocation.addOnSuccessListener { loc ->
+                    if (loc != null) {
+                        userLat = loc.latitude
+                        userLng = loc.longitude
+                    }
+                }
+            } catch (_: SecurityException) {}
+        }
+    }
+
+    // 현위치 취득
+    LaunchedEffect(Unit) {
+        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (hasFine || hasCoarse) {
+            val fusedClient = LocationServices.getFusedLocationProviderClient(context)
+            try {
+                fusedClient.lastLocation.addOnSuccessListener { loc ->
+                    if (loc != null) {
+                        userLat = loc.latitude
+                        userLng = loc.longitude
+                    }
+                }
+            } catch (_: SecurityException) {}
+        } else {
+            locationLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                )
+            )
+        }
+    }
+
+    // programs가 바뀔 때마다 ref 동기화 + 마커 갱신
+    LaunchedEffect(programs) {
+        programsRef.clear()
+        programsRef.addAll(programs)
+        mapState.kakaoMap?.let { map ->
+            currentClusters.clear()
+            currentClusters.addAll(
+                addClusteredMarkers(map, programs, mapState.zoomLevel, context)
+            )
+        }
+    }
+
+    // 현위치 마커 갱신
+    LaunchedEffect(userLat, userLng) {
+        val lat = userLat ?: return@LaunchedEffect
+        val lng = userLng ?: return@LaunchedEffect
+        mapState.kakaoMap?.let { map ->
+            updateLocationMarker(map, lat, lng, context)
+        }
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -272,16 +348,26 @@ private fun KakaoMapContent(
                     },
                     object : KakaoMapReadyCallback() {
                         override fun onMapReady(map: KakaoMap) {
-                            kakaoMapRef = map
+                            mapState.kakaoMap = map
                             val center = LatLng.from(35.842, 128.690)
                             map.moveCamera(CameraUpdateFactory.newCenterPosition(center, 15))
 
-                            currentClusters.clear()
-                            currentClusters.addAll(
-                                addClusteredMarkers(map, programs, currentZoomLevel, context)
-                            )
+                            // 맵 준비됐을 때 이미 programs가 있으면 바로 마커 추가
+                            if (programsRef.isNotEmpty()) {
+                                currentClusters.clear()
+                                currentClusters.addAll(
+                                    addClusteredMarkers(map, programsRef, mapState.zoomLevel, context)
+                                )
+                            }
 
-                            // 라벨 클릭 이벤트
+                            // 현위치 마커 (이미 위치 있으면)
+                            val lat = userLat
+                            val lng = userLng
+                            if (lat != null && lng != null) {
+                                updateLocationMarker(map, lat, lng, context)
+                            }
+
+                            // 라벨 클릭
                             map.setOnLabelClickListener { _, _, label ->
                                 val labelId = label.labelId
                                 val idx = labelId?.removePrefix("cluster_")?.toIntOrNull()
@@ -291,9 +377,8 @@ private fun KakaoMapContent(
                                     if (cluster.isSingle) {
                                         onProgramClick(cluster.programs.first())
                                     } else {
-                                        // 클러스터 탭 → 줌 인
                                         val pos = LatLng.from(cluster.centerLat, cluster.centerLng)
-                                        val newZoom = min(currentZoomLevel + 2, 17)
+                                        val newZoom = min(mapState.zoomLevel + 2, 17)
                                         map.moveCamera(
                                             CameraUpdateFactory.newCenterPosition(pos, newZoom),
                                             CameraAnimation.from(300),
@@ -305,17 +390,17 @@ private fun KakaoMapContent(
                                 }
                             }
 
-                            // 줌 변경 감지 폴링 (300ms 간격)
+                            // 줌 체커 - programsRef 사용 (stale 클로저 방지)
                             val handler = Handler(Looper.getMainLooper())
                             val zoomChecker = object : Runnable {
                                 override fun run() {
                                     try {
                                         val newZoom = map.zoomLevel
-                                        if (newZoom != currentZoomLevel) {
-                                            currentZoomLevel = newZoom
+                                        if (newZoom != mapState.zoomLevel) {
+                                            mapState.zoomLevel = newZoom
                                             currentClusters.clear()
                                             currentClusters.addAll(
-                                                addClusteredMarkers(map, programs, currentZoomLevel, context)
+                                                addClusteredMarkers(map, programsRef, mapState.zoomLevel, context)
                                             )
                                         }
                                     } catch (_: Exception) {}
@@ -331,18 +416,9 @@ private fun KakaoMapContent(
         modifier = Modifier.fillMaxSize(),
     )
 
-    LaunchedEffect(programs) {
-        kakaoMapRef?.let { map ->
-            currentClusters.clear()
-            currentClusters.addAll(
-                addClusteredMarkers(map, programs, currentZoomLevel, context)
-            )
-        }
-    }
-
     LaunchedEffect(focusLat, focusLng) {
         if (focusLat != null && focusLng != null) {
-            kakaoMapRef?.let { map ->
+            mapState.kakaoMap?.let { map ->
                 val pos = LatLng.from(focusLat, focusLng)
                 map.moveCamera(
                     CameraUpdateFactory.newCenterPosition(pos, 17),
@@ -352,6 +428,30 @@ private fun KakaoMapContent(
             onFocusConsumed()
         }
     }
+}
+
+private fun updateLocationMarker(
+    map: KakaoMap,
+    lat: Double,
+    lng: Double,
+    context: android.content.Context,
+) {
+    val labelManager = map.labelManager ?: return
+    val layerId = "userLocation"
+    labelManager.getLayer(layerId)?.removeAll()
+
+    val layer = labelManager.getLayer(layerId)
+        ?: labelManager.addLayer(
+            com.kakao.vectormap.label.LabelLayerOptions.from(layerId)
+        ) ?: return
+
+    val bitmap = createLocationMarkerBitmap(context)
+    val style = LabelStyles.from(LabelStyle.from(bitmap).setApplyDpScale(false))
+    val options = LabelOptions.from("user_location", LatLng.from(lat, lng))
+        .setStyles(style)
+        .setClickable(false)
+
+    layer.addLabel(options)
 }
 
 private fun addClusteredMarkers(
@@ -396,6 +496,41 @@ private fun addClusteredMarkers(
     return clusters
 }
 
+private fun createLocationMarkerBitmap(context: android.content.Context): Bitmap {
+    val density = context.resources.displayMetrics.density
+    val outerRadius = (14 * density).toInt()
+    val innerRadius = (8 * density).toInt()
+    val size = outerRadius * 2
+
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val cx = outerRadius.toFloat()
+    val cy = outerRadius.toFloat()
+
+    // 반투명 파란 외곽
+    val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0x402563EB // 25% opacity blue
+        style = Paint.Style.FILL
+    }
+    canvas.drawCircle(cx, cy, outerRadius.toFloat(), outerPaint)
+
+    // 흰색 테두리
+    val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFFFFF.toInt()
+        style = Paint.Style.FILL
+    }
+    canvas.drawCircle(cx, cy, (innerRadius + 2 * density).toInt().toFloat(), borderPaint)
+
+    // 파란 내부
+    val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF2563EB.toInt()
+        style = Paint.Style.FILL
+    }
+    canvas.drawCircle(cx, cy, innerRadius.toFloat(), innerPaint)
+
+    return bitmap
+}
+
 private fun createClusterBitmap(count: Int, context: android.content.Context): Bitmap {
     val density = context.resources.displayMetrics.density
     val outerRadius = (22 * density).toInt()
@@ -407,21 +542,18 @@ private fun createClusterBitmap(count: Int, context: android.content.Context): B
     val cx = outerRadius.toFloat()
     val cy = outerRadius.toFloat()
 
-    // 외곽 반투명 원
     val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0x4D2563EB // 30% opacity
+        color = 0x4D2563EB
         style = Paint.Style.FILL
     }
     canvas.drawCircle(cx, cy, outerRadius.toFloat(), outerPaint)
 
-    // 내부 원
     val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF2563EB.toInt()
         style = Paint.Style.FILL
     }
     canvas.drawCircle(cx, cy, innerRadius.toFloat(), innerPaint)
 
-    // 숫자
     val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFFFFFFFF.toInt()
         textSize = 14 * density
@@ -457,7 +589,6 @@ private fun createNameBubbleBitmap(name: String, context: android.content.Contex
     val canvas = Canvas(bitmap)
     val cx = boxWidth / 2f
 
-    // 배경 라운드 박스
     val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = primaryColor
         style = Paint.Style.FILL
@@ -465,7 +596,6 @@ private fun createNameBubbleBitmap(name: String, context: android.content.Contex
     val boxRect = android.graphics.RectF(0f, 0f, boxWidth.toFloat(), boxHeight.toFloat())
     canvas.drawRoundRect(boxRect, cornerRadius, cornerRadius, bgPaint)
 
-    // 아래 삼각형 포인터
     val path = Path().apply {
         moveTo(cx - 4 * density, boxHeight - 1f)
         lineTo(cx, totalHeight.toFloat())
@@ -474,7 +604,6 @@ private fun createNameBubbleBitmap(name: String, context: android.content.Contex
     }
     canvas.drawPath(path, bgPaint)
 
-    // 텍스트
     val textY = boxHeight / 2f + textPaint.textSize / 3f
     canvas.drawText(name, cx, textY, textPaint)
 

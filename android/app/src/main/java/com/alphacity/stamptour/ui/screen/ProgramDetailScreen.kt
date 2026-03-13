@@ -130,7 +130,8 @@ fun ProgramDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(Color.White)
+            .statusBarsPadding(),
     ) {
         // Header
         DetailHeader(

@@ -163,3 +163,9 @@ data class UserProfile(
     val couponCount: Int? = null,
     val missionCount: Int? = null,
 )
+
+@Serializable
+data class UpdateProfileRequest(
+    val nickname: String,
+    val password: String? = null,
+)

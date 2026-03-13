@@ -87,18 +87,14 @@ struct SplashView: View {
                         .foregroundStyle(AppColor.textGray)
 
                     Spacer()
-                        .frame(height: 80)
-
-                    // 캐릭터 (뚜비)
-                    GIFImageView(name: "alphacity_splash")
-                        .frame(width: 160, height: 160)
-
-                    Spacer()
                 }
 
-                // 하단 "투어 시작하기" 버튼
-                VStack {
+                // 캐릭터 (뚜비) + 하단 "투어 시작하기" 버튼
+                VStack(spacing: 24) {
                     Spacer()
+
+                    GIFImageView(name: "alphacity_splash")
+                        .frame(width: 160, height: 160)
 
                     Button(action: onStartTapped) {
                         Text("투어 시작하기")

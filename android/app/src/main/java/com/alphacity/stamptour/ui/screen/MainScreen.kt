@@ -64,9 +64,16 @@ fun MainScreen(
     val deepLinkProgram by deepLinkViewModel.program.collectAsState()
     val activity = LocalContext.current as? Activity
 
-    // 뒤로가기 시 앱 종료 대신 백그라운드로 이동
+    // 뒤로가기: 오버레이 화면이 열려있으면 닫고, 메인이면 백그라운드로
     BackHandler {
-        activity?.moveTaskToBack(true)
+        when {
+            selectedProgram != null -> selectedProgram = null
+            showStampExchange -> showStampExchange = false
+            showMyCoupons -> showMyCoupons = false
+            showEventHighlight -> showEventHighlight = false
+            showProgramList -> { showProgramList = false; programListCategory = null }
+            else -> activity?.moveTaskToBack(true)
+        }
     }
 
     // 딥링크 프로그램 ID → API 로드
@@ -142,8 +149,8 @@ fun MainScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        // Content
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        // Content (상태바 높이만큼 상단 패딩)
+        Box(modifier = Modifier.weight(1f).fillMaxWidth().statusBarsPadding()) {
             when (selectedTab) {
                 BottomTab.HOME -> HomeScreen(
                     onNavigateToMyPage = {
@@ -192,7 +199,8 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
-                .padding(top = 8.dp, bottom = 20.dp),
+                .navigationBarsPadding()
+                .padding(top = 8.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             BottomTab.entries.forEach { tab ->

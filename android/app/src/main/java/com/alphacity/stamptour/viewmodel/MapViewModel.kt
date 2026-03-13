@@ -36,6 +36,8 @@ class MapViewModel @Inject constructor(
 
     fun fetchPrograms() {
         if (_isLoading.value) return
+        // 이미 데이터가 있으면 재로드 불필요
+        if (_programs.value.isNotEmpty()) return
         _isLoading.value = true
 
         viewModelScope.launch {

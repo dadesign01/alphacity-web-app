@@ -9,6 +9,7 @@ import com.alphacity.stamptour.network.dto.MissionCompletionResult
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StampItem
+import com.alphacity.stamptour.network.dto.UpdateProfileRequest
 import com.alphacity.stamptour.network.dto.UserProfile
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -90,6 +91,20 @@ class HomeRepository @Inject constructor(
                 Result.success(response.data)
             } else {
                 Result.failure(Exception(response.error?.message ?: "프로필 로드 실패"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateProfile(nickname: String, password: String?): Result<UserProfile> {
+        return try {
+            val request = UpdateProfileRequest(nickname = nickname, password = password?.ifBlank { null })
+            val response = apiService.updateProfile(request)
+            if (response.success && response.data != null) {
+                Result.success(response.data)
+            } else {
+                Result.failure(Exception(response.error?.message ?: "프로필 저장 실패"))
             }
         } catch (e: Exception) {
             Result.failure(e)

@@ -55,7 +55,7 @@ fun FirstComeEventDetailScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header
             Row(
