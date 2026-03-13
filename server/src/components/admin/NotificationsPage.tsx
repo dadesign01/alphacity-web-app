@@ -67,15 +67,6 @@ export default function NotificationsPage() {
               placeholder="알림 내용을 입력하세요" rows={4}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">수신 대상</label>
-            <select value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <option value="all">전체 사용자</option>
-              <option value="active">활성 사용자만</option>
-              <option value="specific_group">특정 그룹</option>
-            </select>
-          </div>
           <div className="flex gap-3">
             <button onClick={handleSend}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">

@@ -33,6 +33,15 @@ struct ProgramData: Decodable, Identifiable {
     let endDate: String
     let status: String
     let events: [EventData]?
+    let storeCoupons: [StoreCouponInfo]?
+}
+
+struct StoreCouponInfo: Decodable {
+    let storeId: Int
+    let storeName: String
+    let couponId: Int
+    let couponName: String
+    let couponDescription: String?
 }
 
 // MARK: - 미션

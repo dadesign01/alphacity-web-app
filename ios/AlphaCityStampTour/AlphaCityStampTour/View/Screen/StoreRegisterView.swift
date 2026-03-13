@@ -447,7 +447,7 @@ struct StoreRegisterView: View {
         VStack {
             Spacer()
 
-            Image("StampCharacterSmall")
+            Image("Walk")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 69, height: 81)

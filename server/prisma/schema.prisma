@@ -45,6 +45,7 @@ model Program {
   missions      Mission[]
   stamps        Stamp[]
   coupons       Coupon[]
+  stores        Store[]
   programPlaces ProgramPlace[]
 
   @@map("programs")
@@ -170,11 +171,10 @@ model ProgramPlace {
 }
 
 enum PlaceCategory {
-  entrance
   food
-  facility
-  photo_zone
-  other
+  exhibition
+  seminar
+  event
 }
 
 model Mission {
@@ -267,8 +267,9 @@ model Coupon {
   programId      Int?     @map("program_id")
   createdAt      DateTime @default(now()) @map("created_at")
 
-  program     Program?     @relation(fields: [programId], references: [id], onDelete: SetNull)
-  userCoupons UserCoupon[]
+  program      Program?     @relation(fields: [programId], references: [id], onDelete: SetNull)
+  userCoupons  UserCoupon[]
+  storeCoupons StoreCoupon[]
 
   @@map("coupons")
 }
@@ -313,14 +314,29 @@ model Store {
   openTime      String?       @map("open_time") @db.VarChar(10)
   closeTime     String?       @map("close_time") @db.VarChar(10)
   userId        Int?          @map("user_id")
+  programId     Int?          @map("program_id")
   status        StoreStatus   @default(pending)
   requestDate   DateTime      @map("request_date") @db.Date
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
-  userCoupons UserCoupon[]
+  program      Program?      @relation(fields: [programId], references: [id], onDelete: SetNull)
+  userCoupons  UserCoupon[]
+  storeCoupons StoreCoupon[]
 
   @@map("stores")
+}
+
+model StoreCoupon {
+  id       Int @id @default(autoincrement())
+  storeId  Int @map("store_id")
+  couponId Int @map("coupon_id")
+
+  store  Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, couponId])
+  @@map("store_coupons")
 }
 
 enum StoreCategory {

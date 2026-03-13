@@ -12,6 +12,15 @@ struct QuizMissionView: View {
 
     @StateObject private var viewModel = MissionViewModel()
     @State private var selectedOption: String? = nil
+    @State private var textAnswer: String = ""
+
+    private var isShortAnswer: Bool {
+        mission.options == nil || mission.options?.isEmpty == true
+    }
+
+    private var canSubmit: Bool {
+        isShortAnswer ? !textAnswer.trimmingCharacters(in: .whitespaces).isEmpty : selectedOption != nil
+    }
 
     var body: some View {
         ZStack {
@@ -80,9 +89,23 @@ struct QuizMissionView: View {
                             .padding(.top, 20)
                         }
 
+                        // 서술형 입력
+                        if isShortAnswer {
+                            TextField("정답을 입력하세요", text: $textAnswer)
+                                .font(AppFont.medium(15))
+                                .padding(.horizontal, 18)
+                                .padding(.vertical, 16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
+                                )
+                                .padding(.top, 20)
+                        }
+
                         // 제출 버튼
                         Button(action: {
-                            guard let answer = selectedOption else { return }
+                            let answer = isShortAnswer ? textAnswer.trimmingCharacters(in: .whitespaces) : (selectedOption ?? "")
+                            guard !answer.isEmpty else { return }
                             viewModel.completeQuizMission(missionId: mission.id, answer: answer)
                         }) {
                             HStack {
@@ -98,10 +121,10 @@ struct QuizMissionView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(selectedOption != nil ? AppColor.primary : Color(hex: "D1D5DB"))
+                                    .fill(canSubmit ? AppColor.primary : Color(hex: "D1D5DB"))
                             )
                         }
-                        .disabled(selectedOption == nil || viewModel.isLoading)
+                        .disabled(!canSubmit || viewModel.isLoading)
                         .padding(.top, 28)
                     }
                     .padding(.horizontal, 20)

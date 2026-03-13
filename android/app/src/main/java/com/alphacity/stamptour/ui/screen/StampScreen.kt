@@ -14,6 +14,9 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -52,8 +55,16 @@ fun StampScreen(
     val missions by viewModel.missions.collectAsState()
     val userStamps by viewModel.userStamps.collectAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.fetchStampData()
+    // 탭 전환 시마다 최신 데이터 로드
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.fetchStampData()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     val progress = if (totalStampCount > 0) {
@@ -362,7 +373,7 @@ private fun StampProgressCard(
 
                 // Character on bar
                 Image(
-                    painter = painterResource(id = R.drawable.stamp_character),
+                    painter = painterResource(id = R.drawable.walk),
                     contentDescription = "스탬프 캐릭터",
                     modifier = Modifier
                         .size(36.dp)

@@ -40,6 +40,14 @@ export async function GET(request: NextRequest) {
             } : {}),
           },
         },
+        stores: {
+          where: { status: 'approved' },
+          include: {
+            storeCoupons: {
+              include: { coupon: { select: { id: true, name: true, description: true } } },
+            },
+          },
+        },
       },
       orderBy: { startDate: 'asc' },
     });
@@ -60,11 +68,23 @@ export async function GET(request: NextRequest) {
         else if (today > end) status = 'ended';
         else status = 'in_progress';
 
+        // 상점별 쿠폰을 플랫하게 변환
+        const storeCoupons = program.stores.flatMap(store =>
+          store.storeCoupons.map(sc => ({
+            storeId: store.id,
+            storeName: store.name,
+            couponId: sc.coupon.id,
+            couponName: sc.coupon.name,
+            couponDescription: sc.coupon.description,
+          }))
+        );
+
         return {
           ...program,
           status,
           latitude: program.latitude ? Number(program.latitude) : null,
           longitude: program.longitude ? Number(program.longitude) : null,
+          storeCoupons,
           events: program.events.map((event) => {
             const { participants, _count, ...rest } = event as typeof event & { participants?: { id: number }[] };
             return {

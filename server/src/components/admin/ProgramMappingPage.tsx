@@ -65,11 +65,10 @@ interface StampData {
 }
 
 const categoryLabels: Record<string, string> = {
-  entrance: '입구',
-  food: '음식점',
-  facility: '편의시설',
-  photo_zone: '포토존',
-  other: '기타',
+  food: '맛집',
+  exhibition: '전시',
+  seminar: '세미나',
+  event: '이벤트',
 };
 
 const statusLabels: Record<string, string> = {

@@ -9,14 +9,16 @@ async function main() {
   await prisma.missionCompletion.deleteMany();
   await prisma.mission.deleteMany();
   await prisma.userCoupon.deleteMany();
+  await prisma.storeCoupon.deleteMany();
   await prisma.coupon.deleteMany();
   await prisma.userStamp.deleteMany();
   await prisma.stamp.deleteMany();
   await prisma.eventParticipant.deleteMany();
   await prisma.event.deleteMany();
+  await prisma.programPlace.deleteMany();
+  await prisma.store.deleteMany();
   await prisma.program.deleteMany();
   await prisma.place.deleteMany();
-  await prisma.store.deleteMany();
   await prisma.banner.deleteMany();
   console.log('Existing data cleared');
 
@@ -149,7 +151,7 @@ async function main() {
   console.log('Seminar programs created');
 
   // 프로그램 (맛집)
-  await prisma.program.create({
+  const food1 = await prisma.program.create({
     data: {
       name: '알파시티 카페거리 맛집 투어',
       description: '알파시티 내 숨겨진 카페와 디저트 맛집을 스탬프와 함께 즐겨보세요.',
@@ -164,7 +166,7 @@ async function main() {
       status: 'in_progress',
     },
   });
-  await prisma.program.create({
+  const food2 = await prisma.program.create({
     data: {
       name: '스마트 비스트로 미식 체험',
       description: 'AI가 추천하는 맞춤형 메뉴와 스마트 키친의 미래를 경험하세요.',
@@ -541,10 +543,10 @@ async function main() {
 
   // 장소
   const places = await Promise.all([
-    prisma.place.create({ data: { name: '메인 게이트', category: 'entrance', latitude: 37.5665, longitude: 126.978, address: '서울특별시 중구 세종대로 110' } }),
-    prisma.place.create({ data: { name: '푸드 코트', category: 'food', latitude: 37.5665, longitude: 126.979 } }),
-    prisma.place.create({ data: { name: '공연장', category: 'facility', latitude: 37.5666, longitude: 126.978 } }),
-    prisma.place.create({ data: { name: '포토존 1', category: 'photo_zone', latitude: 37.5664, longitude: 126.978 } }),
+    prisma.place.create({ data: { name: '알파시티 카페', category: 'food', latitude: 37.5665, longitude: 126.978, address: '서울특별시 중구 세종대로 110' } }),
+    prisma.place.create({ data: { name: 'AI 전시관', category: 'exhibition', latitude: 37.5665, longitude: 126.979 } }),
+    prisma.place.create({ data: { name: '세미나홀', category: 'seminar', latitude: 37.5666, longitude: 126.978 } }),
+    prisma.place.create({ data: { name: '스탬프 이벤트 광장', category: 'event', latitude: 37.5664, longitude: 126.978 } }),
   ]);
   console.log('Places created');
 
@@ -579,91 +581,131 @@ async function main() {
   });
   console.log('Geofence test missions created');
 
-  // 스탬프
-  await prisma.stamp.createMany({
-    data: [
-      { name: '첫 방문 스탬프', conditionType: 'place_visit', conditionDetail: '프로그램 첫 방문' },
-      { name: '미션 완료 스탬프', conditionType: 'mission_complete', conditionDetail: '미션 3개 완료' },
-      { name: '이벤트 참여 스탬프', conditionType: 'event_participate', conditionDetail: '이벤트 1회 참여' },
-    ],
+  // 스탬프 (개별 생성 - 미션 연결을 위해 ID 필요)
+  const stamp1 = await prisma.stamp.create({
+    data: { name: '첫 방문 스탬프', conditionType: 'place_visit', conditionDetail: '프로그램 첫 방문', imageUrl: '/uploads/stamp_1.png' },
   });
-  console.log('Stamps created');
+  const stamp2 = await prisma.stamp.create({
+    data: { name: '미션 완료 스탬프', conditionType: 'mission_complete', conditionDetail: '미션 완료 시 적립', imageUrl: '/uploads/stamp_2.png' },
+  });
+  const stamp3 = await prisma.stamp.create({
+    data: { name: '이벤트 참여 스탬프', conditionType: 'event_participate', conditionDetail: '이벤트 1회 참여', imageUrl: '/uploads/stamp_3.png' },
+  });
+
+  // 미션에 스탬프 연결
+  const allMissions = await prisma.mission.findMany({ orderBy: { id: 'asc' } });
+  if (allMissions.length >= 3) {
+    await prisma.mission.update({ where: { id: allMissions[0].id }, data: { stampId: stamp1.id } });
+    await prisma.mission.update({ where: { id: allMissions[1].id }, data: { stampId: stamp2.id } });
+    await prisma.mission.update({ where: { id: allMissions[2].id }, data: { stampId: stamp3.id } });
+  }
+  if (allMissions.length >= 4) {
+    await prisma.mission.update({ where: { id: allMissions[3].id }, data: { stampId: stamp1.id } });
+  }
+  if (allMissions.length >= 5) {
+    await prisma.mission.update({ where: { id: allMissions[4].id }, data: { stampId: stamp2.id } });
+  }
+  console.log('Stamps created and linked to missions');
 
   // 쿠폰
-  await prisma.coupon.createMany({
-    data: [
-      { name: '커피 무료 쿠폰', description: '제휴 카페에서 사용 가능한 커피 무료 쿠폰', requiredStamps: 3, validUntil: new Date('2025-04-30') },
-      { name: '기념품 교환권', description: '프로그램 기념품을 교환할 수 있는 쿠폰', requiredStamps: 5, validUntil: new Date('2025-05-31') },
-      { name: '10% 할인 쿠폰', description: '프로그램 내 상점 10% 할인', requiredStamps: 2, validUntil: new Date('2025-04-15') },
-    ],
+  const coupon1 = await prisma.coupon.create({
+    data: { name: '커피 무료 쿠폰', description: '제휴 카페에서 사용 가능한 커피 무료 쿠폰', requiredStamps: 3, validUntil: new Date('2026-12-31') },
+  });
+  const coupon2 = await prisma.coupon.create({
+    data: { name: '기념품 교환권', description: '프로그램 기념품을 교환할 수 있는 쿠폰', requiredStamps: 5, validUntil: new Date('2026-12-31') },
+  });
+  const coupon3 = await prisma.coupon.create({
+    data: { name: '10% 할인 쿠폰', description: '프로그램 내 상점 10% 할인', requiredStamps: 2, validUntil: new Date('2026-12-31') },
+  });
+  const coupon4 = await prisma.coupon.create({
+    data: { name: '런치 세트 할인권', description: '런치 세트 메뉴 20% 할인', requiredStamps: 4, validUntil: new Date('2026-12-31') },
   });
   console.log('Coupons created');
 
-  // 상점
-  await prisma.store.createMany({
-    data: [
-      {
-        name: '알파시티 카페',
-        category: 'cafe',
-        ownerName: '김사장',
-        phone: '053-123-4567',
-        address: '대구광역시 수성구 알파시티 2로 33',
-        addressDetail: '태왕알파시티 1층 101호',
-        description: '알파시티 내 분위기 좋은 카페입니다.',
-        storeCode: '#CAFE0001',
-        operatingDays: '월,화,수,목,금,토',
-        openTime: '09:00',
-        closeTime: '21:00',
-        requestDate: new Date('2026-02-25'),
-        status: 'pending',
-      },
-      {
-        name: '알파 레스토랑',
-        category: 'restaurant',
-        ownerName: '이사장',
-        phone: '053-234-5678',
-        address: '대구광역시 수성구 알파시티 2로 35',
-        addressDetail: '태왕알파시티 2층 201호',
-        description: '한식과 양식을 모두 즐길 수 있는 레스토랑입니다.',
-        storeCode: '#REST0001',
-        operatingDays: '월,화,수,목,금,토,일',
-        openTime: '11:00',
-        closeTime: '22:00',
-        requestDate: new Date('2026-02-26'),
-        status: 'pending',
-      },
-      {
-        name: '알파 마트',
-        category: 'convenience',
-        ownerName: '박사장',
-        phone: '053-345-6789',
-        address: '대구광역시 수성구 알파시티 2로 33',
-        addressDetail: '태왕알파시티 1층 102호',
-        description: '생활용품과 간식을 편리하게 구매할 수 있습니다.',
-        storeCode: '#CONV0001',
-        operatingDays: '월,화,수,목,금,토,일',
-        openTime: '07:00',
-        closeTime: '23:00',
-        requestDate: new Date('2026-02-20'),
-        status: 'approved',
-      },
-      {
-        name: '수성 기념품샵',
-        category: 'shopping',
-        ownerName: '최사장',
-        phone: '053-456-7890',
-        address: '대구광역시 수성구 알파시티 2로 37',
-        description: '수성구 기념품과 관광 상품을 판매합니다.',
-        storeCode: '#SHOP0001',
-        operatingDays: '화,수,목,금,토,일',
-        openTime: '10:00',
-        closeTime: '19:00',
-        requestDate: new Date('2026-02-18'),
-        status: 'rejected',
-      },
-    ],
+  // 상점 (프로그램 연결)
+  const store1 = await prisma.store.create({
+    data: {
+      name: '알파시티 카페',
+      category: 'cafe',
+      ownerName: '김사장',
+      phone: '053-123-4567',
+      address: '대구광역시 수성구 알파시티 2로 33',
+      addressDetail: '태왕알파시티 1층 101호',
+      description: '알파시티 내 분위기 좋은 카페입니다.',
+      storeCode: '#CAFE0001',
+      operatingDays: '월,화,수,목,금,토',
+      openTime: '09:00',
+      closeTime: '21:00',
+      programId: food1.id,
+      requestDate: new Date('2026-02-25'),
+      status: 'approved',
+    },
+  });
+  const store2 = await prisma.store.create({
+    data: {
+      name: '알파 레스토랑',
+      category: 'restaurant',
+      ownerName: '이사장',
+      phone: '053-234-5678',
+      address: '대구광역시 수성구 알파시티 2로 35',
+      addressDetail: '태왕알파시티 2층 201호',
+      description: '한식과 양식을 모두 즐길 수 있는 레스토랑입니다.',
+      storeCode: '#REST0001',
+      operatingDays: '월,화,수,목,금,토,일',
+      openTime: '11:00',
+      closeTime: '22:00',
+      programId: food2.id,
+      requestDate: new Date('2026-02-26'),
+      status: 'approved',
+    },
+  });
+  const store3 = await prisma.store.create({
+    data: {
+      name: '알파 마트',
+      category: 'convenience',
+      ownerName: '박사장',
+      phone: '053-345-6789',
+      address: '대구광역시 수성구 알파시티 2로 33',
+      addressDetail: '태왕알파시티 1층 102호',
+      description: '생활용품과 간식을 편리하게 구매할 수 있습니다.',
+      storeCode: '#CONV0001',
+      operatingDays: '월,화,수,목,금,토,일',
+      openTime: '07:00',
+      closeTime: '23:00',
+      programId: food1.id,
+      requestDate: new Date('2026-02-20'),
+      status: 'approved',
+    },
+  });
+  await prisma.store.create({
+    data: {
+      name: '수성 기념품샵',
+      category: 'shopping',
+      ownerName: '최사장',
+      phone: '053-456-7890',
+      address: '대구광역시 수성구 알파시티 2로 37',
+      description: '수성구 기념품과 관광 상품을 판매합니다.',
+      storeCode: '#SHOP0001',
+      operatingDays: '화,수,목,금,토,일',
+      openTime: '10:00',
+      closeTime: '19:00',
+      requestDate: new Date('2026-02-18'),
+      status: 'rejected',
+    },
   });
   console.log('Stores created');
+
+  // 상점-쿠폰 연결
+  await prisma.storeCoupon.createMany({
+    data: [
+      { storeId: store1.id, couponId: coupon1.id },
+      { storeId: store1.id, couponId: coupon3.id },
+      { storeId: store2.id, couponId: coupon3.id },
+      { storeId: store2.id, couponId: coupon4.id },
+      { storeId: store3.id, couponId: coupon2.id },
+    ],
+  });
+  console.log('Store-Coupon links created');
 
   // 알림
   await prisma.notification.createMany({

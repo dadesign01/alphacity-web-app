@@ -158,20 +158,30 @@ struct ProgramDetailView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 14)
 
-                    Text("스탬프 투어 참여자 10% 할인")
-                        .font(AppFont.regular(12))
-                        .foregroundColor(Color(hex: "595959"))
-                        .padding(.horizontal, 20)
-                        .padding(.top, 8)
+                    if let storeCoupons = program.storeCoupons, !storeCoupons.isEmpty {
+                        ForEach(storeCoupons, id: \.couponId) { sc in
+                            HStack(spacing: 6) {
+                                Text("•")
+                                    .font(AppFont.regular(12))
+                                    .foregroundColor(Color(hex: "595959"))
+                                Text("\(sc.couponName) (\(sc.storeName))")
+                                    .font(AppFont.regular(12))
+                                    .foregroundColor(Color(hex: "595959"))
+                                Spacer()
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 2)
+                        }
+                    } else {
+                        Text("등록된 제휴 혜택이 없습니다")
+                            .font(AppFont.regular(12))
+                            .foregroundColor(Color(hex: "9CA3AF"))
+                            .padding(.horizontal, 20)
+                            .padding(.top, 8)
+                    }
 
-                    Text("쿠폰 사용 가능")
-                        .font(AppFont.regular(12))
-                        .foregroundColor(Color(hex: "595959"))
-                        .padding(.horizontal, 20)
-                        .padding(.top, 3)
-
-                    // 참여 가능 미션 section (exhibition/seminar only)
-                    if !isFood {
+                    // 참여 가능 미션 section
+                    Group {
                         Divider()
                             .background(Color(hex: "B5B5B5"))
                             .padding(.horizontal, 20)
@@ -224,113 +234,68 @@ struct ProgramDetailView: View {
                             .padding(.bottom, 8)
                     }
 
-                    // Action buttons
-                    if isFood {
-                        // Food: "지도에서 보기" + Share button
-                        HStack(spacing: 11) {
-                            Button(action: {
-                                guard let lat = program.latitude, let lng = program.longitude else { return }
-                                onNavigateToMap?(lat, lng)
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "map")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 20, height: 20)
-                                    Text("지도에서 보기")
-                                        .font(AppFont.medium(16))
-                                        .tracking(-0.32)
-                                }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color(hex: "6092FF"), Color(hex: "2563EB"), Color(hex: "1551D3")],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                            }
-
-                            Button(action: { showShareSheet = true }) {
-                                Image(systemName: "square.and.arrow.up")
+                    // Action buttons: "지도에서 보기" + "참여하기"
+                    if !viewModel.isNearLocation && !viewModel.isCheckingLocation {
+                        Text("장소 근처에 도착하면 참여할 수 있습니다")
+                            .font(AppFont.regular(12))
+                            .foregroundColor(Color(hex: "9CA3AF"))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 6)
+                    }
+                    HStack(spacing: 11) {
+                        // "지도에서 보기" button
+                        Button(action: {
+                            guard let lat = program.latitude, let lng = program.longitude else { return }
+                            onNavigateToMap?(lat, lng)
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "map")
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(width: 24, height: 24)
-                                    .foregroundColor(AppColor.primary)
+                                    .frame(width: 20, height: 20)
+                                Text("지도에서 보기")
+                                    .font(AppFont.medium(16))
+                                    .tracking(-0.32)
                             }
-                            .frame(width: 56, height: 56)
-                            .background(Color(hex: "EDF7FF"))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color(hex: "6092FF"), Color(hex: "2563EB"), Color(hex: "1551D3")],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 40)
-                    } else {
-                        // Program/Seminar: "지도에서 보기" + "참여하기"
-                        if !viewModel.isNearLocation && !viewModel.isCheckingLocation {
-                            Text("장소 근처에 도착하면 참여할 수 있습니다")
-                                .font(AppFont.regular(12))
-                                .foregroundColor(Color(hex: "9CA3AF"))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 20)
-                                .padding(.bottom, 6)
-                        }
-                        HStack(spacing: 11) {
-                            // "지도에서 보기" button
-                            Button(action: {
-                                guard let lat = program.latitude, let lng = program.longitude else { return }
-                                onNavigateToMap?(lat, lng)
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "map")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 20, height: 20)
-                                    Text("지도에서 보기")
+
+                        // "참여하기" button
+                        Button(action: { showMissionSheet = true }) {
+                            Group {
+                                if viewModel.isCheckingLocation {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Text(viewModel.isNearLocation ? "참여하기" : "위치확인")
                                         .font(AppFont.medium(16))
                                         .tracking(-0.32)
                                 }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color(hex: "6092FF"), Color(hex: "2563EB"), Color(hex: "1551D3")],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
-
-                            // "참여하기" button
-                            Button(action: { showMissionSheet = true }) {
-                                Group {
-                                    if viewModel.isCheckingLocation {
-                                        ProgressView()
-                                            .tint(.white)
-                                    } else {
-                                        Text(viewModel.isNearLocation ? "참여하기" : "위치확인")
-                                            .font(AppFont.medium(16))
-                                            .tracking(-0.32)
-                                    }
-                                }
-                                .foregroundColor(.white)
-                                .frame(width: 101, height: 56)
-                                .background(
-                                    viewModel.isNearLocation
-                                    ? LinearGradient(colors: [Color(hex: "6092FF"), Color(hex: "2563EB"), Color(hex: "1551D3")], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                    : LinearGradient(colors: [Color(hex: "9CA3AF"), Color(hex: "6B7280")], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                            }
-                            .disabled(!viewModel.isNearLocation || viewModel.isCheckingLocation)
+                            .foregroundColor(.white)
+                            .frame(width: 101, height: 56)
+                            .background(
+                                viewModel.isNearLocation
+                                ? LinearGradient(colors: [Color(hex: "6092FF"), Color(hex: "2563EB"), Color(hex: "1551D3")], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                : LinearGradient(colors: [Color(hex: "9CA3AF"), Color(hex: "6B7280")], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 40)
+                        .disabled(!viewModel.isNearLocation || viewModel.isCheckingLocation)
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
                 }
             }
         }
@@ -415,7 +380,7 @@ struct ProgramDetailView: View {
 
     private var headerTitle: String {
         switch program.category {
-        case "food": return "삼점 상세"
+        case "food": return "맛집 상세"
         case "seminar": return "세미나 상세"
         default: return "프로그램 상세"
         }

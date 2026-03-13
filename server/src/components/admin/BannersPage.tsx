@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Pencil, Trash2, GripVertical, Image as ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Image as ImageIcon } from 'lucide-react';
 
 interface Banner {
   id: number;
@@ -99,6 +99,32 @@ export default function BannersPage() {
       if (json.success) fetchBanners();
     } catch {
       alert('삭제 중 오류가 발생했습니다');
+    }
+  };
+
+  const handleMove = async (index: number, direction: 'up' | 'down') => {
+    const newBanners = [...banners];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newBanners.length) return;
+
+    [newBanners[index], newBanners[targetIndex]] = [newBanners[targetIndex], newBanners[index]];
+    const orders = newBanners.map((b, i) => ({ id: b.id, sortOrder: i }));
+
+    setBanners(newBanners.map((b, i) => ({ ...b, sortOrder: i })));
+
+    try {
+      const res = await fetch('/api/v1/admin/banners', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orders }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setBanners(json.data);
+        setImgErrors(new Set());
+      }
+    } catch {
+      fetchBanners();
     }
   };
 
@@ -228,9 +254,24 @@ export default function BannersPage() {
               {banners.map((banner, index) => (
                 <tr key={banner.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 text-gray-400">
-                      <GripVertical className="w-4 h-4" />
-                      <span className="text-sm">{index + 1}</span>
+                    <div className="flex items-center gap-1">
+                      <div className="flex flex-col">
+                        <button
+                          onClick={() => handleMove(index, 'up')}
+                          disabled={index === 0}
+                          className="p-0.5 text-gray-400 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleMove(index, 'down')}
+                          disabled={index === banners.length - 1}
+                          className="p-0.5 text-gray-400 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <span className="text-sm text-gray-500 ml-1">{index + 1}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">

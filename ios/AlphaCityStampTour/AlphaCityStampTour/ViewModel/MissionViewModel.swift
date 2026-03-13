@@ -88,7 +88,7 @@ final class MissionViewModel: ObservableObject {
             let targetLocation = CLLocation(latitude: targetLat, longitude: targetLng)
             let distance = location.distance(from: targetLocation)
 
-            if distance <= 100 {
+            if distance <= 50 {
                 do {
                     let result = try await repository.completeMission(missionId: missionId)
                     earnedStamp = result.stamp
@@ -112,7 +112,7 @@ final class MissionViewModel: ObservableObject {
                     showAlert = true
                 }
             } else {
-                alertMessage = "해당 장소 근처에서 인증해주세요.\n(현재 거리: \(Int(distance))m)"
+                alertMessage = "해당 장소 근처에서 인증해주세요.\n(남은 거리: \(Int(distance))m)"
                 showAlert = true
             }
             isLoading = false

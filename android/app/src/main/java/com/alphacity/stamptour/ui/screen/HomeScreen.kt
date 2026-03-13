@@ -607,7 +607,7 @@ private fun StampProgressSection(stampCount: Int = 0, totalStamps: Int = 10, onS
 
                 // Character on bar
                 Image(
-                    painter = painterResource(id = R.drawable.stamp_character),
+                    painter = painterResource(id = R.drawable.walk),
                     contentDescription = "스탬프 캐릭터",
                     modifier = Modifier
                         .size(36.dp)

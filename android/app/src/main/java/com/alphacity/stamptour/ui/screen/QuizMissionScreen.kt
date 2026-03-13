@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,6 +41,8 @@ fun QuizMissionScreen(
     val alertMessage by viewModel.alertMessage.collectAsState()
     val earnedStamp by viewModel.earnedStamp.collectAsState()
     var selectedOption by remember { mutableStateOf<String?>(null) }
+    var textAnswer by remember { mutableStateOf(TextFieldValue("")) }
+    val isShortAnswer = mission.options.isNullOrEmpty()
 
     // 스탬프 적립 팝업
     if (isCompleted && earnedStamp != null) {
@@ -212,17 +215,42 @@ fun QuizMissionScreen(
                     }
                 }
 
+                // 서술형 입력
+                if (isShortAnswer) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    OutlinedTextField(
+                        value = textAnswer,
+                        onValueChange = { textAnswer = it },
+                        placeholder = {
+                            Text("정답을 입력하세요", fontFamily = Pretendard, fontSize = 15.sp, color = Color(0xFF9CA3AF))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Primary,
+                            unfocusedBorderColor = Color(0xFFE5E7EB),
+                        ),
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 15.sp,
+                            color = Color(0xFF121212),
+                        ),
+                        singleLine = true,
+                    )
+                }
+
                 // 제출 버튼
+                val canSubmit = if (isShortAnswer) textAnswer.text.isNotBlank() else selectedOption != null
                 Spacer(modifier = Modifier.height(28.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (selectedOption != null) Primary else Color(0xFFD1D5DB))
-                        .clickable(enabled = selectedOption != null && !isLoading) {
-                            selectedOption?.let { answer ->
-                                viewModel.completeQuizMission(mission.id, answer)
-                            }
+                        .background(if (canSubmit) Primary else Color(0xFFD1D5DB))
+                        .clickable(enabled = canSubmit && !isLoading) {
+                            val answer = if (isShortAnswer) textAnswer.text.trim() else selectedOption ?: return@clickable
+                            viewModel.completeQuizMission(mission.id, answer)
                         }
                         .padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center,

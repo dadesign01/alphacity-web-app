@@ -8,7 +8,6 @@
 import SwiftUI
 
 enum AppScreen {
-    case splash
     case login
     case register
     case forgotPassword
@@ -17,67 +16,78 @@ enum AppScreen {
 
 struct ContentView: View {
     @StateObject private var loginViewModel = LoginViewModel()
-    @State private var currentScreen: AppScreen = .splash
+    @State private var currentScreen: AppScreen = .login
     @State private var deepLinkProgramId: Int? = nil
+    @State private var showSplash = true
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        NavigationStack {
-            switch currentScreen {
-            case .splash:
+        ZStack {
+            NavigationStack {
+                switch currentScreen {
+                case .login:
+                    LoginView(
+                        viewModel: loginViewModel,
+                        onLoginSuccess: {
+                            currentScreen = .home
+                        },
+                        onGuestTapped: {
+                            currentScreen = .home
+                        },
+                        onRegisterTapped: {
+                            currentScreen = .register
+                        },
+                        onForgotPasswordTapped: {
+                            currentScreen = .forgotPassword
+                        }
+                    )
+
+                case .register:
+                    RegisterView(
+                        onRegisterSuccess: {
+                            currentScreen = .home
+                        },
+                        onBackTapped: {
+                            currentScreen = .login
+                        }
+                    )
+
+                case .forgotPassword:
+                    ForgotPasswordView(
+                        onBackTapped: {
+                            currentScreen = .login
+                        }
+                    )
+
+                case .home:
+                    MainTabView(
+                        deepLinkProgramId: $deepLinkProgramId,
+                        onLogout: {
+                            currentScreen = .login
+                        },
+                        onNavigateToRegister: {
+                            currentScreen = .login
+                        }
+                    )
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .deepLinkProgram)) { notification in
+                if let programId = notification.userInfo?["programId"] as? Int {
+                    showSplash = false
+                    currentScreen = .home
+                    deepLinkProgramId = programId
+                }
+            }
+
+            if showSplash {
                 SplashView(onStartTapped: {
-                    currentScreen = .login
+                    showSplash = false
                 })
-
-            case .login:
-                LoginView(
-                    viewModel: loginViewModel,
-                    onLoginSuccess: {
-                        currentScreen = .home
-                    },
-                    onGuestTapped: {
-                        currentScreen = .home
-                    },
-                    onRegisterTapped: {
-                        currentScreen = .register
-                    },
-                    onForgotPasswordTapped: {
-                        currentScreen = .forgotPassword
-                    }
-                )
-
-            case .register:
-                RegisterView(
-                    onRegisterSuccess: {
-                        currentScreen = .home
-                    },
-                    onBackTapped: {
-                        currentScreen = .login
-                    }
-                )
-
-            case .forgotPassword:
-                ForgotPasswordView(
-                    onBackTapped: {
-                        currentScreen = .login
-                    }
-                )
-
-            case .home:
-                MainTabView(
-                    deepLinkProgramId: $deepLinkProgramId,
-                    onLogout: {
-                        currentScreen = .login
-                    },
-                    onNavigateToRegister: {
-                        currentScreen = .login
-                    }
-                )
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .deepLinkProgram)) { notification in
-            if let programId = notification.userInfo?["programId"] as? Int {
-                currentScreen = .home
-                deepLinkProgramId = programId
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active && !showSplash {
+                showSplash = true
             }
         }
     }

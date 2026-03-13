@@ -111,7 +111,7 @@ class MissionViewModel @Inject constructor(
             }
             val distance = location.distanceTo(target)
 
-            if (distance <= 100f) {
+            if (distance <= 50f) {
                 homeRepository.completeMission(missionId)
                     .onSuccess { result ->
                         _earnedStamp.value = result.stamp
@@ -129,7 +129,7 @@ class MissionViewModel @Inject constructor(
                         _showAlert.value = true
                     }
             } else {
-                _alertMessage.value = "해당 장소 근처에서 인증해주세요.\n(현재 거리: ${distance.toInt()}m)"
+                _alertMessage.value = "해당 장소 근처에서 인증해주세요.\n(남은 거리: ${distance.toInt()}m)"
                 _showAlert.value = true
             }
             _isLoading.value = false

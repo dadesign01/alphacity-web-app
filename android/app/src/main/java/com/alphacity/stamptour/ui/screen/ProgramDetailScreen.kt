@@ -136,7 +136,7 @@ fun ProgramDetailScreen(
         // Header
         DetailHeader(
             title = when (program.category) {
-                "food" -> "삼점 상세"
+                "food" -> "맛집 상세"
                 "seminar" -> "세미나 상세"
                 else -> "프로그램 상세"
             },
@@ -321,26 +321,43 @@ fun ProgramDetailScreen(
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "스탬프 투어 참여자 10% 할인",
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                color = Color(0xFF595959),
-                modifier = Modifier.padding(horizontal = 20.dp),
-            )
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(
-                text = "쿠폰 사용 가능",
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                color = Color(0xFF595959),
-                modifier = Modifier.padding(horizontal = 20.dp),
-            )
+            if (!program.storeCoupons.isNullOrEmpty()) {
+                program.storeCoupons.forEach { sc ->
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 20.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "•",
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 12.sp,
+                            color = Color(0xFF595959),
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "${sc.couponName} (${sc.storeName})",
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 12.sp,
+                            color = Color(0xFF595959),
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "등록된 제휴 혜택이 없습니다",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    color = Color(0xFF9CA3AF),
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+            }
 
-            // "참여 가능 미션" section (exhibition/seminar only)
-            if (!isFood) {
+            // "참여 가능 미션" section
+            run {
                 Divider(
                     color = Color(0xFFB5B5B5),
                     thickness = 0.5.dp,
@@ -408,159 +425,90 @@ fun ProgramDetailScreen(
                 )
             }
 
-            // Action buttons
-            if (isFood) {
-                // Food: "지도에서 보기" + Share
-                Row(
+            // Action buttons: "지도에서 보기" + "참여하기"
+            if (!isNearLocation && !isCheckingLocation) {
+                Text(
+                    text = "장소 근처에 도착하면 참여할 수 있습니다",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    color = Color(0xFF9CA3AF),
                     modifier = Modifier
-                        .fillMaxWidth()
                         .padding(horizontal = 20.dp)
-                        .padding(bottom = 40.dp),
-                    horizontalArrangement = Arrangement.spacedBy(11.dp),
+                        .padding(bottom = 6.dp),
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 40.dp),
+                horizontalArrangement = Arrangement.spacedBy(11.dp),
+            ) {
+                // "지도에서 보기" button
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(GradientBlue)
+                        .clickable {
+                            val lat = program.latitude ?: return@clickable
+                            val lng = program.longitude ?: return@clickable
+                            onNavigateToMap(lat, lng)
+                        },
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(GradientBlue)
-                            .clickable {
-                                val lat = program.latitude ?: return@clickable
-                                val lng = program.longitude ?: return@clickable
-                                onNavigateToMap(lat, lng)
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Map,
-                                contentDescription = "지도",
-                                modifier = Modifier.size(20.dp),
-                                tint = Color.White,
-                            )
-                            Text(
-                                text = "지도에서 보기",
-                                fontFamily = Pretendard,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 16.sp,
-                                color = Color.White,
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFEDF7FF))
-                            .clickable {
-                                // Share
-                                val shareText = "${program.name} - 알파시티 스탬프 투어\nalphacity://program/${program.id}"
-                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, shareText)
-                                }
-                                context.startActivity(Intent.createChooser(shareIntent, "공유"))
-                            },
-                        contentAlignment = Alignment.Center,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Share,
-                            contentDescription = "공유",
-                            modifier = Modifier.size(24.dp),
-                            tint = Primary,
+                            imageVector = Icons.Outlined.Map,
+                            contentDescription = "지도",
+                            modifier = Modifier.size(20.dp),
+                            tint = Color.White,
+                        )
+                        Text(
+                            text = "지도에서 보기",
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp,
+                            color = Color.White,
                         )
                     }
                 }
-            } else {
-                // Program/Seminar: "지도에서 보기" + "참여하기"
-                if (!isNearLocation && !isCheckingLocation) {
-                    Text(
-                        text = "장소 근처에 도착하면 참여할 수 있습니다",
-                        fontFamily = Pretendard,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 12.sp,
-                        color = Color(0xFF9CA3AF),
-                        modifier = Modifier
-                            .padding(horizontal = 20.dp)
-                            .padding(bottom = 6.dp),
-                    )
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .padding(bottom = 40.dp),
-                    horizontalArrangement = Arrangement.spacedBy(11.dp),
-                ) {
-                    // "지도에서 보기" button
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(GradientBlue)
-                            .clickable {
-                                val lat = program.latitude ?: return@clickable
-                                val lng = program.longitude ?: return@clickable
-                                onNavigateToMap(lat, lng)
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Map,
-                                contentDescription = "지도",
-                                modifier = Modifier.size(20.dp),
-                                tint = Color.White,
-                            )
-                            Text(
-                                text = "지도에서 보기",
-                                fontFamily = Pretendard,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 16.sp,
-                                color = Color.White,
-                            )
-                        }
-                    }
 
-                    // "참여하기" button
-                    Box(
-                        modifier = Modifier
-                            .width(101.dp)
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isNearLocation) GradientBlue else GradientGray)
-                            .then(
-                                if (isNearLocation && !isCheckingLocation) {
-                                    Modifier.clickable { showMissionSheet = true }
-                                } else {
-                                    Modifier
-                                }
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (isCheckingLocation) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp,
-                            )
-                        } else {
-                            Text(
-                                text = if (isNearLocation) "참여하기" else "위치확인",
-                                fontFamily = Pretendard,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 16.sp,
-                                color = Color.White,
-                            )
-                        }
+                // "참여하기" button
+                Box(
+                    modifier = Modifier
+                        .width(101.dp)
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isNearLocation) GradientBlue else GradientGray)
+                        .then(
+                            if (isNearLocation && !isCheckingLocation) {
+                                Modifier.clickable { showMissionSheet = true }
+                            } else {
+                                Modifier
+                            }
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (isCheckingLocation) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text(
+                            text = if (isNearLocation) "참여하기" else "위치확인",
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp,
+                            color = Color.White,
+                        )
                     }
                 }
             }

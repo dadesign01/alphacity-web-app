@@ -27,7 +27,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // 퀴즈 미션인 경우 정답 확인
     if (mission.type === 'quiz') {
       const body = await request.json();
-      if (body.answer !== mission.answer) {
+      const userAnswer = (body.answer || '').trim();
+      const correctAnswer = (mission.answer || '').trim();
+      // 객관식: 정확히 일치, 서술형(options 없음): 대소문자 무시 + 공백 trim
+      const hasOptions = mission.options && JSON.parse(mission.options).length > 0;
+      const isCorrect = hasOptions
+        ? userAnswer === correctAnswer
+        : userAnswer.toLowerCase() === correctAnswer.toLowerCase();
+      if (!isCorrect) {
         return errorResponse('WRONG_ANSWER', '정답이 아닙니다');
       }
     }

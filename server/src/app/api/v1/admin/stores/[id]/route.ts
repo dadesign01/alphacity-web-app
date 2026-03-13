@@ -26,16 +26,37 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
+    const storeId = parseInt(id);
     const body = await request.json();
 
+    const updateData: Record<string, unknown> = {};
+    if (body.status) updateData.status = body.status;
+    if (body.programId !== undefined) updateData.programId = body.programId || null;
+
     const store = await prisma.store.update({
-      where: { id: parseInt(id) },
-      data: {
-        status: body.status,
+      where: { id: storeId },
+      data: updateData,
+    });
+
+    // 쿠폰 연결 업데이트
+    if (body.couponIds !== undefined) {
+      await prisma.storeCoupon.deleteMany({ where: { storeId } });
+      if (body.couponIds.length > 0) {
+        await prisma.storeCoupon.createMany({
+          data: body.couponIds.map((couponId: number) => ({ storeId, couponId })),
+        });
+      }
+    }
+
+    const result = await prisma.store.findUnique({
+      where: { id: storeId },
+      include: {
+        program: { select: { id: true, name: true } },
+        storeCoupons: { include: { coupon: { select: { id: true, name: true } } } },
       },
     });
 
-    return successResponse(store, '상점 상태가 변경되었습니다');
+    return successResponse(result, '상점이 업데이트되었습니다');
   } catch {
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }

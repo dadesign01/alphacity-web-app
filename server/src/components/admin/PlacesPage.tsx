@@ -25,10 +25,10 @@ interface Place {
 }
 
 const CATEGORY_MAP: Record<string, string> = {
-  entrance: '입구', food: '식음료', facility: '시설', photo_zone: '포토존', other: '기타',
+  food: '맛집', exhibition: '전시', seminar: '세미나', event: '이벤트',
 };
 
-const EMPTY_FORM = { name: '', category: 'entrance', latitude: '', longitude: '', address: '', description: '', ttsText: '' };
+const EMPTY_FORM = { name: '', category: 'food', latitude: '', longitude: '', address: '', description: '', ttsText: '' };
 
 export default function PlacesPage() {
   const [places, setPlaces] = useState<Place[]>([]);

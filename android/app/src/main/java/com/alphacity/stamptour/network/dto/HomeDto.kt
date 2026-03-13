@@ -32,6 +32,16 @@ data class ProgramItem(
     val status: String,
     val phone: String? = null,
     val events: List<EventItem>? = null,
+    val storeCoupons: List<StoreCouponInfo>? = null,
+)
+
+@Serializable
+data class StoreCouponInfo(
+    val storeId: Int,
+    val storeName: String,
+    val couponId: Int,
+    val couponName: String,
+    val couponDescription: String? = null,
 )
 
 // === 이벤트 ===

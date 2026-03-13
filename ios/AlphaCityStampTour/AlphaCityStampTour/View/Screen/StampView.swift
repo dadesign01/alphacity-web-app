@@ -249,7 +249,7 @@ private struct StampProgressCardView: View {
                         .frame(maxWidth: .infinity, alignment: .bottom)
 
                         // Character on bar
-                        Image("StampCharacterSmall")
+                        Image("Walk")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 36, height: 36)

@@ -495,7 +495,7 @@ private struct StampProgressSectionView: View {
                             .offset(y: 27)
 
                         // Character on bar
-                        Image("StampCharacterSmall")
+                        Image("Walk")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 36, height: 37)

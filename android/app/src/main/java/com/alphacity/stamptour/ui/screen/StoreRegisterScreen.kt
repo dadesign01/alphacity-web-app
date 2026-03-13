@@ -713,7 +713,7 @@ private fun StoreRegisterStep3(
 
         // Character image
         Image(
-            painter = painterResource(id = R.drawable.stamp_character),
+            painter = painterResource(id = R.drawable.walk),
             contentDescription = null,
             modifier = Modifier.size(69.dp, 81.dp),
             contentScale = ContentScale.Fit,

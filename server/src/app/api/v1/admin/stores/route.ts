@@ -3,7 +3,15 @@ import { successResponse, errorResponse } from '@/lib/api-response';
 
 export async function GET() {
   try {
-    const stores = await prisma.store.findMany({ orderBy: { createdAt: 'desc' } });
+    const stores = await prisma.store.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        program: { select: { id: true, name: true } },
+        storeCoupons: {
+          include: { coupon: { select: { id: true, name: true } } },
+        },
+      },
+    });
 
     const [totalCount, pendingCount, approvedCount, rejectedCount] = await Promise.all([
       prisma.store.count(),

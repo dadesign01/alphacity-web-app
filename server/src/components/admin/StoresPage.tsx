@@ -1,7 +1,11 @@
 'use client';
 
-import { CheckCircle, X as XIcon, MapPin, Clock, Phone, Store } from 'lucide-react';
+import { CheckCircle, X as XIcon, MapPin, Clock, Store, Ticket, Link } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+interface StoreCouponItem {
+  coupon: { id: number; name: string };
+}
 
 interface StoreItem {
   id: number;
@@ -17,10 +21,23 @@ interface StoreItem {
   operatingDays?: string;
   openTime?: string;
   closeTime?: string;
+  programId?: number | null;
+  program?: { id: number; name: string } | null;
+  storeCoupons?: StoreCouponItem[];
   requestDate: string;
   status: string;
   createdAt: string;
   updatedAt: string;
+}
+
+interface ProgramOption {
+  id: number;
+  name: string;
+}
+
+interface CouponOption {
+  id: number;
+  name: string;
 }
 
 interface Stats {
@@ -43,6 +60,11 @@ export default function StoresPage() {
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [stats, setStats] = useState<Stats>({ totalCount: 0, pendingCount: 0, approvedCount: 0, rejectedCount: 0 });
   const [selected, setSelected] = useState<StoreItem | null>(null);
+  const [programs, setPrograms] = useState<ProgramOption[]>([]);
+  const [coupons, setCoupons] = useState<CouponOption[]>([]);
+  const [editProgramId, setEditProgramId] = useState<number | null>(null);
+  const [editCouponIds, setEditCouponIds] = useState<number[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const fetchData = () => {
     fetch('/api/v1/admin/stores').then((r) => r.json()).then((d) => {
@@ -50,7 +72,22 @@ export default function StoresPage() {
     });
   };
 
-  useEffect(() => { fetchData(); }, []);
+  const fetchOptions = () => {
+    fetch('/api/v1/admin/programs').then((r) => r.json()).then((d) => {
+      if (d.success) setPrograms(d.data.map((p: ProgramOption) => ({ id: p.id, name: p.name })));
+    });
+    fetch('/api/v1/admin/coupons').then((r) => r.json()).then((d) => {
+      if (d.success) setCoupons(d.data.map((c: CouponOption) => ({ id: c.id, name: c.name })));
+    });
+  };
+
+  useEffect(() => { fetchData(); fetchOptions(); }, []);
+
+  const openDetail = (store: StoreItem) => {
+    setSelected(store);
+    setEditProgramId(store.programId ?? null);
+    setEditCouponIds(store.storeCoupons?.map(sc => sc.coupon.id) ?? []);
+  };
 
   const handleAction = async (id: number, status: 'approved' | 'rejected') => {
     try {
@@ -70,6 +107,36 @@ export default function StoresPage() {
     }
   };
 
+  const handleSaveLinks = async () => {
+    if (!selected) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/v1/admin/stores/${selected.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ programId: editProgramId, couponIds: editCouponIds }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+        setSelected(data.data);
+        alert('저장되었습니다');
+      } else {
+        alert(`저장 실패: ${data.error?.message || '알 수 없는 오류'}`);
+      }
+    } catch {
+      alert('저장 실패: 서버와 통신할 수 없습니다');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleCoupon = (couponId: number) => {
+    setEditCouponIds(prev =>
+      prev.includes(couponId) ? prev.filter(id => id !== couponId) : [...prev, couponId]
+    );
+  };
+
   return (
     <div className="p-8">
       <div className="mb-6">
@@ -83,9 +150,8 @@ export default function StoresPage() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상점명</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">운영자</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">연락처</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">신청일</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">연결 프로그램</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">연결 쿠폰</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
             </tr>
@@ -99,9 +165,24 @@ export default function StoresPage() {
                     {CATEGORY_MAP[store.category] || store.category}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-900">{store.ownerName}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{store.phone}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{new Date(store.requestDate).toLocaleDateString()}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">
+                  {store.program ? (
+                    <span className="inline-flex px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">{store.program.name}</span>
+                  ) : (
+                    <span className="text-gray-400">미연결</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-600">
+                  {store.storeCoupons && store.storeCoupons.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {store.storeCoupons.map(sc => (
+                        <span key={sc.coupon.id} className="inline-flex px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-800">{sc.coupon.name}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">없음</span>
+                  )}
+                </td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
                     store.status === 'approved' ? 'bg-green-100 text-green-800'
@@ -112,27 +193,28 @@ export default function StoresPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  {store.status === 'pending' ? (
-                    <div className="flex gap-2">
-                      <button onClick={() => handleAction(store.id, 'approved')}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                        <CheckCircle className="w-4 h-4" />
-                        승인
-                      </button>
-                      <button onClick={() => handleAction(store.id, 'rejected')}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                        <XIcon className="w-4 h-4" />
-                        반려
-                      </button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setSelected(store)} className="text-sm text-blue-600 hover:underline">상세보기</button>
-                  )}
+                  <div className="flex gap-2">
+                    {store.status === 'pending' && (
+                      <>
+                        <button onClick={() => handleAction(store.id, 'approved')}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                          <CheckCircle className="w-4 h-4" />
+                          승인
+                        </button>
+                        <button onClick={() => handleAction(store.id, 'rejected')}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                          <XIcon className="w-4 h-4" />
+                          반려
+                        </button>
+                      </>
+                    )}
+                    <button onClick={() => openDetail(store)} className="text-sm text-blue-600 hover:underline">상세보기</button>
+                  </div>
                 </td>
               </tr>
             ))}
             {stores.length === 0 && (
-              <tr><td colSpan={7} className="px-6 py-8 text-center text-sm text-gray-500">등록된 상점이 없습니다</td></tr>
+              <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">등록된 상점이 없습니다</td></tr>
             )}
           </tbody>
         </table>
@@ -239,6 +321,52 @@ export default function StoresPage() {
                   </span>
                 </div>
               </div>
+
+              {/* 프로그램 연결 */}
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1"><Link className="w-4 h-4" /> 프로그램 연결</p>
+                <select
+                  value={editProgramId ?? ''}
+                  onChange={(e) => setEditProgramId(e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">프로그램 선택 (미연결)</option>
+                  {programs.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 쿠폰 연결 */}
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1"><Ticket className="w-4 h-4" /> 사용 가능 쿠폰</p>
+                {coupons.length === 0 ? (
+                  <p className="text-sm text-gray-400">등록된 쿠폰이 없습니다</p>
+                ) : (
+                  <div className="space-y-2">
+                    {coupons.map(coupon => (
+                      <label key={coupon.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editCouponIds.includes(coupon.id)}
+                          onChange={() => toggleCoupon(coupon.id)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-900">{coupon.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 저장 버튼 */}
+              <button
+                onClick={handleSaveLinks}
+                disabled={saving}
+                className="w-full py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {saving ? '저장 중...' : '프로그램/쿠폰 연결 저장'}
+              </button>
             </div>
             <div className="sticky bottom-0 bg-white flex justify-end gap-2 p-6 pt-4 border-t border-gray-200">
               {selected.status !== 'approved' && (

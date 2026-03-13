@@ -48,6 +48,7 @@ export default function MissionsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [missionType, setMissionType] = useState('quiz');
+  const [quizFormat, setQuizFormat] = useState<'multiple_choice' | 'short_answer'>('multiple_choice');
   const [form, setForm] = useState(EMPTY_FORM);
 
   const fetchMissions = () => {
@@ -71,6 +72,7 @@ export default function MissionsPage() {
     setEditingId(null);
     setForm(EMPTY_FORM);
     setMissionType('quiz');
+    setQuizFormat('multiple_choice');
     setShowForm(true);
   };
 
@@ -80,6 +82,11 @@ export default function MissionsPage() {
     let parsedOptions = ['', '', '', ''];
     if (mission.options) {
       try { parsedOptions = JSON.parse(mission.options); } catch { /* ignore */ }
+    }
+    // 보기가 없으면 서술형, 있으면 객관식
+    if (mission.type === 'quiz') {
+      const hasOptions = mission.options && JSON.parse(mission.options).length > 0;
+      setQuizFormat(hasOptions ? 'multiple_choice' : 'short_answer');
     }
     setForm({
       name: mission.name,
@@ -111,7 +118,7 @@ export default function MissionsPage() {
           stampId: form.stampId || null,
           question: missionType === 'quiz' ? form.question : null,
           answer: missionType === 'quiz' ? form.answer : null,
-          options: missionType === 'quiz' ? JSON.stringify(form.options.filter(o => o.trim())) : null,
+          options: missionType === 'quiz' && quizFormat === 'multiple_choice' ? JSON.stringify(form.options.filter(o => o.trim())) : null,
           stayMinutes: missionType === 'stay' ? form.stayMinutes : null,
         }),
       });
@@ -212,34 +219,52 @@ export default function MissionsPage() {
             {missionType === 'quiz' && (
               <>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">퀴즈 형식</label>
+                  <div className="flex gap-3">
+                    {[{ value: 'multiple_choice' as const, label: '객관식' }, { value: 'short_answer' as const, label: '서술형' }].map((fmt) => (
+                      <button key={fmt.value} onClick={() => setQuizFormat(fmt.value)}
+                        className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                          quizFormat === fmt.value ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}>
+                        {fmt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">퀴즈 질문</label>
                   <input type="text" value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })}
                     placeholder="퀴즈 질문을 입력하세요"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">보기 (객관식)</label>
-                  <div className="space-y-2">
-                    {form.options.map((opt, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500 w-6">{idx + 1}.</span>
-                        <input type="text" value={opt}
-                          onChange={(e) => {
-                            const newOptions = [...form.options];
-                            newOptions[idx] = e.target.value;
-                            setForm({ ...form, options: newOptions });
-                          }}
-                          placeholder={`보기 ${idx + 1}`}
-                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                      </div>
-                    ))}
-                    {form.options.length < 6 && (
-                      <button type="button" onClick={() => setForm({ ...form, options: [...form.options, ''] })}
-                        className="text-sm text-blue-600 hover:text-blue-700">+ 보기 추가</button>
-                    )}
+                {quizFormat === 'multiple_choice' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">보기 (객관식)</label>
+                    <div className="space-y-2">
+                      {form.options.map((opt, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500 w-6">{idx + 1}.</span>
+                          <input type="text" value={opt}
+                            onChange={(e) => {
+                              const newOptions = [...form.options];
+                              newOptions[idx] = e.target.value;
+                              setForm({ ...form, options: newOptions });
+                            }}
+                            placeholder={`보기 ${idx + 1}`}
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                      ))}
+                      {form.options.length < 6 && (
+                        <button type="button" onClick={() => setForm({ ...form, options: [...form.options, ''] })}
+                          className="text-sm text-blue-600 hover:text-blue-700">+ 보기 추가</button>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">정답도 보기에 포함되어야 합니다</p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">정답도 보기에 포함되어야 합니다</p>
-                </div>
+                )}
+                {quizFormat === 'short_answer' && (
+                  <p className="text-xs text-gray-500">서술형은 사용자가 직접 답을 입력합니다. 대소문자 구분 없이 정답과 일치하면 정답 처리됩니다.</p>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">정답</label>
                   <input type="text" value={form.answer} onChange={(e) => setForm({ ...form, answer: e.target.value })}
