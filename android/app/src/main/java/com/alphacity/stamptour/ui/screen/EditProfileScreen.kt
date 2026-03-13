@@ -58,12 +58,18 @@ fun EditProfileScreen(
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var addressDetail by remember { mutableStateOf("") }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-
     val context = LocalContext.current
     val isLoading by (viewModel?.isLoading ?: MutableStateFlow(false)).collectAsState()
     val saveSuccess by (viewModel?.saveSuccess ?: MutableStateFlow(false)).collectAsState()
     val saveError by (viewModel?.saveError ?: MutableStateFlow(null)).collectAsState()
+
+    // ViewModel에서 현재 프로필 이미지 URI 읽기 (화면 재진입 시 유지됨)
+    val persistedImageUri by (viewModel?.profileImageUri ?: MutableStateFlow(null)).collectAsState()
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    // 화면 열릴 때 ViewModel에 저장된 URI로 초기화
+    LaunchedEffect(Unit) {
+        if (selectedImageUri == null) selectedImageUri = persistedImageUri
+    }
 
     // 저장 성공/실패 처리
     LaunchedEffect(saveSuccess) {
@@ -82,7 +88,12 @@ fun EditProfileScreen(
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
-    ) { uri -> uri?.let { selectedImageUri = it } }
+    ) { uri ->
+        uri?.let {
+            selectedImageUri = it
+            viewModel?.setProfileImageUri(it)  // ViewModel에 저장 → MyPageScreen에서도 반영
+        }
+    }
 
     Column(
         modifier = Modifier

@@ -9,6 +9,7 @@ interface Mission {
   type: string;
   place: { id: number; name: string } | null;
   program: { id: number; name: string } | null;
+  stamp: { id: number; name: string; imageUrl: string | null } | null;
   question: string | null;
   answer: string | null;
   options: string | null;
@@ -26,17 +27,24 @@ interface Place {
   name: string;
 }
 
+interface StampOption {
+  id: number;
+  name: string;
+  imageUrl: string | null;
+}
+
 const TYPE_MAP: Record<string, string> = { quiz: '퀴즈', location_auth: '위치 인증', stay_time: '체류시간' };
 
 const TYPE_TO_FORM: Record<string, string> = { quiz: 'quiz', location_auth: 'location', stay_time: 'stay' };
 const FORM_TO_TYPE: Record<string, string> = { quiz: 'quiz', location: 'location_auth', stay: 'stay_time' };
 
-const EMPTY_FORM = { name: '', placeId: 0, programId: 0, question: '', answer: '', options: ['', '', '', ''], stayMinutes: 5 };
+const EMPTY_FORM = { name: '', placeId: 0, programId: 0, stampId: 0, question: '', answer: '', options: ['', '', '', ''], stayMinutes: 5 };
 
 export default function MissionsPage() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [places, setPlaces] = useState<Place[]>([]);
   const [programs, setPrograms] = useState<ProgramOption[]>([]);
+  const [stamps, setStamps] = useState<StampOption[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [missionType, setMissionType] = useState('quiz');
@@ -53,6 +61,9 @@ export default function MissionsPage() {
     });
     fetch('/api/v1/admin/programs').then((r) => r.json()).then((d) => {
       if (d.success) setPrograms(d.data.map((p: ProgramOption) => ({ id: p.id, name: p.name })));
+    });
+    fetch('/api/v1/admin/stamps').then((r) => r.json()).then((d) => {
+      if (d.success) setStamps(d.data.map((s: StampOption) => ({ id: s.id, name: s.name, imageUrl: s.imageUrl })));
     });
   }, []);
 
@@ -74,6 +85,7 @@ export default function MissionsPage() {
       name: mission.name,
       placeId: mission.place?.id || 0,
       programId: mission.program?.id || 0,
+      stampId: mission.stamp?.id || 0,
       question: mission.question || '',
       answer: mission.answer || '',
       options: parsedOptions,
@@ -96,6 +108,7 @@ export default function MissionsPage() {
           type: FORM_TO_TYPE[missionType],
           placeId: form.placeId || null,
           programId: form.programId || null,
+          stampId: form.stampId || null,
           question: missionType === 'quiz' ? form.question : null,
           answer: missionType === 'quiz' ? form.answer : null,
           options: missionType === 'quiz' ? JSON.stringify(form.options.filter(o => o.trim())) : null,
@@ -177,6 +190,16 @@ export default function MissionsPage() {
                 <option value={0}>프로그램을 선택하세요 (선택사항)</option>
                 {programs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">완료 시 적립 스탬프</label>
+              <select value={form.stampId} onChange={(e) => setForm({ ...form, stampId: Number(e.target.value) })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value={0}>스탬프 없음</option>
+                {stamps.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">미션 완료 시 자동으로 이 스탬프가 적립됩니다</p>
             </div>
 
             <div>
@@ -279,6 +302,7 @@ export default function MissionsPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">미션명</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">프로그램</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">유형</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">적립 스탬프</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상세</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">완료 수</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
@@ -293,6 +317,13 @@ export default function MissionsPage() {
                   <span className="inline-flex px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
                     {TYPE_MAP[mission.type] || mission.type}
                   </span>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-600">
+                  {mission.stamp ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
+                      🏅 {mission.stamp.name}
+                    </span>
+                  ) : <span className="text-gray-400">-</span>}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">
                   {mission.question || (mission.place?.name ? `${mission.place.name}${mission.stayMinutes ? ` / ${mission.stayMinutes}분` : ''}` : '-')}
@@ -313,7 +344,7 @@ export default function MissionsPage() {
               </tr>
             ))}
             {missions.length === 0 && (
-              <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">등록된 미션이 없습니다</td></tr>
+              <tr><td colSpan={7} className="px-6 py-8 text-center text-sm text-gray-500">등록된 미션이 없습니다</td></tr>
             )}
           </tbody>
         </table>

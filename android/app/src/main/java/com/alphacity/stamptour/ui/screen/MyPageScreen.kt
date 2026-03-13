@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import coil.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,6 +42,7 @@ fun MyPageScreen(
     var showStampExchange by remember { mutableStateOf(false) }
 
     val userProfile by viewModel.userProfile.collectAsState()
+    val profileImageUri by viewModel.profileImageUri.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.fetchProfile()
@@ -115,15 +117,26 @@ fun MyPageScreen(
                 .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Profile Avatar - 이미지가 원형에 꽉 차게
-            Image(
-                painter = painterResource(id = R.drawable.icon_profile),
-                contentDescription = "프로필",
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop,
-            )
+            // Profile Avatar
+            if (profileImageUri != null) {
+                AsyncImage(
+                    model = profileImageUri,
+                    contentDescription = "프로필",
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.icon_profile),
+                    contentDescription = "프로필",
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop,
+                )
+            }
 
             Spacer(modifier = Modifier.width(20.dp))
 

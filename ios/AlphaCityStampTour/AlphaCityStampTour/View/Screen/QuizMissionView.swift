@@ -14,6 +14,7 @@ struct QuizMissionView: View {
     @State private var selectedOption: String? = nil
 
     var body: some View {
+        ZStack {
         VStack(spacing: 0) {
             // Header
             HStack(spacing: 12) {
@@ -113,6 +114,14 @@ struct QuizMissionView: View {
             Button("확인", role: .cancel) {}
         } message: {
             Text(viewModel.alertMessage)
+        }
+
+        if viewModel.isCompleted, let stamp = viewModel.earnedStamp {
+            StampEarnedView(stamp: stamp, onDismiss: {
+                onCompleted?()
+                onDismiss?()
+            })
+        }
         }
     }
 

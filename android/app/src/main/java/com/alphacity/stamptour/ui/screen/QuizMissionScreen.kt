@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.alphacity.stamptour.network.dto.MissionItem
+import com.alphacity.stamptour.ui.component.StampEarnedDialog
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.viewmodel.MissionViewModel
@@ -37,7 +38,20 @@ fun QuizMissionScreen(
     val isCompleted by viewModel.isCompleted.collectAsState()
     val showAlert by viewModel.showAlert.collectAsState()
     val alertMessage by viewModel.alertMessage.collectAsState()
+    val earnedStamp by viewModel.earnedStamp.collectAsState()
     var selectedOption by remember { mutableStateOf<String?>(null) }
+
+    // 스탬프 적립 팝업
+    if (isCompleted && earnedStamp != null) {
+        StampEarnedDialog(
+            stamp = earnedStamp,
+            onDismiss = {
+                onCompleted()
+                onDismiss()
+            },
+        )
+        return
+    }
 
     if (showAlert) {
         AlertDialog(

@@ -1,5 +1,6 @@
 package com.alphacity.stamptour.viewmodel
 
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -29,6 +30,14 @@ class MyPageViewModel @Inject constructor(
 
     private val _saveError = MutableStateFlow<String?>(null)
     val saveError: StateFlow<String?> = _saveError
+
+    // 로컬에서 선택한 프로필 이미지 URI (앱 세션 동안 유지)
+    private val _profileImageUri = MutableStateFlow<Uri?>(null)
+    val profileImageUri: StateFlow<Uri?> = _profileImageUri
+
+    fun setProfileImageUri(uri: Uri?) {
+        _profileImageUri.value = uri
+    }
 
     val isLoggedIn: Boolean
         get() = tokenManager.isLoggedIn

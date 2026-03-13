@@ -183,6 +183,7 @@ model Mission {
   type        MissionType
   placeId     Int?        @map("place_id")
   programId   Int?        @map("program_id")
+  stampId     Int?        @map("stamp_id")
   question    String?     @db.Text
   answer      String?     @db.VarChar(500)
   options     String?     @db.Text
@@ -191,6 +192,7 @@ model Mission {
 
   place       Place?              @relation(fields: [placeId], references: [id], onDelete: SetNull)
   program     Program?            @relation(fields: [programId], references: [id], onDelete: SetNull)
+  stamp       Stamp?              @relation(fields: [stampId], references: [id], onDelete: SetNull)
   completions MissionCompletion[]
 
   @@map("missions")
@@ -228,6 +230,7 @@ model Stamp {
   program    Program?    @relation(fields: [programId], references: [id], onDelete: SetNull)
   place      Place?      @relation(fields: [placeId], references: [id], onDelete: SetNull)
   userStamps UserStamp[]
+  missions   Mission[]
 
   @@map("stamps")
 }

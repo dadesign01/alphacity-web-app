@@ -13,6 +13,7 @@ final class MissionViewModel: ObservableObject {
     @Published var message: String?
     @Published var showAlert = false
     @Published var alertMessage = ""
+    @Published var earnedStamp: StampData? = nil
 
     // 체류시간 미션
     @Published var isTimerRunning = false
@@ -38,7 +39,8 @@ final class MissionViewModel: ObservableObject {
         isLoading = true
         Task {
             do {
-                _ = try await repository.completeMission(missionId: missionId, answer: answer)
+                let result = try await repository.completeMission(missionId: missionId, answer: answer)
+                earnedStamp = result.stamp
                 isCompleted = true
                 message = "정답입니다! 미션 완료!"
             } catch let error as APIError {
@@ -88,7 +90,8 @@ final class MissionViewModel: ObservableObject {
 
             if distance <= 100 {
                 do {
-                    _ = try await repository.completeMission(missionId: missionId)
+                    let result = try await repository.completeMission(missionId: missionId)
+                    earnedStamp = result.stamp
                     isCompleted = true
                     message = "위치 인증 완료!"
                 } catch let error as APIError {
@@ -158,7 +161,8 @@ final class MissionViewModel: ObservableObject {
     private func completeStayTimeMission(missionId: Int) async {
         isLoading = true
         do {
-            _ = try await repository.completeMission(missionId: missionId)
+            let result = try await repository.completeMission(missionId: missionId)
+            earnedStamp = result.stamp
             isCompleted = true
             message = "체류시간 미션 완료!"
         } catch let error as APIError {

@@ -364,81 +364,133 @@ struct KakaoMapRepresentable: UIViewRepresentable {
 
         // MARK: - Marker Images
 
-        private func createClusterImage(count: Int) -> UIImage {
-            let radius: CGFloat = 22
-            let size = CGSize(width: radius * 2, height: radius * 2)
+        // 원본 비율: 1443×1152 (가로:세로 ≈ 5:4)
+        private let duckW: CGFloat = 36
+        private let duckH: CGFloat = 29  // 36 * 1152 / 1443
+        private var cachedDuckImage: UIImage?
 
+        private func getDuckImage() -> UIImage? {
+            if let cached = cachedDuckImage { return cached }
+            guard let src = UIImage(named: "MapMarker") else { return nil }
+            let size = CGSize(width: duckW, height: duckH)
             let renderer = UIGraphicsImageRenderer(size: size)
+            let scaled = renderer.image { _ in
+                src.draw(in: CGRect(origin: .zero, size: size))
+            }
+            cachedDuckImage = scaled
+            return scaled
+        }
+
+        private func createClusterImage(count: Int) -> UIImage {
+            guard let duck = getDuckImage() else {
+                // 폴백: 파란 원
+                return UIGraphicsImageRenderer(size: CGSize(width: 36, height: 36)).image { _ in
+                    UIColor(red: 37/255, green: 99/255, blue: 235/255, alpha: 1).setFill()
+                    UIBezierPath(ovalIn: CGRect(x: 0, y: 0, width: 36, height: 36)).fill()
+                }
+            }
+
+            let badgeRadius: CGFloat = 9
+            let badgeBorder: CGFloat = 2
+            let extra = (badgeRadius + badgeBorder) * 0.7
+            let totalW = duckW + extra
+            let totalH = duckH + extra
+
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: totalW, height: totalH))
             return renderer.image { _ in
-                // 외곽 반투명 원
-                UIColor(red: 37/255, green: 99/255, blue: 235/255, alpha: 0.3).setFill()
+                // 오리
+                duck.draw(in: CGRect(x: 0, y: 0, width: duckW, height: duckH))
+
+                // 배지 위치: 오른쪽 아래
+                let badgeCx = duckW - badgeRadius * 0.2
+                let badgeCy = duckH - badgeRadius * 0.2
+
+                // 흰 테두리
+                UIColor.white.setFill()
                 UIBezierPath(
-                    arcCenter: CGPoint(x: radius, y: radius),
-                    radius: radius,
+                    arcCenter: CGPoint(x: badgeCx, y: badgeCy),
+                    radius: badgeRadius + badgeBorder,
                     startAngle: 0, endAngle: .pi * 2, clockwise: true
                 ).fill()
 
-                // 내부 원
+                // 파란 배지
                 UIColor(red: 37/255, green: 99/255, blue: 235/255, alpha: 1).setFill()
                 UIBezierPath(
-                    arcCenter: CGPoint(x: radius, y: radius),
-                    radius: 16,
+                    arcCenter: CGPoint(x: badgeCx, y: badgeCy),
+                    radius: badgeRadius,
                     startAngle: 0, endAngle: .pi * 2, clockwise: true
                 ).fill()
 
                 // 숫자
                 let text = "\(count)" as NSString
                 let attrs: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.boldSystemFont(ofSize: 14),
+                    .font: UIFont.boldSystemFont(ofSize: 10),
                     .foregroundColor: UIColor.white,
                 ]
                 let textSize = text.size(withAttributes: attrs)
-                text.draw(
-                    at: CGPoint(x: radius - textSize.width / 2, y: radius - textSize.height / 2),
-                    withAttributes: attrs
-                )
+                text.draw(at: CGPoint(
+                    x: badgeCx - textSize.width / 2,
+                    y: badgeCy - textSize.height / 2
+                ), withAttributes: attrs)
             }
         }
 
         private func createNameBubbleImage(name: String) -> UIImage {
-            let primaryColor = UIColor(red: 37/255, green: 99/255, blue: 235/255, alpha: 1)
-            let pointerHeight: CGFloat = 6
+            guard let duck = getDuckImage() else { return UIImage() }
 
             let textAttrs: [NSAttributedString.Key: Any] = [
-                .font: UIFont.boldSystemFont(ofSize: 10),
-                .foregroundColor: UIColor.white,
+                .font: UIFont.systemFont(ofSize: 11, weight: .medium),
+                .foregroundColor: UIColor(red: 18/255, green: 18/255, blue: 18/255, alpha: 1),
             ]
             let textNS = name as NSString
             let textSize = textNS.size(withAttributes: textAttrs)
             let paddingH: CGFloat = 10
-            let paddingV: CGFloat = 5
+            let paddingV: CGFloat = 6
             let boxWidth = textSize.width + paddingH * 2
             let boxHeight = textSize.height + paddingV * 2
-            let cornerRadius = boxHeight / 2
-            let totalHeight = boxHeight + pointerHeight
+            let cornerRadius: CGFloat = 7
+            let pointerH: CGFloat = 5
+            let shadowPad: CGFloat = 5
 
-            let renderer = UIGraphicsImageRenderer(size: CGSize(width: boxWidth, height: totalHeight))
-            return renderer.image { _ in
-                let cx = boxWidth / 2
+            let totalW = max(boxWidth + shadowPad * 2, duckW)
+            let totalH = shadowPad + boxHeight + pointerH + duckH
 
-                // 배경 라운드 박스
-                let boxRect = CGRect(x: 0, y: 0, width: boxWidth, height: boxHeight)
-                primaryColor.setFill()
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: totalW, height: totalH))
+            return renderer.image { ctx in
+                let cgCtx = ctx.cgContext
+                let cx = totalW / 2
+
+                let boxLeft = cx - boxWidth / 2
+                let boxTop = shadowPad
+                let boxRect = CGRect(x: boxLeft, y: boxTop, width: boxWidth, height: boxHeight)
+
+                // 그림자 설정
+                cgCtx.setShadow(offset: CGSize(width: 0, height: 2), blur: 4,
+                                color: UIColor.black.withAlphaComponent(0.2).cgColor)
+
+                // 흰 배경
+                UIColor.white.setFill()
                 UIBezierPath(roundedRect: boxRect, cornerRadius: cornerRadius).fill()
 
-                // 아래 삼각형 포인터
+                // 그림자 해제 후 포인터
+                cgCtx.setShadow(offset: .zero, blur: 0, color: nil)
+                let pointerY = boxTop + boxHeight
                 let pointer = UIBezierPath()
-                pointer.move(to: CGPoint(x: cx - 4, y: boxHeight - 1))
-                pointer.addLine(to: CGPoint(x: cx, y: totalHeight))
-                pointer.addLine(to: CGPoint(x: cx + 4, y: boxHeight - 1))
+                pointer.move(to: CGPoint(x: cx - 4, y: pointerY))
+                pointer.addLine(to: CGPoint(x: cx, y: pointerY + pointerH))
+                pointer.addLine(to: CGPoint(x: cx + 4, y: pointerY))
                 pointer.close()
+                UIColor.white.setFill()
                 pointer.fill()
 
                 // 텍스트
-                textNS.draw(
-                    at: CGPoint(x: paddingH, y: paddingV),
-                    withAttributes: textAttrs
-                )
+                textNS.draw(at: CGPoint(x: boxLeft + paddingH, y: boxTop + paddingV),
+                            withAttributes: textAttrs)
+
+                // 오리 이미지
+                let duckLeft = (totalW - duckW) / 2
+                let duckTop = boxTop + boxHeight + pointerH
+                duck.draw(in: CGRect(x: duckLeft, y: duckTop, width: duckW, height: duckH))
             }
         }
     }

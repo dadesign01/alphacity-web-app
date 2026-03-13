@@ -3,9 +3,11 @@ package com.alphacity.stamptour.ui.screen
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.RectF
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -531,81 +533,131 @@ private fun createLocationMarkerBitmap(context: android.content.Context): Bitmap
     return bitmap
 }
 
+// 원본 비율: 1443×1152 (가로:세로 ≈ 5:4)
+private const val DUCK_W_DP = 36f
+private const val DUCK_H_DP = 29f  // 36 * 1152 / 1443
+
+// 매번 디코딩하지 않도록 캐시
+private var cachedDuckBitmap: Bitmap? = null
+
+private fun getDuckBitmap(context: android.content.Context, wPx: Int, hPx: Int): Bitmap {
+    val cached = cachedDuckBitmap
+    if (cached != null && cached.width == wPx && cached.height == hPx) return cached
+    val src = BitmapFactory.decodeResource(context.resources, R.drawable.map_marker)
+    val scaled = Bitmap.createScaledBitmap(src, wPx, hPx, true)
+    cachedDuckBitmap = scaled
+    return scaled
+}
+
+private fun createDuckMarkerBitmap(context: android.content.Context): Bitmap {
+    val d = context.resources.displayMetrics.density
+    val w = (DUCK_W_DP * d).toInt()
+    val h = (DUCK_H_DP * d).toInt()
+    return getDuckBitmap(context, w, h)
+}
+
 private fun createClusterBitmap(count: Int, context: android.content.Context): Bitmap {
-    val density = context.resources.displayMetrics.density
-    val outerRadius = (22 * density).toInt()
-    val innerRadius = (16 * density).toInt()
-    val size = outerRadius * 2
+    val d = context.resources.displayMetrics.density
+    val duckW = (DUCK_W_DP * d).toInt()
+    val duckH = (DUCK_H_DP * d).toInt()
+    val badgeRadius = (9 * d)
+    val badgeBorder = (2 * d)
+    val extra = ((badgeRadius + badgeBorder) * 0.7f).toInt()
+    val totalW = duckW + extra
+    val totalH = duckH + extra
 
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val bitmap = Bitmap.createBitmap(totalW, totalH, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
-    val cx = outerRadius.toFloat()
-    val cy = outerRadius.toFloat()
 
-    val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0x4D2563EB
+    canvas.drawBitmap(getDuckBitmap(context, duckW, duckH), 0f, 0f, null)
+
+    // 배지: 오른쪽 아래
+    val badgeCx = duckW - badgeRadius * 0.2f
+    val badgeCy = duckH - badgeRadius * 0.2f
+
+    val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFFFFF.toInt()
         style = Paint.Style.FILL
     }
-    canvas.drawCircle(cx, cy, outerRadius.toFloat(), outerPaint)
+    canvas.drawCircle(badgeCx, badgeCy, badgeRadius + badgeBorder, borderPaint)
 
-    val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF2563EB.toInt()
         style = Paint.Style.FILL
     }
-    canvas.drawCircle(cx, cy, innerRadius.toFloat(), innerPaint)
+    canvas.drawCircle(badgeCx, badgeCy, badgeRadius, bgPaint)
 
     val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFFFFFFFF.toInt()
-        textSize = 14 * density
+        textSize = 10 * d
         textAlign = Paint.Align.CENTER
         isFakeBoldText = true
     }
-    val textY = cy + (textPaint.textSize / 3)
-    canvas.drawText(count.toString(), cx, textY, textPaint)
+    canvas.drawText(count.toString(), badgeCx, badgeCy + textPaint.textSize / 3f, textPaint)
 
     return bitmap
 }
 
 private fun createNameBubbleBitmap(name: String, context: android.content.Context): Bitmap {
-    val density = context.resources.displayMetrics.density
-    val primaryColor = 0xFF2563EB.toInt()
-    val pointerHeight = (6 * density).toInt()
-    val paddingH = 10 * density
-    val paddingV = 5 * density
+    val d = context.resources.displayMetrics.density
+    val duckW = (DUCK_W_DP * d).toInt()
+    val duckH = (DUCK_H_DP * d).toInt()
 
     val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFFFFFFF.toInt()
-        textSize = 10 * density
+        color = 0xFF121212.toInt()
+        textSize = 11 * d
         textAlign = Paint.Align.CENTER
-        isFakeBoldText = true
     }
-    val textWidth = textPaint.measureText(name)
-    val boxWidth = (textWidth + paddingH * 2).toInt()
-    val boxHeight = (textPaint.textSize + paddingV * 2).toInt()
-    val cornerRadius = boxHeight / 2f
-    val totalHeight = boxHeight + pointerHeight
+    val paddingH = 10 * d
+    val paddingV = 6 * d
+    val boxWidth = textPaint.measureText(name) + paddingH * 2
+    val boxHeight = textPaint.textSize + paddingV * 2
+    val cornerRadius = 7 * d
+    val pointerH = 5 * d
+    val shadowPad = 5 * d  // 그림자 여백
 
-    val bitmap = Bitmap.createBitmap(boxWidth, totalHeight, Bitmap.Config.ARGB_8888)
+    val totalW = maxOf(boxWidth.toInt() + (shadowPad * 2).toInt(), duckW)
+    val totalH = (shadowPad + boxHeight + pointerH + duckH).toInt()
+
+    val bitmap = Bitmap.createBitmap(totalW, totalH, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
-    val cx = boxWidth / 2f
 
-    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = primaryColor
+    val cx = totalW / 2f
+    val boxLeft = cx - boxWidth / 2
+    val boxTop = shadowPad
+
+    // 흰 배경 + 그림자
+    val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFFFFF.toInt()
+        style = Paint.Style.FILL
+        setShadowLayer(4 * d, 0f, 2 * d, 0x33000000)
+    }
+    canvas.drawRoundRect(
+        RectF(boxLeft, boxTop, boxLeft + boxWidth, boxTop + boxHeight),
+        cornerRadius, cornerRadius, boxPaint
+    )
+
+    // 포인터 삼각형 (그림자 없이)
+    val pointerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFFFFF.toInt()
         style = Paint.Style.FILL
     }
-    val boxRect = android.graphics.RectF(0f, 0f, boxWidth.toFloat(), boxHeight.toFloat())
-    canvas.drawRoundRect(boxRect, cornerRadius, cornerRadius, bgPaint)
-
+    val pointerY = boxTop + boxHeight
     val path = Path().apply {
-        moveTo(cx - 4 * density, boxHeight - 1f)
-        lineTo(cx, totalHeight.toFloat())
-        lineTo(cx + 4 * density, boxHeight - 1f)
+        moveTo(cx - 4 * d, pointerY)
+        lineTo(cx, pointerY + pointerH)
+        lineTo(cx + 4 * d, pointerY)
         close()
     }
-    canvas.drawPath(path, bgPaint)
+    canvas.drawPath(path, pointerPaint)
 
-    val textY = boxHeight / 2f + textPaint.textSize / 3f
-    canvas.drawText(name, cx, textY, textPaint)
+    // 텍스트
+    canvas.drawText(name, cx, boxTop + boxHeight / 2 + textPaint.textSize / 3f, textPaint)
+
+    // 오리 이미지 (이름 박스 아래)
+    val duckLeft = (totalW - duckW) / 2f
+    val duckTop = boxTop + boxHeight + pointerH
+    canvas.drawBitmap(getDuckBitmap(context, duckW, duckH), duckLeft, duckTop, null)
 
     return bitmap
 }

@@ -20,9 +20,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const where: Record<string, unknown> = {
-      status: { in: ['scheduled', 'in_progress'] },
-    };
+    const where: Record<string, unknown> = {};
 
     if (category && category !== 'all') {
       where.category = category;
@@ -46,20 +44,38 @@ export async function GET(request: NextRequest) {
       orderBy: { startDate: 'asc' },
     });
 
-    // Decimal → number 변환 + isParticipated 필드 추가
-    const result = programs.map((program) => ({
-      ...program,
-      latitude: program.latitude ? Number(program.latitude) : null,
-      longitude: program.longitude ? Number(program.longitude) : null,
-      events: program.events.map((event) => {
-        const { participants, _count, ...rest } = event as typeof event & { participants?: { id: number }[] };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Decimal → number 변환 + 날짜 기반 상태 계산 + 종료된 프로그램 제외
+    const result = programs
+      .map((program) => {
+        const start = new Date(program.startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(program.endDate);
+        end.setHours(0, 0, 0, 0);
+
+        let status: string;
+        if (today < start) status = 'scheduled';
+        else if (today > end) status = 'ended';
+        else status = 'in_progress';
+
         return {
-          ...rest,
-          _count,
-          isParticipated: userId ? (participants?.length ?? 0) > 0 : undefined,
+          ...program,
+          status,
+          latitude: program.latitude ? Number(program.latitude) : null,
+          longitude: program.longitude ? Number(program.longitude) : null,
+          events: program.events.map((event) => {
+            const { participants, _count, ...rest } = event as typeof event & { participants?: { id: number }[] };
+            return {
+              ...rest,
+              _count,
+              isParticipated: userId ? (participants?.length ?? 0) > 0 : undefined,
+            };
+          }),
         };
-      }),
-    }));
+      })
+      .filter(p => p.status !== 'ended');
 
     return successResponse(result);
   } catch (error) {

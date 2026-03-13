@@ -31,6 +31,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         ...(body.answer !== undefined && { answer: body.answer }),
         ...(body.options !== undefined && { options: body.options }),
         ...(body.stayMinutes !== undefined && { stayMinutes: body.stayMinutes }),
+        ...(body.stampId !== undefined && { stampId: body.stampId }),
       },
     });
     return successResponse(mission, '미션이 수정되었습니다');

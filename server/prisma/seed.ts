@@ -228,6 +228,140 @@ async function main() {
   });
   console.log('Geofence test programs created');
 
+  // ──────────────────────────────────────────────────────────────
+  // 광명시 광이로 95 (트리우스 아파트) 주변 스탬프 투어 프로그램 5개
+  // 기준점: 37.4789, 126.8671
+  // ──────────────────────────────────────────────────────────────
+  const gwang1 = await prisma.program.create({
+    data: {
+      name: '광이 어린이공원 포토존',
+      description: '트리우스 아파트 바로 옆 광이 어린이공원을 방문하고\n귀여운 포토존에서 인증샷을 남겨보세요!',
+      category: 'event',
+      operatingHours: '09:00 - 21:00',
+      location: '광명시 광이로 95 인근 어린이공원',
+      latitude: 37.4794,
+      longitude: 126.8678,
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-12-31'),
+      status: 'in_progress',
+    },
+  });
+  const gwang2 = await prisma.program.create({
+    data: {
+      name: '트리우스 카페거리',
+      description: '트리우스 아파트 상가 1층 카페거리에서 커피 한 잔 즐기며\n여유로운 시간을 보내보세요.',
+      category: 'food',
+      operatingHours: '08:00 - 22:00',
+      location: '광명시 광이로 95 트리우스 아파트 상가 1층',
+      latitude: 37.4789,
+      longitude: 126.8659,
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-12-31'),
+      status: 'in_progress',
+    },
+  });
+  const gwang3 = await prisma.program.create({
+    data: {
+      name: '광이로 문화 광장',
+      description: '광이로 95 앞 문화 광장에서 진행되는 다양한 공연과 행사를\n직접 방문해 즐겨보세요!',
+      category: 'event',
+      operatingHours: '10:00 - 20:00',
+      location: '광명시 광이로 95 앞 문화 광장',
+      latitude: 37.4782,
+      longitude: 126.8671,
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-12-31'),
+      status: 'in_progress',
+    },
+  });
+  const gwang4 = await prisma.program.create({
+    data: {
+      name: '광이 마을 작은도서관',
+      description: '광이 마을 주민들을 위한 작은 도서관을 방문하고\n지역 문화를 느껴보세요.',
+      category: 'exhibition',
+      operatingHours: '09:00 - 18:00',
+      location: '광명시 광이로 95 인근 주민센터',
+      latitude: 37.4799,
+      longitude: 126.8664,
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-12-31'),
+      status: 'in_progress',
+    },
+  });
+  const gwang5 = await prisma.program.create({
+    data: {
+      name: '광명 스탬프 기념 포토존',
+      description: '광명시 스탬프 투어의 특별한 포토존!\n방문 인증 후 아름다운 추억을 사진으로 남겨보세요.',
+      category: 'event',
+      operatingHours: '00:00 - 23:59',
+      location: '광명시 광이로 95 인근 포토존',
+      latitude: 37.4793,
+      longitude: 126.8684,
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-12-31'),
+      status: 'in_progress',
+    },
+  });
+  console.log('광이로 95 area programs created');
+
+  // 광이로 미션
+  await prisma.mission.createMany({
+    data: [
+      {
+        name: '광이 어린이공원 방문 인증',
+        type: 'location_auth',
+        programId: gwang1.id,
+      },
+      {
+        name: '광명시 퀴즈',
+        type: 'quiz',
+        programId: gwang1.id,
+        question: '광명시의 유명한 관광 명소 동굴의 이름은?',
+        answer: '광명동굴',
+        options: JSON.stringify(['가평동굴', '광명동굴', '안양동굴', '시흥동굴']),
+      },
+      {
+        name: '카페에서 여유롭게',
+        type: 'stay_time',
+        programId: gwang2.id,
+        stayMinutes: 5,
+      },
+      {
+        name: '트리우스 퀴즈',
+        type: 'quiz',
+        programId: gwang2.id,
+        question: '광명시가 속한 광역자치단체는?',
+        answer: '경기도',
+        options: JSON.stringify(['서울특별시', '인천광역시', '경기도', '충청남도']),
+      },
+      {
+        name: '문화 광장 방문 인증',
+        type: 'location_auth',
+        programId: gwang3.id,
+      },
+      {
+        name: '도서관 방문 퀴즈',
+        type: 'quiz',
+        programId: gwang4.id,
+        question: '독서의 날은 몇 월 몇 일인가요?',
+        answer: '9월 12일',
+        options: JSON.stringify(['9월 12일', '10월 9일', '11월 1일', '3월 14일']),
+      },
+      {
+        name: '도서관 체류 미션',
+        type: 'stay_time',
+        programId: gwang4.id,
+        stayMinutes: 3,
+      },
+      {
+        name: '포토존 방문 인증',
+        type: 'location_auth',
+        programId: gwang5.id,
+      },
+    ],
+  });
+  console.log('광이로 95 area missions created');
+
   // 프로그램 (이벤트)
   await prisma.program.create({
     data: {
@@ -540,6 +674,15 @@ async function main() {
     ],
   });
   console.log('Notifications created');
+
+  // 배너
+  await prisma.banner.createMany({
+    data: [
+      { title: '수성알파시티 스탬프 투어', imageUrl: '/uploads/program_img_1.png', sortOrder: 0, isActive: true },
+      { title: '봄맞이 스탬프 랠리', imageUrl: '/uploads/program_img_2.png', sortOrder: 1, isActive: true },
+    ],
+  });
+  console.log('Banners created');
 
   console.log('\nSeed completed successfully!');
   console.log('Login: admin@festival.kr / admin1234');

@@ -20,13 +20,14 @@ export default function BannersPage() {
   const [imageUrl, setImageUrl] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchBanners = async () => {
     try {
       const res = await fetch('/api/v1/admin/banners');
       const json = await res.json();
-      if (json.success) setBanners(json.data);
+      if (json.success) { setBanners(json.data); setImgErrors(new Set()); }
     } catch (e) {
       console.error(e);
     }
@@ -233,11 +234,18 @@ export default function BannersPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <img
-                      src={banner.imageUrl}
-                      alt={banner.title}
-                      className="h-16 w-28 rounded-lg object-cover border border-gray-200"
-                    />
+                    {imgErrors.has(banner.id) ? (
+                      <div className="h-16 w-28 rounded-lg border border-gray-200 bg-gray-100 flex items-center justify-center">
+                        <ImageIcon className="w-5 h-5 text-gray-400" />
+                      </div>
+                    ) : (
+                      <img
+                        src={banner.imageUrl}
+                        alt={banner.title}
+                        className="h-16 w-28 rounded-lg object-cover border border-gray-200"
+                        onError={() => setImgErrors(prev => new Set(prev).add(banner.id))}
+                      />
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">{banner.title}</td>
                   <td className="px-6 py-4">

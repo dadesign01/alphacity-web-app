@@ -102,6 +102,7 @@ data class MissionItem(
     val type: String,
     val placeId: Int? = null,
     val programId: Int? = null,
+    val stampId: Int? = null,
     val question: String? = null,
     val answer: String? = null,
     val options: List<String>? = null,
@@ -116,6 +117,7 @@ data class MissionCompletionResult(
     val missionId: Int,
     val userId: Int,
     val completedAt: String? = null,
+    val stamp: StampItem? = null,
 )
 
 @Serializable

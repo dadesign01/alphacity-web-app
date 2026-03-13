@@ -13,6 +13,7 @@ struct StayTimeMissionView: View {
     @StateObject private var viewModel = MissionViewModel()
 
     var body: some View {
+        ZStack {
         VStack(spacing: 0) {
             // Header
             HStack(spacing: 12) {
@@ -145,6 +146,14 @@ struct StayTimeMissionView: View {
             Button("확인", role: .cancel) {}
         } message: {
             Text(viewModel.alertMessage)
+        }
+
+        if viewModel.isCompleted, let stamp = viewModel.earnedStamp {
+            StampEarnedView(stamp: stamp, onDismiss: {
+                onCompleted?()
+                onDismiss?()
+            })
+        }
         }
     }
 

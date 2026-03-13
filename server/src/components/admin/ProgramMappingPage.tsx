@@ -12,8 +12,6 @@ import {
   Save,
   HelpCircle,
   Clock,
-  Upload,
-  Trash2,
   ChevronDown,
   ChevronUp,
   Check,
@@ -66,24 +64,6 @@ interface StampData {
   place: { id: number; name: string } | null;
 }
 
-interface MissionDraft {
-  tempId: string;
-  name: string;
-  type: string;
-  placeId: number | null;
-  question: string;
-  answer: string;
-  stayMinutes: number | null;
-}
-
-interface StampDraft {
-  tempId: string;
-  name: string;
-  conditionType: string;
-  conditionDetail: string;
-  placeId: number | null;
-}
-
 const categoryLabels: Record<string, string> = {
   entrance: '입구',
   food: '음식점',
@@ -111,18 +91,18 @@ const missionTypeLabels: Record<string, string> = {
   stay_time: '체류 시간',
 };
 
+const missionTypeIcons: Record<string, typeof MapPin> = {
+  location_auth: MapPin,
+  quiz: HelpCircle,
+  stay_time: Clock,
+};
+
 const conditionLabels: Record<string, string> = {
   mission_complete: '미션 완료',
   event_participate: '이벤트 참여',
   place_visit: '장소 방문',
   quiz_correct: '퀴즈 정답',
 };
-
-const missionTemplates = [
-  { type: 'location_auth', name: '위치 인증', icon: MapPin },
-  { type: 'quiz', name: '퀴즈', icon: HelpCircle },
-  { type: 'stay_time', name: '체류 시간', icon: Clock },
-];
 
 export default function ProgramMappingPage() {
   // Program selection
@@ -139,23 +119,24 @@ export default function ProgramMappingPage() {
   const [placeCategoryFilter, setPlaceCategoryFilter] = useState('');
 
   // Missions tab
-  const [connectedMissions, setConnectedMissions] = useState<Mission[]>([]);
-  const [newMissions, setNewMissions] = useState<MissionDraft[]>([]);
-  const [removedMissionIds, setRemovedMissionIds] = useState<number[]>([]);
+  const [allMissions, setAllMissions] = useState<Mission[]>([]);
+  const [connectedMissionIds, setConnectedMissionIds] = useState<number[]>([]);
+  const [missionSearchTerm, setMissionSearchTerm] = useState('');
+  const [missionTypeFilter, setMissionTypeFilter] = useState('');
 
   // Stamps tab
-  const [connectedStamps, setConnectedStamps] = useState<StampData[]>([]);
-  const [newStamps, setNewStamps] = useState<StampDraft[]>([]);
-  const [removedStampIds, setRemovedStampIds] = useState<number[]>([]);
-  const [showStampLibrary, setShowStampLibrary] = useState(false);
   const [allStamps, setAllStamps] = useState<StampData[]>([]);
-  const [librarySearchTerm, setLibrarySearchTerm] = useState('');
-  const [selectedLibraryStampIds, setSelectedLibraryStampIds] = useState<number[]>([]);
-  const [showStampDropdown, setShowStampDropdown] = useState(false);
+  const [connectedStampIds, setConnectedStampIds] = useState<number[]>([]);
+  const [stampSearchTerm, setStampSearchTerm] = useState('');
+  const [stampConditionFilter, setStampConditionFilter] = useState('');
 
   // UI state
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Track original connected IDs for unlink calculation
+  const [originalMissionIds, setOriginalMissionIds] = useState<number[]>([]);
+  const [originalStampIds, setOriginalStampIds] = useState<number[]>([]);
 
   // Fetch programs on mount
   useEffect(() => {
@@ -175,21 +156,23 @@ export default function ProgramMappingPage() {
         fetch('/api/v1/admin/program-mapping/available').then(r => r.json()),
       ]);
 
-      if (mappingRes.success) {
-        setConnectedPlaceIds(mappingRes.data.places.map((p: Place) => p.id));
-        setConnectedMissions(mappingRes.data.missions);
-        setConnectedStamps(mappingRes.data.stamps);
-      }
-
       if (availableRes.success) {
         setAllPlaces(availableRes.data.places);
+        setAllMissions(availableRes.data.missions);
         setAllStamps(availableRes.data.stamps);
       }
 
-      setNewMissions([]);
-      setNewStamps([]);
-      setRemovedMissionIds([]);
-      setRemovedStampIds([]);
+      if (mappingRes.success) {
+        const placeIds = mappingRes.data.places.map((p: Place) => p.id);
+        const missionIds = mappingRes.data.missions.map((m: Mission) => m.id);
+        const stampIds = mappingRes.data.stamps.map((s: StampData) => s.id);
+
+        setConnectedPlaceIds(placeIds);
+        setConnectedMissionIds(missionIds);
+        setConnectedStampIds(stampIds);
+        setOriginalMissionIds(missionIds);
+        setOriginalStampIds(stampIds);
+      }
     } catch {
       alert('데이터를 불러오는데 실패했습니다');
     }
@@ -230,67 +213,35 @@ export default function ProgramMappingPage() {
   };
 
   // Mission handlers
-  const handleAddMission = (type: string) => {
-    const template = missionTemplates.find(t => t.type === type);
-    setNewMissions([...newMissions, {
-      tempId: `new-${Date.now()}`,
-      name: `새 ${template?.name} 미션`,
-      type,
-      placeId: null,
-      question: '',
-      answer: '',
-      stayMinutes: type === 'stay_time' ? 5 : null,
-    }]);
+  const handleAddMission = (missionId: number) => {
+    if (!connectedMissionIds.includes(missionId)) {
+      setConnectedMissionIds([...connectedMissionIds, missionId]);
+    }
   };
 
-  const handleRemoveExistingMission = (missionId: number) => {
-    setConnectedMissions(connectedMissions.filter(m => m.id !== missionId));
-    setRemovedMissionIds([...removedMissionIds, missionId]);
-  };
-
-  const handleRemoveNewMission = (tempId: string) => {
-    setNewMissions(newMissions.filter(m => m.tempId !== tempId));
-  };
-
-  const handleUpdateNewMission = (tempId: string, updates: Partial<MissionDraft>) => {
-    setNewMissions(newMissions.map(m => m.tempId === tempId ? { ...m, ...updates } : m));
+  const handleRemoveMission = (missionId: number) => {
+    setConnectedMissionIds(connectedMissionIds.filter(id => id !== missionId));
   };
 
   // Stamp handlers
-  const handleAddStamp = () => {
-    setNewStamps([...newStamps, {
-      tempId: `new-${Date.now()}`,
-      name: '새 스탬프',
-      conditionType: 'mission_complete',
-      conditionDetail: '',
-      placeId: null,
-    }]);
+  const handleAddStamp = (stampId: number) => {
+    if (!connectedStampIds.includes(stampId)) {
+      setConnectedStampIds([...connectedStampIds, stampId]);
+    }
   };
 
-  const handleRemoveExistingStamp = (stampId: number) => {
-    setConnectedStamps(connectedStamps.filter(s => s.id !== stampId));
-    setRemovedStampIds([...removedStampIds, stampId]);
-  };
-
-  const handleRemoveNewStamp = (tempId: string) => {
-    setNewStamps(newStamps.filter(s => s.tempId !== tempId));
-  };
-
-  const handleUpdateNewStamp = (tempId: string, updates: Partial<StampDraft>) => {
-    setNewStamps(newStamps.map(s => s.tempId === tempId ? { ...s, ...updates } : s));
-  };
-
-  const handleAddLibraryStamps = () => {
-    const stampsToLink = allStamps.filter(s => selectedLibraryStampIds.includes(s.id));
-    setConnectedStamps([...connectedStamps, ...stampsToLink]);
-    setSelectedLibraryStampIds([]);
-    setShowStampLibrary(false);
+  const handleRemoveStamp = (stampId: number) => {
+    setConnectedStampIds(connectedStampIds.filter(id => id !== stampId));
   };
 
   // Save
   const handleSave = async () => {
     if (!selectedProgramId) return;
     setIsSaving(true);
+
+    // Calculate unlinked missions/stamps
+    const unlinkMissions = originalMissionIds.filter(id => !connectedMissionIds.includes(id));
+    const unlinkStamps = originalStampIds.filter(id => !connectedStampIds.includes(id));
 
     try {
       const res = await fetch(`/api/v1/admin/program-mapping/${selectedProgramId}`, {
@@ -301,26 +252,12 @@ export default function ProgramMappingPage() {
             placeIds: connectedPlaceIds,
           },
           missions: {
-            unlink: removedMissionIds,
-            link: connectedMissions.map(m => m.id),
-            create: newMissions.map(m => ({
-              name: m.name,
-              type: m.type,
-              placeId: m.placeId,
-              question: m.question || null,
-              answer: m.answer || null,
-              stayMinutes: m.stayMinutes,
-            })),
+            unlink: unlinkMissions,
+            link: connectedMissionIds,
           },
           stamps: {
-            unlink: removedStampIds,
-            link: connectedStamps.map(s => s.id),
-            create: newStamps.map(s => ({
-              name: s.name,
-              conditionType: s.conditionType,
-              conditionDetail: s.conditionDetail || null,
-              placeId: s.placeId,
-            })),
+            unlink: unlinkStamps,
+            link: connectedStampIds,
           },
         }),
       });
@@ -338,25 +275,29 @@ export default function ProgramMappingPage() {
     setIsSaving(false);
   };
 
-  // Filtered places for left panel
+  // Filtered lists
   const filteredPlaces = allPlaces.filter(place => {
     if (placeSearchTerm && !place.name.toLowerCase().includes(placeSearchTerm.toLowerCase())) return false;
     if (placeCategoryFilter && place.category !== placeCategoryFilter) return false;
     return true;
   });
 
-  // Library stamps (exclude already connected)
-  const connectedStampIds = new Set(connectedStamps.map(s => s.id));
-  const libraryStamps = allStamps.filter(s => {
-    if (connectedStampIds.has(s.id)) return false;
-    if (librarySearchTerm && !s.name.toLowerCase().includes(librarySearchTerm.toLowerCase())) return false;
+  const filteredMissions = allMissions.filter(mission => {
+    if (missionSearchTerm && !mission.name.toLowerCase().includes(missionSearchTerm.toLowerCase())) return false;
+    if (missionTypeFilter && mission.type !== missionTypeFilter) return false;
+    return true;
+  });
+
+  const filteredStamps = allStamps.filter(stamp => {
+    if (stampSearchTerm && !stamp.name.toLowerCase().includes(stampSearchTerm.toLowerCase())) return false;
+    if (stampConditionFilter && stamp.conditionType !== stampConditionFilter) return false;
     return true;
   });
 
   const tabs = [
-    { id: 'places' as TabType, label: '장소 연결', icon: MapPin },
-    { id: 'missions' as TabType, label: '미션 연결', icon: Target },
-    { id: 'stamps' as TabType, label: '스탬프 설정', icon: Stamp },
+    { id: 'places' as TabType, label: '장소 연결', icon: MapPin, count: connectedPlaceIds.length },
+    { id: 'missions' as TabType, label: '미션 연결', icon: Target, count: connectedMissionIds.length },
+    { id: 'stamps' as TabType, label: '스탬프 설정', icon: Stamp, count: connectedStampIds.length },
   ];
 
   // === Render: Places Tab ===
@@ -458,294 +399,214 @@ export default function ProgramMappingPage() {
 
   // === Render: Missions Tab ===
   const renderMissionsTab = () => (
-    <div className="space-y-6">
-      {/* Mission Templates */}
+    <div className="grid grid-cols-2 gap-6">
+      {/* Left Panel - Available Missions */}
       <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-900 mb-3">미션 추가하기</h4>
-        <div className="grid grid-cols-3 gap-3">
-          {missionTemplates.map(template => {
-            const Icon = template.icon;
+        <h4 className="text-sm font-medium text-gray-900 mb-3">등록된 미션</h4>
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="미션 검색..."
+            value={missionSearchTerm}
+            onChange={e => setMissionSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <select
+          value={missionTypeFilter}
+          onChange={e => setMissionTypeFilter(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+        >
+          <option value="">전체 유형</option>
+          {Object.entries(missionTypeLabels).map(([key, label]) => (
+            <option key={key} value={key}>{label}</option>
+          ))}
+        </select>
+
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {filteredMissions.map(mission => {
+            const Icon = missionTypeIcons[mission.type] || Target;
             return (
-              <button
-                key={template.type}
-                onClick={() => handleAddMission(template.type)}
-                className="flex flex-col items-center gap-2 p-4 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-              >
-                <Icon className="w-6 h-6 text-blue-600" />
-                <span className="text-sm font-medium text-gray-900">{template.name}</span>
-              </button>
+              <div key={mission.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{mission.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-800 rounded">
+                        {missionTypeLabels[mission.type] || mission.type}
+                      </span>
+                      {mission.place && (
+                        <span className="text-xs text-gray-500 truncate">{mission.place.name}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {!connectedMissionIds.includes(mission.id) ? (
+                  <button onClick={() => handleAddMission(mission.id)} className="ml-2 p-1 text-blue-600 hover:bg-blue-50 rounded">
+                    <Plus className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <Check className="ml-2 w-4 h-4 text-green-500" />
+                )}
+              </div>
             );
           })}
+          {filteredMissions.length === 0 && (
+            <div className="text-center py-8 text-sm text-gray-500">검색 결과가 없습니다</div>
+          )}
         </div>
       </div>
 
-      {/* Connected Missions (existing) */}
-      <div className="space-y-4">
-        {connectedMissions.map((mission, index) => (
-          <div key={mission.id} className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-medium">
+      {/* Right Panel - Connected Missions */}
+      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-gray-900 mb-3">
+          연결된 미션 ({connectedMissionIds.length})
+        </h4>
+        <div className="space-y-2">
+          {connectedMissionIds.map((missionId, index) => {
+            const mission = allMissions.find(m => m.id === missionId);
+            if (!mission) return null;
+            const Icon = missionTypeIcons[mission.type] || Target;
+            return (
+              <div key={missionId} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-sm font-medium flex-shrink-0">
                   {index + 1}
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{mission.name}</p>
-                  <p className="text-xs text-gray-500">{missionTypeLabels[mission.type] || mission.type} · 기존 미션</p>
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-4 h-4 text-blue-600" />
                 </div>
-              </div>
-              <button onClick={() => handleRemoveExistingMission(mission.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              {mission.place && (
-                <div>
-                  <span className="text-xs text-gray-500">연결 장소:</span>
-                  <span className="ml-1 text-gray-900">{mission.place.name}</span>
-                </div>
-              )}
-              {mission.type === 'quiz' && mission.question && (
-                <div className="col-span-2">
-                  <span className="text-xs text-gray-500">질문:</span>
-                  <span className="ml-1 text-gray-900">{mission.question}</span>
-                </div>
-              )}
-              {mission.type === 'stay_time' && mission.stayMinutes && (
-                <div>
-                  <span className="text-xs text-gray-500">체류 시간:</span>
-                  <span className="ml-1 text-gray-900">{mission.stayMinutes}분</span>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {/* New Missions (drafts) */}
-        {newMissions.map((mission, idx) => (
-          <div key={mission.tempId} className="bg-white border border-blue-300 rounded-lg p-4">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-sm font-medium">
-                  새
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{mission.name}</p>
-                  <p className="text-xs text-gray-500">{missionTypeLabels[mission.type] || mission.type} · 새 미션</p>
-                </div>
-              </div>
-              <button onClick={() => handleRemoveNewMission(mission.tempId)} className="p-1 text-red-600 hover:bg-red-50 rounded">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">미션 이름</label>
-                <input
-                  type="text"
-                  value={mission.name}
-                  onChange={e => handleUpdateNewMission(mission.tempId, { name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">연결 장소</label>
-                <select
-                  value={mission.placeId || ''}
-                  onChange={e => handleUpdateNewMission(mission.tempId, { placeId: e.target.value ? parseInt(e.target.value) : null })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">장소 선택</option>
-                  {connectedPlaceIds.map(pid => {
-                    const place = allPlaces.find(p => p.id === pid);
-                    return place ? <option key={pid} value={pid}>{place.name}</option> : null;
-                  })}
-                </select>
-              </div>
-
-              {mission.type === 'quiz' && (
-                <>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">퀴즈 질문</label>
-                    <input
-                      type="text"
-                      value={mission.question}
-                      onChange={e => handleUpdateNewMission(mission.tempId, { question: e.target.value })}
-                      placeholder="예: 이 건물의 이름은 무엇인가요?"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{mission.name}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-800 rounded">
+                      {missionTypeLabels[mission.type] || mission.type}
+                    </span>
+                    {mission.place && (
+                      <span className="text-xs text-gray-500">{mission.place.name}</span>
+                    )}
+                    {mission.type === 'stay_time' && mission.stayMinutes && (
+                      <span className="text-xs text-gray-500">{mission.stayMinutes}분</span>
+                    )}
                   </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">정답</label>
-                    <input
-                      type="text"
-                      value={mission.answer}
-                      onChange={e => handleUpdateNewMission(mission.tempId, { answer: e.target.value })}
-                      placeholder="예: 63빌딩"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </>
-              )}
-
-              {mission.type === 'stay_time' && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">체류 시간 (분)</label>
-                  <input
-                    type="number"
-                    value={mission.stayMinutes || 5}
-                    onChange={e => handleUpdateNewMission(mission.tempId, { stayMinutes: parseInt(e.target.value) || 5 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    min="1"
-                  />
                 </div>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {connectedMissions.length === 0 && newMissions.length === 0 && (
-          <div className="text-center py-12 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">
-            연결된 미션이 없습니다. 위에서 미션을 추가해주세요.
-          </div>
-        )}
+                <button onClick={() => handleRemoveMission(missionId)} className="p-1 text-red-600 hover:bg-red-50 rounded">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
+          {connectedMissionIds.length === 0 && (
+            <div className="text-center py-8 text-sm text-gray-500">연결된 미션이 없습니다</div>
+          )}
+        </div>
       </div>
     </div>
   );
 
   // === Render: Stamps Tab ===
   const renderStampsTab = () => (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-600">이 프로그램에 사용할 스탬프를 설정하세요</p>
-        <div className="relative">
-          <button
-            onClick={() => setShowStampDropdown(!showStampDropdown)}
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            스탬프 추가
-            <ChevronDown className="w-4 h-4" />
-          </button>
-          {showStampDropdown && (
-            <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-              <button
-                onClick={() => { handleAddStamp(); setShowStampDropdown(false); }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-b border-gray-100"
-              >
-                <Plus className="w-4 h-4 text-blue-600" />
-                새 스탬프 만들기
-              </button>
-              <button
-                onClick={() => { setShowStampLibrary(true); setShowStampDropdown(false); }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-              >
-                <Upload className="w-4 h-4 text-blue-600" />
-                기존 스탬프 가져오기
-              </button>
+    <div className="grid grid-cols-2 gap-6">
+      {/* Left Panel - Available Stamps */}
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-gray-900 mb-3">등록된 스탬프</h4>
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="스탬프 검색..."
+            value={stampSearchTerm}
+            onChange={e => setStampSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <select
+          value={stampConditionFilter}
+          onChange={e => setStampConditionFilter(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+        >
+          <option value="">전체 조건</option>
+          {Object.entries(conditionLabels).map(([key, label]) => (
+            <option key={key} value={key}>{label}</option>
+          ))}
+        </select>
+
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {filteredStamps.map(stamp => (
+            <div key={stamp.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+                  <Stamp className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{stamp.name}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
+                      {conditionLabels[stamp.conditionType] || stamp.conditionType}
+                    </span>
+                    {stamp.place && (
+                      <span className="text-xs text-gray-500 truncate">{stamp.place.name}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {!connectedStampIds.includes(stamp.id) ? (
+                <button onClick={() => handleAddStamp(stamp.id)} className="ml-2 p-1 text-blue-600 hover:bg-blue-50 rounded">
+                  <Plus className="w-4 h-4" />
+                </button>
+              ) : (
+                <Check className="ml-2 w-4 h-4 text-green-500" />
+              )}
             </div>
+          ))}
+          {filteredStamps.length === 0 && (
+            <div className="text-center py-8 text-sm text-gray-500">검색 결과가 없습니다</div>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Existing stamps */}
-        {connectedStamps.map(stamp => (
-          <div key={stamp.id} className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <Stamp className="w-5 h-5 text-blue-600" />
+      {/* Right Panel - Connected Stamps */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-gray-900 mb-3">
+          연결된 스탬프 ({connectedStampIds.length})
+        </h4>
+        <div className="space-y-2">
+          {connectedStampIds.map((stampId) => {
+            const stamp = allStamps.find(s => s.id === stampId);
+            if (!stamp) return null;
+            return (
+              <div key={stampId} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+                  <Stamp className="w-4 h-4 text-amber-600" />
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{stamp.name}</p>
-                  <p className="text-xs text-gray-500">{conditionLabels[stamp.conditionType] || stamp.conditionType}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{stamp.name}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
+                      {conditionLabels[stamp.conditionType] || stamp.conditionType}
+                    </span>
+                    {stamp.place && (
+                      <span className="text-xs text-gray-500">{stamp.place.name}</span>
+                    )}
+                    {stamp.conditionDetail && (
+                      <span className="text-xs text-gray-500 truncate">{stamp.conditionDetail}</span>
+                    )}
+                  </div>
                 </div>
+                <button onClick={() => handleRemoveStamp(stampId)} className="p-1 text-red-600 hover:bg-red-50 rounded">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button onClick={() => handleRemoveExistingStamp(stamp.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-            {stamp.conditionDetail && (
-              <p className="text-xs text-gray-500 mb-2">{stamp.conditionDetail}</p>
-            )}
-            {stamp.place && (
-              <div className="text-xs text-gray-500">연결 장소: <span className="text-gray-700">{stamp.place.name}</span></div>
-            )}
-          </div>
-        ))}
-
-        {/* New stamps (drafts) */}
-        {newStamps.map(stamp => (
-          <div key={stamp.tempId} className="bg-white border border-blue-300 rounded-lg p-4">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-                  <Stamp className="w-5 h-5 text-green-600" />
-                </div>
-                <p className="text-sm font-medium text-gray-900">새 스탬프</p>
-              </div>
-              <button onClick={() => handleRemoveNewStamp(stamp.tempId)} className="p-1 text-red-600 hover:bg-red-50 rounded">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">스탬프 이름</label>
-                <input
-                  type="text"
-                  value={stamp.name}
-                  onChange={e => handleUpdateNewStamp(stamp.tempId, { name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">스탬프 설명</label>
-                <input
-                  type="text"
-                  value={stamp.conditionDetail}
-                  onChange={e => handleUpdateNewStamp(stamp.tempId, { conditionDetail: e.target.value })}
-                  placeholder="스탬프에 대한 설명"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">발급 조건</label>
-                <select
-                  value={stamp.conditionType}
-                  onChange={e => handleUpdateNewStamp(stamp.tempId, { conditionType: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {Object.entries(conditionLabels).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">연결 장소</label>
-                <select
-                  value={stamp.placeId || ''}
-                  onChange={e => handleUpdateNewStamp(stamp.tempId, { placeId: e.target.value ? parseInt(e.target.value) : null })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">선택하세요</option>
-                  {connectedPlaceIds.map(pid => {
-                    const place = allPlaces.find(p => p.id === pid);
-                    return place ? <option key={pid} value={pid}>{place.name}</option> : null;
-                  })}
-                </select>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {connectedStamps.length === 0 && newStamps.length === 0 && (
-        <div className="text-center py-12 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">
-          등록된 스탬프가 없습니다. 스탬프를 추가해주세요.
+            );
+          })}
+          {connectedStampIds.length === 0 && (
+            <div className="text-center py-8 text-sm text-gray-500">연결된 스탬프가 없습니다</div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 
@@ -832,6 +693,11 @@ export default function ProgramMappingPage() {
                     >
                       <Icon className="w-4 h-4" />
                       {tab.label}
+                      {tab.count > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                          {tab.count}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -866,93 +732,6 @@ export default function ProgramMappingPage() {
             </button>
           </div>
         </>
-      )}
-
-      {/* Stamp Library Modal */}
-      {showStampLibrary && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">스탬프 라이브러리</h3>
-                <button onClick={() => { setShowStampLibrary(false); setSelectedLibraryStampIds([]); }} className="p-1 text-gray-400 hover:text-gray-600">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="스탬프 검색..."
-                  value={librarySearchTerm}
-                  onChange={e => setLibrarySearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12">선택</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">스탬프명</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">발급 조건</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">연결 장소</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {libraryStamps.map(stamp => (
-                      <tr
-                        key={stamp.id}
-                        className="hover:bg-gray-50 cursor-pointer"
-                        onClick={() => {
-                          if (selectedLibraryStampIds.includes(stamp.id)) {
-                            setSelectedLibraryStampIds(selectedLibraryStampIds.filter(id => id !== stamp.id));
-                          } else {
-                            setSelectedLibraryStampIds([...selectedLibraryStampIds, stamp.id]);
-                          }
-                        }}
-                      >
-                        <td className="px-4 py-3">
-                          <input type="checkbox" checked={selectedLibraryStampIds.includes(stamp.id)} onChange={() => {}} className="w-4 h-4 text-blue-600 border-gray-300 rounded" />
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{stamp.name}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{conditionLabels[stamp.conditionType] || stamp.conditionType}</td>
-                        <td className="px-4 py-3 text-sm text-gray-500">{stamp.place?.name || '-'}</td>
-                      </tr>
-                    ))}
-                    {libraryStamps.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">가져올 수 있는 스탬프가 없습니다</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-gray-200 flex items-center justify-between">
-              <p className="text-sm text-gray-600">{selectedLibraryStampIds.length}개 선택됨</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setShowStampLibrary(false); setSelectedLibraryStampIds([]); }}
-                  className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={handleAddLibraryStamps}
-                  disabled={selectedLibraryStampIds.length === 0}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                >
-                  선택한 스탬프 추가
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

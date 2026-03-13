@@ -13,7 +13,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params;
     const missionId = Number(id);
 
-    const mission = await prisma.mission.findUnique({ where: { id: missionId } });
+    const mission = await prisma.mission.findUnique({
+      where: { id: missionId },
+      include: { stamp: true },
+    });
     if (!mission) return errorResponse('NOT_FOUND', '미션을 찾을 수 없습니다', 404);
 
     const existing = await prisma.missionCompletion.findUnique({
@@ -33,7 +36,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       data: { missionId, userId },
     });
 
-    return successResponse(completion, '미션을 완료했습니다');
+    // 미션에 스탬프가 연결된 경우 자동 적립
+    if (mission.stampId) {
+      await prisma.userStamp.upsert({
+        where: { userId_stampId: { userId, stampId: mission.stampId } },
+        create: { userId, stampId: mission.stampId },
+        update: {},
+      });
+    }
+
+    return successResponse(
+      { ...completion, stamp: mission.stamp },
+      '미션을 완료했습니다'
+    );
   } catch {
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }

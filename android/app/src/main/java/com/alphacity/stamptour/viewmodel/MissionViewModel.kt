@@ -6,6 +6,7 @@ import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.alphacity.stamptour.network.TokenManager
+import com.alphacity.stamptour.network.dto.StampItem
 import com.alphacity.stamptour.repository.HomeRepository
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -41,6 +42,9 @@ class MissionViewModel @Inject constructor(
     private val _alertMessage = MutableStateFlow("")
     val alertMessage: StateFlow<String> = _alertMessage
 
+    private val _earnedStamp = MutableStateFlow<StampItem?>(null)
+    val earnedStamp: StateFlow<StampItem?> = _earnedStamp
+
     // 체류시간 미션
     private val _isTimerRunning = MutableStateFlow(false)
     val isTimerRunning: StateFlow<Boolean> = _isTimerRunning
@@ -63,7 +67,8 @@ class MissionViewModel @Inject constructor(
         _isLoading.value = true
         viewModelScope.launch {
             homeRepository.completeMission(missionId, answer)
-                .onSuccess {
+                .onSuccess { result ->
+                    _earnedStamp.value = result.stamp
                     _isCompleted.value = true
                     _message.value = "정답입니다! 미션 완료!"
                 }
@@ -108,7 +113,8 @@ class MissionViewModel @Inject constructor(
 
             if (distance <= 100f) {
                 homeRepository.completeMission(missionId)
-                    .onSuccess {
+                    .onSuccess { result ->
+                        _earnedStamp.value = result.stamp
                         _isCompleted.value = true
                         _message.value = "위치 인증 완료!"
                     }
@@ -175,7 +181,8 @@ class MissionViewModel @Inject constructor(
     private suspend fun completeStayTimeMission(missionId: Int) {
         _isLoading.value = true
         homeRepository.completeMission(missionId)
-            .onSuccess {
+            .onSuccess { result ->
+                _earnedStamp.value = result.stamp
                 _isCompleted.value = true
                 _message.value = "체류시간 미션 완료!"
             }

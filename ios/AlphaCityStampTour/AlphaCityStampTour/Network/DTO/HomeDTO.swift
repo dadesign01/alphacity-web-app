@@ -64,6 +64,7 @@ struct MissionCompletionData: Decodable {
     let missionId: Int
     let userId: Int
     let completedAt: String?
+    let stamp: StampData?
 }
 
 // MARK: - 이벤트

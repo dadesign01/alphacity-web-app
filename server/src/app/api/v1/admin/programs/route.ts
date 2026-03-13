@@ -1,6 +1,20 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { ProgramStatus } from '@prisma/client';
+
+function computeStatus(startDate: Date, endDate: Date): ProgramStatus {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+
+  if (today < start) return 'scheduled';
+  if (today > end) return 'ended';
+  return 'in_progress';
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,9 +23,6 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
 
     const where: Record<string, unknown> = {};
-    if (status && status !== 'all') {
-      where.status = status;
-    }
     if (category && category !== 'all') {
       where.category = category;
     }
@@ -22,7 +33,18 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    return successResponse(programs);
+    // 날짜 기반으로 상태 계산
+    const programsWithStatus = programs.map(p => ({
+      ...p,
+      status: computeStatus(p.startDate, p.endDate),
+    }));
+
+    // 상태 필터 적용 (계산된 상태 기준)
+    const filtered = status && status !== 'all'
+      ? programsWithStatus.filter(p => p.status === status)
+      : programsWithStatus;
+
+    return successResponse(filtered);
   } catch {
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }
@@ -53,7 +75,7 @@ export async function POST(request: NextRequest) {
         ...(longitude !== undefined && { longitude }),
         startDate: new Date(startDate),
         endDate: new Date(endDate),
-        status: status || 'scheduled',
+        status: computeStatus(new Date(startDate), new Date(endDate)),
       },
     });
 

@@ -22,7 +22,7 @@ interface SettingsData {
 export default function SettingsPage() {
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [programForm, setProgramForm] = useState({ name: '', description: '', startDate: '', endDate: '', autoNotification: true, collectStats: true });
-  const [adminForm, setAdminForm] = useState({ name: '', phone: '' });
+  const [adminForm, setAdminForm] = useState({ name: '', email: '', phone: '', currentPassword: '', newPassword: '', confirmPassword: '' });
 
   useEffect(() => {
     fetch('/api/v1/admin/settings').then((r) => r.json()).then((d) => {
@@ -39,22 +39,28 @@ export default function SettingsPage() {
           });
         }
         if (d.data.admin) {
-          setAdminForm({ name: d.data.admin.name, phone: d.data.admin.phone || '' });
+          setAdminForm({ name: d.data.admin.name, email: d.data.admin.email, phone: d.data.admin.phone || '', currentPassword: '', newPassword: '', confirmPassword: '' });
         }
       }
     });
   }, []);
 
   const handleSave = async () => {
+    if (adminForm.newPassword && adminForm.newPassword !== adminForm.confirmPassword) {
+      alert('새 비밀번호가 일치하지 않습니다');
+      return;
+    }
     try {
+      const { confirmPassword, ...adminData } = adminForm;
       const res = await fetch('/api/v1/admin/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ program: programForm, admin: adminForm }),
+        body: JSON.stringify({ program: programForm, admin: adminData }),
       });
       const data = await res.json();
       if (data.success) {
         alert('설정이 저장되었습니다');
+        setAdminForm((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
       } else {
         alert(`설정 저장 실패: ${data.error?.message || '알 수 없는 오류'}`);
       }
@@ -107,13 +113,27 @@ export default function SettingsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">이메일</label>
-              <input type="email" value={settings?.admin?.email || ''} disabled
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500" />
+              <input type="email" value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">연락처</label>
               <input type="tel" value={adminForm.phone} onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div className="pt-4 border-t border-gray-200">
+              <p className="text-sm font-medium text-gray-700 mb-3">비밀번호 변경</p>
+              <div className="space-y-3">
+                <input type="password" placeholder="현재 비밀번호" value={adminForm.currentPassword}
+                  onChange={(e) => setAdminForm({ ...adminForm, currentPassword: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                <input type="password" placeholder="새 비밀번호 (6자 이상)" value={adminForm.newPassword}
+                  onChange={(e) => setAdminForm({ ...adminForm, newPassword: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                <input type="password" placeholder="새 비밀번호 확인" value={adminForm.confirmPassword}
+                  onChange={(e) => setAdminForm({ ...adminForm, confirmPassword: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
             </div>
           </div>
         </div>
