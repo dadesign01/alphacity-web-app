@@ -32,13 +32,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // HTTPS가 아닌 환경(HTTP)에서도 쿠키가 저장되도록 secure는 실제 프로토콜 기반으로 설정
+    const isHttps = request.nextUrl.protocol === 'https:';
     response.cookies.set('admin_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isHttps,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });
+    console.log(`[Admin Login] ${admin.email} 로그인 성공 (secure=${isHttps})`);
 
     return response;
   } catch {
