@@ -1,0 +1,4 @@
+module Alamofire {
+    header "/Users/yunjongseo/데스크탑/Projects/alphacity/ios/.build/arm64-apple-macosx/debug/Alamofire.build/Alamofire-Swift.h"
+    requires objc
+}

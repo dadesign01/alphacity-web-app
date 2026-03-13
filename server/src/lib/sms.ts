@@ -14,6 +14,11 @@ function makeSignature(method: string, url: string, timestamp: string): string {
 }
 
 export async function sendSMS(to: string, content: string): Promise<boolean> {
+  if (!NCP_ACCESS_KEY || !NCP_SECRET_KEY || !NCP_SERVICE_ID || !NCP_SENDER) {
+    console.log(`[DEV] SMS to ${to}: ${content}`);
+    return true;
+  }
+
   const timestamp = Date.now().toString();
   const uri = `/sms/v2/services/${encodeURIComponent(NCP_SERVICE_ID)}/messages`;
   const signature = makeSignature('POST', uri, timestamp);

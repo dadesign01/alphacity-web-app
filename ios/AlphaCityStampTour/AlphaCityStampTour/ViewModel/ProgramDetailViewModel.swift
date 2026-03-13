@@ -5,22 +5,90 @@
 
 import Foundation
 import AVFoundation
+import CoreLocation
 
 @MainActor
-final class ProgramDetailViewModel: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
+final class ProgramDetailViewModel: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, CLLocationManagerDelegate {
     @Published var isParticipated = false
     @Published var isLoading = false
     @Published var message: String? = nil
     @Published var missions: [MissionData] = []
     @Published var isMissionsLoading = false
     @Published var isSpeaking = false
+    @Published var isNearLocation = false
+    @Published var isCheckingLocation = false
 
     private let repository = HomeRepository.shared
     private let synthesizer = AVSpeechSynthesizer()
+    private let locationManager = CLLocationManager()
+    private var targetLatitude: Double = 0
+    private var targetLongitude: Double = 0
 
     override init() {
         super.init()
         synthesizer.delegate = self
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+    }
+
+    // MARK: - Location
+
+    func checkLocationForParticipation(lat: Double?, lng: Double?) {
+        guard let lat = lat, let lng = lng else {
+            isNearLocation = true
+            return
+        }
+        targetLatitude = lat
+        targetLongitude = lng
+        isCheckingLocation = true
+
+        switch locationManager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            locationManager.requestLocation()
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        default:
+            isNearLocation = true
+            isCheckingLocation = false
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        Task { @MainActor in
+            guard let location = locations.first else {
+                isNearLocation = true
+                isCheckingLocation = false
+                return
+            }
+            let target = CLLocation(latitude: targetLatitude, longitude: targetLongitude)
+            isNearLocation = location.distance(from: target) <= 300
+            isCheckingLocation = false
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        Task { @MainActor in
+            isNearLocation = true
+            isCheckingLocation = false
+        }
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        Task { @MainActor in
+            switch manager.authorizationStatus {
+            case .authorizedWhenInUse, .authorizedAlways:
+                if isCheckingLocation {
+                    manager.requestLocation()
+                }
+            case .denied, .restricted:
+                if isCheckingLocation {
+                    isNearLocation = true
+                    isCheckingLocation = false
+                }
+            default:
+                break
+            }
+        }
     }
 
     func checkParticipation(program: ProgramData) {

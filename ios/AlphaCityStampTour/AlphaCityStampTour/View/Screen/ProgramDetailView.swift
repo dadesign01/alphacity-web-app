@@ -177,19 +177,12 @@ struct ProgramDetailView: View {
                             .padding(.horizontal, 20)
                             .padding(.top, 14)
 
-                        HStack {
-                            Text("참여 가능 미션")
-                                .font(AppFont.semibold(14))
-                                .foregroundColor(Color(hex: "121212"))
-                            Spacer()
-                            Button(action: { showMissionSheet = true }) {
-                                Text("미션 참여하기")
-                                    .font(AppFont.semibold(12))
-                                    .foregroundColor(AppColor.primary)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 14)
+                        Text("참여 가능 미션")
+                            .font(AppFont.semibold(14))
+                            .foregroundColor(Color(hex: "121212"))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 14)
 
                         if viewModel.isMissionsLoading {
                             HStack {
@@ -276,6 +269,14 @@ struct ProgramDetailView: View {
                         .padding(.bottom, 40)
                     } else {
                         // Program/Seminar: "지도에서 보기" + "참여하기"
+                        if !viewModel.isNearLocation && !viewModel.isCheckingLocation {
+                            Text("장소 근처에 도착하면 참여할 수 있습니다")
+                                .font(AppFont.regular(12))
+                                .foregroundColor(Color(hex: "9CA3AF"))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 6)
+                        }
                         HStack(spacing: 11) {
                             // "지도에서 보기" button
                             Button(action: {
@@ -305,13 +306,13 @@ struct ProgramDetailView: View {
                             }
 
                             // "참여하기" button
-                            Button(action: { viewModel.participate(program: program) }) {
+                            Button(action: { showMissionSheet = true }) {
                                 Group {
-                                    if viewModel.isLoading {
+                                    if viewModel.isCheckingLocation {
                                         ProgressView()
                                             .tint(.white)
                                     } else {
-                                        Text(viewModel.isParticipated ? "참여 완료" : "참여하기")
+                                        Text(viewModel.isNearLocation ? "참여하기" : "위치확인")
                                             .font(AppFont.medium(16))
                                             .tracking(-0.32)
                                     }
@@ -319,13 +320,13 @@ struct ProgramDetailView: View {
                                 .foregroundColor(.white)
                                 .frame(width: 101, height: 56)
                                 .background(
-                                    viewModel.isParticipated
-                                    ? LinearGradient(colors: [Color(hex: "9CA3AF"), Color(hex: "6B7280")], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                    : LinearGradient(colors: [Color(hex: "6092FF"), Color(hex: "2563EB"), Color(hex: "1551D3")], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    viewModel.isNearLocation
+                                    ? LinearGradient(colors: [Color(hex: "6092FF"), Color(hex: "2563EB"), Color(hex: "1551D3")], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    : LinearGradient(colors: [Color(hex: "9CA3AF"), Color(hex: "6B7280")], startPoint: .topLeading, endPoint: .bottomTrailing)
                                 )
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
-                            .disabled(viewModel.isParticipated || viewModel.isLoading)
+                            .disabled(!viewModel.isNearLocation || viewModel.isCheckingLocation)
                         }
                         .padding(.horizontal, 20)
                         .padding(.bottom, 40)
@@ -337,6 +338,7 @@ struct ProgramDetailView: View {
         .onAppear {
             viewModel.checkParticipation(program: program)
             viewModel.fetchMissions(programId: program.id)
+            viewModel.checkLocationForParticipation(lat: program.latitude, lng: program.longitude)
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: [shareText])

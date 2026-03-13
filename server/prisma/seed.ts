@@ -196,6 +196,38 @@ async function main() {
   });
   console.log('Food programs created');
 
+  // 지오펜스 테스트 프로그램 (광명시 광이로 95 기준: 37.4789, 126.8671)
+  const geoTestNear = await prisma.program.create({
+    data: {
+      name: '[테스트] 근거리 전시 (200m 이내)',
+      description: '지오펜스 테스트용 프로그램입니다.\n광명시 광이로 95 기준 약 78m 거리입니다.\n→ 참여하기 버튼이 활성화되어야 합니다.',
+      category: 'exhibition',
+      operatingHours: '10:00 - 18:00',
+      location: '광명시 광이로 95 인근 (약 78m)',
+      latitude: 37.4796,
+      longitude: 126.8671,
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-12-31'),
+      status: 'in_progress',
+    },
+  });
+  const geoTestFar = await prisma.program.create({
+    data: {
+      name: '[테스트] 원거리 세미나 (300m 초과)',
+      description: '지오펜스 테스트용 프로그램입니다.\n광명시 광이로 95 기준 약 378m 거리입니다.\n→ 참여하기 버튼이 비활성화되어야 합니다.',
+      category: 'seminar',
+      speaker: '테스트 강사',
+      operatingHours: '10:00 - 12:00',
+      location: '광명시 광이로 95 원거리 (약 378m)',
+      latitude: 37.4755,
+      longitude: 126.8671,
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-12-31'),
+      status: 'in_progress',
+    },
+  });
+  console.log('Geofence test programs created');
+
   // 프로그램 (이벤트)
   await prisma.program.create({
     data: {
@@ -391,6 +423,27 @@ async function main() {
     ],
   });
   console.log('Missions created');
+
+  // 지오펜스 테스트 미션
+  await prisma.mission.createMany({
+    data: [
+      {
+        name: '[테스트] 광명 퀴즈',
+        type: 'quiz',
+        programId: geoTestNear.id,
+        question: '광명시의 유명 관광지는?',
+        answer: '광명동굴',
+        options: JSON.stringify(['광명시청', '광명동굴', '이케아', '코스트코']),
+      },
+      {
+        name: '[테스트] 세미나 체류 미션',
+        type: 'stay_time',
+        programId: geoTestFar.id,
+        stayMinutes: 1,
+      },
+    ],
+  });
+  console.log('Geofence test missions created');
 
   // 스탬프
   await prisma.stamp.createMany({

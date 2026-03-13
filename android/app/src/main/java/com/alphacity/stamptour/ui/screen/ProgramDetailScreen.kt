@@ -1,8 +1,13 @@
 package com.alphacity.stamptour.ui.screen
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -83,10 +88,23 @@ fun ProgramDetailScreen(
     val isParticipated by viewModel.isParticipated.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val message by viewModel.message.collectAsState()
+    val isNearLocation by viewModel.isNearLocation.collectAsState()
+    val isCheckingLocation by viewModel.isCheckingLocation.collectAsState()
     var showMissionSheet by remember { mutableStateOf(false) }
     var selectedMission by remember { mutableStateOf<MissionItem?>(null) }
     var showRestrictionAlert by remember { mutableStateOf(false) }
     var restrictionMessage by remember { mutableStateOf("") }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions.values.any { it }
+        if (granted) {
+            viewModel.checkLocationForParticipation(context, program.latitude, program.longitude)
+        } else {
+            viewModel.checkLocationForParticipation(context, null, null)
+        }
+    }
 
     LaunchedEffect(program) {
         viewModel.checkParticipation(program)
@@ -95,6 +113,18 @@ fun ProgramDetailScreen(
 
     LaunchedEffect(Unit) {
         viewModel.initTts(context)
+        val fineGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (fineGranted || coarseGranted) {
+            viewModel.checkLocationForParticipation(context, program.latitude, program.longitude)
+        } else {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                )
+            )
+        }
     }
 
     Column(
@@ -316,29 +346,14 @@ fun ProgramDetailScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
                 )
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "참여 가능 미션",
-                        fontFamily = Pretendard,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        color = Color(0xFF121212),
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        text = "미션 참여하기",
-                        fontFamily = Pretendard,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp,
-                        color = Primary,
-                        modifier = Modifier.clickable { showMissionSheet = true },
-                    )
-                }
+                Text(
+                    text = "참여 가능 미션",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = Color(0xFF121212),
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
                 Spacer(modifier = Modifier.height(10.dp))
 
                 val missions by viewModel.missions.collectAsState()
@@ -461,6 +476,18 @@ fun ProgramDetailScreen(
                 }
             } else {
                 // Program/Seminar: "지도에서 보기" + "참여하기"
+                if (!isNearLocation && !isCheckingLocation) {
+                    Text(
+                        text = "장소 근처에 도착하면 참여할 수 있습니다",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = Color(0xFF9CA3AF),
+                        modifier = Modifier
+                            .padding(horizontal = 20.dp)
+                            .padding(bottom = 6.dp),
+                    )
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -508,17 +535,17 @@ fun ProgramDetailScreen(
                             .width(101.dp)
                             .height(56.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (isParticipated) GradientGray else GradientBlue)
+                            .background(if (isNearLocation) GradientBlue else GradientGray)
                             .then(
-                                if (!isParticipated && !isLoading) {
-                                    Modifier.clickable { viewModel.participate(program) }
+                                if (isNearLocation && !isCheckingLocation) {
+                                    Modifier.clickable { showMissionSheet = true }
                                 } else {
                                     Modifier
                                 }
                             ),
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (isLoading) {
+                        if (isCheckingLocation) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
                                 color = Color.White,
@@ -526,7 +553,7 @@ fun ProgramDetailScreen(
                             )
                         } else {
                             Text(
-                                text = if (isParticipated) "참여 완료" else "참여하기",
+                                text = if (isNearLocation) "참여하기" else "위치확인",
                                 fontFamily = Pretendard,
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 16.sp,

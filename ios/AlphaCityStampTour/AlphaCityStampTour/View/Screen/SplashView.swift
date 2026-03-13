@@ -90,9 +90,7 @@ struct SplashView: View {
                         .frame(height: 80)
 
                     // 캐릭터 (뚜비)
-                    Image("SplashCharacter")
-                        .resizable()
-                        .scaledToFit()
+                    GIFImageView(name: "alphacity_splash")
                         .frame(width: 160, height: 160)
 
                     Spacer()

@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -454,6 +455,11 @@ private fun RegisterTextField(
         value = value,
         onValueChange = onValueChange,
         enabled = enabled,
+        textStyle = androidx.compose.ui.text.TextStyle(
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp,
+        ),
         placeholder = {
             Text(
                 text = placeholder,
@@ -489,7 +495,7 @@ private fun RegisterTextField(
         ),
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .defaultMinSize(minHeight = 48.dp)
             .border(1.dp, Color(0xFFE9E9E9), RoundedCornerShape(8.dp)),
     )
 }

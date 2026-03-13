@@ -17,6 +17,9 @@ npx prisma generate
 echo ">>> Syncing database schema..."
 npx prisma db push
 
+echo ">>> Seeding database..."
+npm run seed
+
 echo ">>> Building..."
 npm run build
 

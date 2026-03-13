@@ -303,7 +303,7 @@ private struct RegisterTextField: View {
             }
         }
         .padding(.horizontal, 16)
-        .frame(height: 48)
+        .padding(.vertical, 14)
         .background(isDisabled ? Color(hex: "F5F5F5") : Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(

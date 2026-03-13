@@ -1,6 +1,8 @@
 package com.alphacity.stamptour.viewmodel
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.location.Location
 import android.speech.tts.TextToSpeech
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,12 +10,17 @@ import com.alphacity.stamptour.network.TokenManager
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.repository.HomeRepository
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 @HiltViewModel
 class ProgramDetailViewModel @Inject constructor(
@@ -38,6 +45,12 @@ class ProgramDetailViewModel @Inject constructor(
 
     private val _isSpeaking = MutableStateFlow(false)
     val isSpeaking: StateFlow<Boolean> = _isSpeaking
+
+    private val _isNearLocation = MutableStateFlow(false)
+    val isNearLocation: StateFlow<Boolean> = _isNearLocation
+
+    private val _isCheckingLocation = MutableStateFlow(false)
+    val isCheckingLocation: StateFlow<Boolean> = _isCheckingLocation
 
     private var tts: TextToSpeech? = null
 
@@ -131,6 +144,43 @@ class ProgramDetailViewModel @Inject constructor(
             "해당 프로그램에서는 체류시간 미션만 참여 가능합니다"
         } else {
             "해당 프로그램에서는 다른 미션을 선택해주세요"
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun checkLocationForParticipation(context: Context, targetLat: Double?, targetLng: Double?) {
+        if (targetLat == null || targetLng == null) {
+            _isNearLocation.value = true
+            return
+        }
+        _isCheckingLocation.value = true
+        viewModelScope.launch {
+            val location = getCurrentLocation(context)
+            _isNearLocation.value = if (location == null) {
+                true // 위치 확인 불가 시 참여 허용
+            } else {
+                val target = Location("target").apply {
+                    latitude = targetLat
+                    longitude = targetLng
+                }
+                location.distanceTo(target) <= 300f
+            }
+            _isCheckingLocation.value = false
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private suspend fun getCurrentLocation(context: Context): Location? {
+        return suspendCoroutine { cont ->
+            try {
+                val client = LocationServices.getFusedLocationProviderClient(context)
+                val cancellationToken = CancellationTokenSource()
+                client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationToken.token)
+                    .addOnSuccessListener { location -> cont.resume(location) }
+                    .addOnFailureListener { cont.resume(null) }
+            } catch (_: Exception) {
+                cont.resume(null)
+            }
         }
     }
 

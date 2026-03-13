@@ -87,6 +87,7 @@ dependencies {
 
     // Image
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
 
     // Room
     implementation(libs.room.runtime)

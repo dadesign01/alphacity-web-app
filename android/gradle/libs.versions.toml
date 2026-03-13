@@ -50,6 +50,7 @@ retrofit-kotlinx-serialization = { group = "com.jakewharton.retrofit", name = "r
 
 # Image
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
 
 # Room
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }

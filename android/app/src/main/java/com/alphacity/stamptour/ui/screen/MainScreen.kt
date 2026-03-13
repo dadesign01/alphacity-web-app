@@ -28,6 +28,9 @@ import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.viewmodel.DeepLinkViewModel
+import android.app.Activity
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
@@ -59,6 +62,12 @@ fun MainScreen(
 
     val isGuest = !tokenManager.isLoggedIn
     val deepLinkProgram by deepLinkViewModel.program.collectAsState()
+    val activity = LocalContext.current as? Activity
+
+    // 뒤로가기 시 앱 종료 대신 백그라운드로 이동
+    BackHandler {
+        activity?.moveTaskToBack(true)
+    }
 
     // 딥링크 프로그램 ID → API 로드
     LaunchedEffect(deepLinkProgramId) {
