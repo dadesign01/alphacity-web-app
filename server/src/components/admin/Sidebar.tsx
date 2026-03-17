@@ -50,10 +50,13 @@ export default function Sidebar() {
         <ul className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive =
-              item.path === '/admin'
-                ? pathname === '/admin'
-                : pathname === item.path || pathname.startsWith(item.path + '/');
+            const isMatch = item.path === '/admin'
+              ? pathname === '/admin'
+              : pathname === item.path || pathname.startsWith(item.path + '/');
+            const hasBetterMatch = isMatch && menuItems.some(
+              (other) => other.path !== item.path && other.path.startsWith(item.path + '/') && (pathname === other.path || pathname.startsWith(other.path + '/'))
+            );
+            const isActive = isMatch && !hasBetterMatch;
 
             return (
               <li key={item.path}>

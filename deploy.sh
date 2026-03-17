@@ -15,7 +15,7 @@ echo ">>> Generating Prisma client..."
 npx prisma generate
 
 echo ">>> Syncing database schema..."
-npx prisma db push
+npx prisma db push --accept-data-loss
 
 echo ">>> Seeding database..."
 npm run seed
