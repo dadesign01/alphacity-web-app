@@ -24,12 +24,10 @@ export async function POST(request: NextRequest) {
     }
 
     // FCM 토큰이 있는 대상 사용자 조회
-    const where = target === 'active'
-      ? { isActive: true, fcmToken: { not: null } }
-      : { fcmToken: { not: null } };
-
     const users = await prisma.user.findMany({
-      where: where as Parameters<typeof prisma.user.findMany>[0]['where'],
+      where: target === 'active'
+        ? { isActive: true, fcmToken: { not: null } }
+        : { fcmToken: { not: null } },
       select: { fcmToken: true },
     });
 
