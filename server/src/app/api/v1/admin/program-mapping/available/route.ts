@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const [places, missions, stamps] = await Promise.all([
