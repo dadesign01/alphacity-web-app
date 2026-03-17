@@ -150,16 +150,16 @@ export default function ProgramMappingPage() {
   const fetchMappingData = useCallback(async (programId: number) => {
     setIsLoading(true);
     try {
-      const [mappingRes, availableRes] = await Promise.all([
+      const [mappingRes, placesRes, missionsRes, stampsRes] = await Promise.all([
         fetch(`/api/v1/admin/program-mapping/${programId}`).then(r => r.json()),
-        fetch('/api/v1/admin/program-mapping/available').then(r => r.json()),
+        fetch('/api/v1/admin/places').then(r => r.json()),
+        fetch('/api/v1/admin/missions').then(r => r.json()),
+        fetch('/api/v1/admin/stamps').then(r => r.json()),
       ]);
 
-      if (availableRes.success) {
-        setAllPlaces(availableRes.data.places);
-        setAllMissions(availableRes.data.missions);
-        setAllStamps(availableRes.data.stamps);
-      }
+      if (placesRes.success) setAllPlaces(placesRes.data);
+      if (missionsRes.success) setAllMissions(missionsRes.data);
+      if (stampsRes.success) setAllStamps(stampsRes.data);
 
       if (mappingRes.success) {
         const placeIds = mappingRes.data.places.map((p: Place) => p.id);

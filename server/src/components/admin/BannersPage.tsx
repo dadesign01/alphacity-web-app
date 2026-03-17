@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Image as ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, GripVertical, Image as ImageIcon } from 'lucide-react';
 
 interface Banner {
   id: number;
@@ -22,6 +22,10 @@ export default function BannersPage() {
   const [uploading, setUploading] = useState(false);
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Drag state
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const fetchBanners = async () => {
     try {
@@ -102,16 +106,9 @@ export default function BannersPage() {
     }
   };
 
-  const handleMove = async (index: number, direction: 'up' | 'down') => {
-    const newBanners = [...banners];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= newBanners.length) return;
-
-    [newBanners[index], newBanners[targetIndex]] = [newBanners[targetIndex], newBanners[index]];
-    const orders = newBanners.map((b, i) => ({ id: b.id, sortOrder: i }));
-
-    setBanners(newBanners.map((b, i) => ({ ...b, sortOrder: i })));
-
+  const saveOrder = async (reordered: Banner[]) => {
+    const orders = reordered.map((b, i) => ({ id: b.id, sortOrder: i }));
+    setBanners(reordered.map((b, i) => ({ ...b, sortOrder: i })));
     try {
       const res = await fetch('/api/v1/admin/banners', {
         method: 'PUT',
@@ -126,6 +123,27 @@ export default function BannersPage() {
     } catch {
       fetchBanners();
     }
+  };
+
+  // Drag handlers
+  const handleDragStart = (index: number) => {
+    setDragIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+      const newBanners = [...banners];
+      const [dragged] = newBanners.splice(dragIndex, 1);
+      newBanners.splice(dragOverIndex, 0, dragged);
+      saveOrder(newBanners);
+    }
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
   const handleEdit = (banner: Banner) => {
@@ -252,26 +270,24 @@ export default function BannersPage() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {banners.map((banner, index) => (
-                <tr key={banner.id} className="hover:bg-gray-50">
+                <tr
+                  key={banner.id}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`transition-colors ${
+                    dragIndex === index
+                      ? 'opacity-50 bg-blue-50'
+                      : dragOverIndex === index
+                        ? 'bg-blue-50 border-t-2 border-blue-400'
+                        : 'hover:bg-gray-50'
+                  }`}
+                >
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-1">
-                      <div className="flex flex-col">
-                        <button
-                          onClick={() => handleMove(index, 'up')}
-                          disabled={index === 0}
-                          className="p-0.5 text-gray-400 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                          <ChevronUp className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleMove(index, 'down')}
-                          disabled={index === banners.length - 1}
-                          className="p-0.5 text-gray-400 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <span className="text-sm text-gray-500 ml-1">{index + 1}</span>
+                    <div className="flex items-center gap-2">
+                      <GripVertical className="w-5 h-5 text-gray-400 cursor-grab active:cursor-grabbing" />
+                      <span className="text-sm font-medium text-gray-700">{index + 1}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
