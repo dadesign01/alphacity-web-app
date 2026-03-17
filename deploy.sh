@@ -14,6 +14,12 @@ npm install
 echo ">>> Generating Prisma client..."
 npx prisma generate
 
+echo ">>> Migrating old data before schema push..."
+DB_URL=$(grep DATABASE_URL .env | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
+if [ -n "$DB_URL" ]; then
+  echo "UPDATE places SET category='event' WHERE category NOT IN ('food','exhibition','seminar','event');" | npx prisma db execute --stdin --url "$DB_URL" 2>/dev/null || true
+fi
+
 echo ">>> Syncing database schema..."
 npx prisma db push --accept-data-loss
 
