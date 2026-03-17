@@ -1,18 +1,32 @@
-import { PrismaClient } from '@prisma/client';
+import { createConnection } from 'net';
 
-const prisma = new PrismaClient();
+// .env에서 DATABASE_URL 파싱
+import { readFileSync } from 'fs';
+import { execSync } from 'child_process';
 
-async function main() {
+function getDbCredentials() {
   try {
-    // places 테이블의 이전 카테고리 값을 새 enum에 맞게 변환
-    const result = await prisma.$executeRawUnsafe(
-      "UPDATE places SET category='event' WHERE category NOT IN ('food','exhibition','seminar','event')"
-    );
-    console.log(`Pre-push: updated ${result} rows with old category values`);
+    const env = readFileSync('.env', 'utf-8');
+    const match = env.match(/DATABASE_URL\s*=\s*"?mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?"'\s]+)/);
+    if (!match) throw new Error('DATABASE_URL not found');
+    return { user: match[1], password: match[2], host: match[3], port: match[4], database: match[5] };
   } catch {
-    console.log('Pre-push: skipped (table not found or no old data)');
+    return null;
   }
-  await prisma.$disconnect();
 }
 
-main();
+const creds = getDbCredentials();
+if (creds) {
+  const sql = "UPDATE places SET category='event' WHERE category NOT IN ('food','exhibition','seminar','event');";
+  try {
+    const result = execSync(
+      `mysql -u "${creds.user}" -p"${creds.password}" -h "${creds.host}" -P "${creds.port}" "${creds.database}" -e "${sql}"`,
+      { stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    console.log('Pre-push: old place categories updated');
+  } catch (e: any) {
+    console.log('Pre-push: skipped -', e.stderr?.toString().trim() || 'no changes needed');
+  }
+} else {
+  console.log('Pre-push: skipped - could not parse DATABASE_URL');
+}
