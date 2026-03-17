@@ -53,7 +53,7 @@ export default function Sidebar() {
             const isActive =
               item.path === '/admin'
                 ? pathname === '/admin'
-                : pathname.startsWith(item.path);
+                : pathname === item.path || pathname.startsWith(item.path + '/');
 
             return (
               <li key={item.path}>
