@@ -9,6 +9,10 @@ import com.alphacity.stamptour.network.dto.ResetPasswordRequest
 import com.alphacity.stamptour.network.dto.SendCodeRequest
 import com.alphacity.stamptour.network.dto.SocialLoginRequest
 import com.alphacity.stamptour.network.dto.VerifyCodeRequest
+import android.content.Context
+import com.alphacity.stamptour.network.FcmTokenManager
+import com.google.firebase.messaging.FirebaseMessaging
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,12 +20,20 @@ import javax.inject.Singleton
 class AuthRepository @Inject constructor(
     private val apiService: ApiService,
     private val tokenManager: TokenManager,
+    @ApplicationContext private val context: Context,
 ) {
+    private fun registerFcmToken(accessToken: String) {
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { fcmToken ->
+            FcmTokenManager.registerTokenToServer(context, fcmToken, accessToken)
+        }
+    }
+
     suspend fun login(email: String, password: String): Result<AuthData> {
         return try {
             val response = apiService.login(LoginRequest(email, password))
             if (response.success && response.data != null) {
                 tokenManager.saveTokens(response.data.token, response.data.refreshToken)
+                registerFcmToken(response.data.token)
                 Result.success(response.data)
             } else {
                 Result.failure(Exception(response.error?.message ?: "로그인에 실패했습니다"))
@@ -51,6 +63,7 @@ class AuthRepository @Inject constructor(
             val response = apiService.socialLogin(SocialLoginRequest(provider, accessToken))
             if (response.success && response.data != null) {
                 tokenManager.saveTokens(response.data.token, response.data.refreshToken)
+                registerFcmToken(response.data.token)
                 android.util.Log.d("AuthRepository", "소셜 로그인 성공: ${response.data.user}")
                 Result.success(response.data)
             } else {
@@ -103,6 +116,10 @@ class AuthRepository @Inject constructor(
     }
 
     fun logout() {
+        val accessToken = tokenManager.accessToken
+        if (accessToken != null) {
+            FcmTokenManager.clearTokenFromServer(context, accessToken)
+        }
         tokenManager.clearTokens()
     }
 

@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -108,4 +109,8 @@ dependencies {
     // Social Login
     implementation("com.kakao.sdk:v2-user:2.20.6")
     implementation("com.navercorp.nid:oauth:5.10.0")
+
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 }

@@ -53,7 +53,8 @@ fun ProgramListScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .navigationBarsPadding(),
     ) {
         // Header
         ProgramListHeader(onBackClick = onBackClick)

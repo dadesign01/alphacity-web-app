@@ -9,6 +9,7 @@ final class APIClient {
     static let shared = APIClient()
 
     private let baseURL = "http://223.130.141.53:1111/api/v1"
+    let baseURLString = "http://223.130.141.53:1111/api/v1"
     static let serverURL = "http://223.130.141.53:1111"
 
     private let decoder: JSONDecoder = {

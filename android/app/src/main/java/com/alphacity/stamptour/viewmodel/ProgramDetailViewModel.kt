@@ -189,6 +189,11 @@ class ProgramDetailViewModel @Inject constructor(
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale.KOREAN
+                tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {}
+                    override fun onDone(utteranceId: String?) { _isSpeaking.value = false }
+                    override fun onError(utteranceId: String?) { _isSpeaking.value = false }
+                })
             }
         }
     }

@@ -17,6 +17,7 @@ extension Notification.Name {
 
 @main
 struct AlphaCityStampTourApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
     init() {
         // Pretendard 폰트 등록

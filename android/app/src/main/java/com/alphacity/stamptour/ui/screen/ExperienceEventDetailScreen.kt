@@ -59,7 +59,7 @@ fun ExperienceEventDetailScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding()) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.White).statusBarsPadding().navigationBarsPadding()) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header
             Row(

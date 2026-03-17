@@ -72,6 +72,7 @@ model User {
   profileImage String?  @map("profile_image") @db.VarChar(500)
   provider     String?  @db.VarChar(20)
   socialId     String?  @map("social_id") @db.VarChar(255)
+  fcmToken     String?  @map("fcm_token") @db.VarChar(500)
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")

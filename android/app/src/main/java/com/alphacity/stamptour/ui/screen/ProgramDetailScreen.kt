@@ -131,7 +131,8 @@ fun ProgramDetailScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .navigationBarsPadding(),
     ) {
         // Header
         DetailHeader(

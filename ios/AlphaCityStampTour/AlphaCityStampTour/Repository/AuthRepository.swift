@@ -19,6 +19,7 @@ final class AuthRepository {
             body: LoginRequest(email: email, password: password)
         )
         tokenManager.saveTokens(access: data.token, refresh: data.refreshToken)
+        registerFcmToken()
         return data
     }
 
@@ -29,6 +30,7 @@ final class AuthRepository {
             body: RegisterRequest(email: email, password: password, nickname: nickname)
         )
         tokenManager.saveTokens(access: data.token, refresh: data.refreshToken)
+        registerFcmToken()
         return data
     }
 
@@ -39,11 +41,19 @@ final class AuthRepository {
             body: SocialLoginRequest(provider: provider, accessToken: accessToken)
         )
         tokenManager.saveTokens(access: data.token, refresh: data.refreshToken)
+        registerFcmToken()
         return data
     }
 
     func logout() {
+        FcmTokenManager.shared.clearTokenFromServer()
         tokenManager.clearTokens()
+    }
+
+    private func registerFcmToken() {
+        if let fcmToken = FcmTokenManager.shared.currentToken {
+            FcmTokenManager.shared.registerTokenToServer(fcmToken: fcmToken)
+        }
     }
 
     var isLoggedIn: Bool {

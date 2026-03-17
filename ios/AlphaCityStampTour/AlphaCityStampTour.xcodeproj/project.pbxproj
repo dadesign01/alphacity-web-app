@@ -9,6 +9,10 @@
 /* Begin PBXBuildFile section */
 		04EABA902F57B00000000001 /* KakaoMapsSDK.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 04EABA902F57B00000000000 /* KakaoMapsSDK.xcframework */; };
 		04EABA902F57B00000000002 /* KakaoMapsSDK.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 04EABA902F57B00000000000 /* KakaoMapsSDK.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		04EAC2222F696353005BC02F /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 04EAC2212F696353005BC02F /* FirebaseCore */; };
+		04EAC2242F696353005BC02F /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 04EAC2232F696353005BC02F /* FirebaseFirestore */; };
+		04EAC2262F696353005BC02F /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = 04EAC2252F696353005BC02F /* FirebaseInAppMessaging-Beta */; };
+		04EAC2282F696353005BC02F /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 04EAC2272F696353005BC02F /* FirebaseMessaging */; };
 		04F695322F4EB71F00F2920C /* KakaoSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 04F695312F4EB71F00F2920C /* KakaoSDK */; };
 		04F695342F4EB71F00F2920C /* KakaoSDKAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 04F695332F4EB71F00F2920C /* KakaoSDKAuth */; };
 		04F695362F4EB71F00F2920C /* KakaoSDKCert in Frameworks */ = {isa = PBXBuildFile; productRef = 04F695352F4EB71F00F2920C /* KakaoSDKCert */; };
@@ -75,9 +79,13 @@
 				04F695322F4EB71F00F2920C /* KakaoSDK in Frameworks */,
 				04F6953E2F4EB71F00F2920C /* KakaoSDKUser in Frameworks */,
 				04EABA902F57B00000000001 /* KakaoMapsSDK.xcframework in Frameworks */,
+				04EAC2222F696353005BC02F /* FirebaseCore in Frameworks */,
 				04F6953A2F4EB71F00F2920C /* KakaoSDKCommon in Frameworks */,
+				04EAC2282F696353005BC02F /* FirebaseMessaging in Frameworks */,
 				04F695342F4EB71F00F2920C /* KakaoSDKAuth in Frameworks */,
+				04EAC2242F696353005BC02F /* FirebaseFirestore in Frameworks */,
 				04F6953C2F4EB71F00F2920C /* KakaoSDKShare in Frameworks */,
+				04EAC2262F696353005BC02F /* FirebaseInAppMessaging-Beta in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -140,6 +148,10 @@
 				04F6953B2F4EB71F00F2920C /* KakaoSDKShare */,
 				04F6953D2F4EB71F00F2920C /* KakaoSDKUser */,
 				04F695402F4EB7C400F2920C /* NidThirdPartyLogin */,
+				04EAC2212F696353005BC02F /* FirebaseCore */,
+				04EAC2232F696353005BC02F /* FirebaseFirestore */,
+				04EAC2252F696353005BC02F /* FirebaseInAppMessaging-Beta */,
+				04EAC2272F696353005BC02F /* FirebaseMessaging */,
 			);
 			productName = AlphaCityStampTour;
 			productReference = 04F694C22F4E8EB000F2920C /* AlphaCityStampTour.app */;
@@ -172,6 +184,7 @@
 			packageReferences = (
 				04F695302F4EB71F00F2920C /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */,
 				04F6953F2F4EB7C400F2920C /* XCRemoteSwiftPackageReference "naveridlogin-sdk-ios-swift" */,
+				04EAC2202F696353005BC02F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 04F694C32F4E8EB000F2920C /* Products */;
@@ -415,6 +428,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		04EAC2202F696353005BC02F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.11.0;
+			};
+		};
 		04F695302F4EB71F00F2920C /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kakao/kakao-ios-sdk";
@@ -434,6 +455,26 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		04EAC2212F696353005BC02F /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 04EAC2202F696353005BC02F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		04EAC2232F696353005BC02F /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 04EAC2202F696353005BC02F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		04EAC2252F696353005BC02F /* FirebaseInAppMessaging-Beta */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 04EAC2202F696353005BC02F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseInAppMessaging-Beta";
+		};
+		04EAC2272F696353005BC02F /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 04EAC2202F696353005BC02F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
 		04F695312F4EB71F00F2920C /* KakaoSDK */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 04F695302F4EB71F00F2920C /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */;

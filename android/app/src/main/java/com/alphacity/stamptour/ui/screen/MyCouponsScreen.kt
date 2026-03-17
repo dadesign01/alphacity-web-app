@@ -65,7 +65,7 @@ fun MyCouponsScreen(
 
     val availableCoupons = mockCoupons.filter { it.id !in usedCouponIds }
 
-    Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+    Box(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "513922666254",
+    "project_id": "alphacity-9ff3a",
+    "storage_bucket": "alphacity-9ff3a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:513922666254:android:80fcec088c727ee1cb915f",
+        "android_client_info": {
+          "package_name": "com.alphacity.stamptour"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsmKnbnqsv4IVvp9jf2nvScjP2jyf5wHo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
