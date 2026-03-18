@@ -9,6 +9,20 @@ struct StampView: View {
     @StateObject private var viewModel = StampViewModel()
     var onNavigateToMap: () -> Void = {}
     var onNavigateToExchange: () -> Void = {}
+    @State private var selectedMission: MissionData? = nil
+
+    /// 스탬프 클릭 시 연결된 미션 찾기
+    private func handleStampTap(_ stamp: StampData) {
+        let linkedMission = viewModel.missions.first { $0.stampId == stamp.id }
+        if let mission = linkedMission {
+            selectedMission = mission
+        } else {
+            // 연결된 미션이 없으면: 미수집은 지도로, 수집 완료는 아무 동작 없음
+            if !viewModel.collectedStampIds.contains(stamp.id) {
+                onNavigateToMap()
+            }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -64,7 +78,7 @@ struct StampView: View {
                         StampGridView(
                             stamps: viewModel.stamps,
                             collectedStampIds: viewModel.collectedStampIds,
-                            onUncollectedTap: { _ in onNavigateToMap() }
+                            onStampTap: { stamp in handleStampTap(stamp) }
                         )
                         .padding(.top, 16)
                         .padding(.horizontal, 20)
@@ -84,7 +98,7 @@ struct StampView: View {
                             stamps: viewModel.stamps,
                             collectedStampIds: viewModel.collectedStampIds,
                             userStamps: viewModel.userStamps,
-                            onUncollectedTap: { _ in onNavigateToMap() }
+                            onStampTap: { stamp in handleStampTap(stamp) }
                         )
                     }
 
@@ -101,6 +115,35 @@ struct StampView: View {
         .background(Color.white)
         .onAppear {
             viewModel.fetchStampData()
+        }
+        .fullScreenCover(item: $selectedMission) { mission in
+            missionDetailView(for: mission)
+        }
+    }
+
+    @ViewBuilder
+    private func missionDetailView(for mission: MissionData) -> some View {
+        switch mission.type {
+        case "quiz":
+            QuizMissionView(
+                mission: mission,
+                onDismiss: { selectedMission = nil },
+                onCompleted: { viewModel.fetchStampData() }
+            )
+        case "location_auth":
+            LocationMissionView(
+                mission: mission,
+                onDismiss: { selectedMission = nil },
+                onCompleted: { viewModel.fetchStampData() }
+            )
+        case "stay_time":
+            StayTimeMissionView(
+                mission: mission,
+                onDismiss: { selectedMission = nil },
+                onCompleted: { viewModel.fetchStampData() }
+            )
+        default:
+            EmptyView()
         }
     }
 }
@@ -345,7 +388,7 @@ private struct RewardButtonView: View {
 private struct StampGridView: View {
     let stamps: [StampData]
     let collectedStampIds: Set<Int>
-    var onUncollectedTap: (StampData) -> Void = { _ in }
+    var onStampTap: (StampData) -> Void = { _ in }
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 19), count: 3)
 
@@ -358,9 +401,7 @@ private struct StampGridView: View {
                     isCollected: isCollected
                 )
                 .onTapGesture {
-                    if !isCollected {
-                        onUncollectedTap(stamp)
-                    }
+                    onStampTap(stamp)
                 }
             }
         }
@@ -531,7 +572,7 @@ private struct StampHistorySection: View {
     let stamps: [StampData]
     let collectedStampIds: Set<Int>
     let userStamps: [UserStampData]
-    var onUncollectedTap: (StampData) -> Void = { _ in }
+    var onStampTap: (StampData) -> Void = { _ in }
 
     private var sortedStamps: [StampData] {
         stamps.sorted { a, b in
@@ -558,9 +599,7 @@ private struct StampHistorySection: View {
                     collectedAt: userStamp?.collectedAt
                 )
                 .onTapGesture {
-                    if !isCollected {
-                        onUncollectedTap(stamp)
-                    }
+                    onStampTap(stamp)
                 }
             }
         }
@@ -627,7 +666,7 @@ private struct StampHistoryRowView: View {
                         .font(AppFont.regular(12))
                         .foregroundColor(Color(hex: "9CA3AF"))
                 } else {
-                    Text("미획득 · 탭하여 지도에서 확인")
+                    Text("미획득 · 탭하여 미션 확인")
                         .font(AppFont.regular(12))
                         .foregroundColor(Color(hex: "2563EB"))
                 }

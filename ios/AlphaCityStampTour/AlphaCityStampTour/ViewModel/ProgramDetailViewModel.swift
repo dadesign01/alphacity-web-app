@@ -61,7 +61,7 @@ final class ProgramDetailViewModel: NSObject, ObservableObject, AVSpeechSynthesi
                 return
             }
             let target = CLLocation(latitude: targetLatitude, longitude: targetLongitude)
-            isNearLocation = location.distance(from: target) <= 300
+            isNearLocation = location.distance(from: target) <= 50
             isCheckingLocation = false
         }
     }

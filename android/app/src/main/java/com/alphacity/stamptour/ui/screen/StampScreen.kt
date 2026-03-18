@@ -1,5 +1,6 @@
 package com.alphacity.stamptour.ui.screen
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -54,6 +55,12 @@ fun StampScreen(
     val collectedStampIds by viewModel.collectedStampIds.collectAsState()
     val missions by viewModel.missions.collectAsState()
     val userStamps by viewModel.userStamps.collectAsState()
+    var selectedMission by remember { mutableStateOf<MissionItem?>(null) }
+
+    // 미션 상세 화면에서 뒤로가기
+    BackHandler(enabled = selectedMission != null) {
+        selectedMission = null
+    }
 
     // 탭 전환 시마다 최신 데이터 로드
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -74,6 +81,41 @@ fun StampScreen(
 
     val completedMissionCount = missions.count { it.isCompleted == true }
     val remainingMissionCount = missions.size - completedMissionCount
+
+    // 미션 상세 전체화면 (스탬프 클릭 시)
+    selectedMission?.let { mission ->
+        when (mission.type) {
+            "quiz" -> QuizMissionScreen(
+                mission = mission,
+                onDismiss = { selectedMission = null },
+                onCompleted = { viewModel.fetchStampData() },
+            )
+            "location_auth" -> LocationMissionScreen(
+                mission = mission,
+                onDismiss = { selectedMission = null },
+                onCompleted = { viewModel.fetchStampData() },
+            )
+            "stay_time" -> StayTimeMissionScreen(
+                mission = mission,
+                onDismiss = { selectedMission = null },
+                onCompleted = { viewModel.fetchStampData() },
+            )
+        }
+        return
+    }
+
+    // 스탬프 클릭 시 연결된 미션 찾기
+    val onStampClick: (StampItem) -> Unit = { stamp ->
+        val linkedMission = missions.find { it.stampId == stamp.id }
+        if (linkedMission != null) {
+            selectedMission = linkedMission
+        } else {
+            // 연결된 미션이 없으면: 미수집은 지도로, 수집 완료는 아무 동작 없음
+            if (!collectedStampIds.contains(stamp.id)) {
+                onNavigateToMap(null, null)
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -155,9 +197,7 @@ fun StampScreen(
                 StampGrid(
                     stamps = stamps,
                     collectedStampIds = collectedStampIds,
-                    onUncollectedClick = { stamp ->
-                        onNavigateToMap(null, null)
-                    },
+                    onStampClick = onStampClick,
                 )
             }
 
@@ -172,9 +212,7 @@ fun StampScreen(
                     stamps = stamps,
                     collectedStampIds = collectedStampIds,
                     userStamps = userStamps,
-                    onUncollectedClick = { stamp ->
-                        onNavigateToMap(null, null)
-                    },
+                    onStampClick = onStampClick,
                 )
             }
 
@@ -521,7 +559,7 @@ private fun RewardButton(onClick: () -> Unit = {}) {
 private fun StampGrid(
     stamps: List<StampItem>,
     collectedStampIds: Set<Int>,
-    onUncollectedClick: (StampItem) -> Unit = {},
+    onStampClick: (StampItem) -> Unit = {},
 ) {
     val chunkedStamps = stamps.chunked(3)
 
@@ -543,9 +581,7 @@ private fun StampGrid(
                         stamp = stamp,
                         isCollected = isCollected,
                         modifier = Modifier.weight(1f),
-                        onClick = if (!isCollected) {
-                            { onUncollectedClick(stamp) }
-                        } else null,
+                        onClick = { onStampClick(stamp) },
                     )
                 }
 
@@ -793,7 +829,7 @@ private fun StampHistorySection(
     stamps: List<StampItem>,
     collectedStampIds: Set<Int>,
     userStamps: List<UserStampItem>,
-    onUncollectedClick: (StampItem) -> Unit = {},
+    onStampClick: (StampItem) -> Unit = {},
 ) {
     val userStampMap = userStamps.associateBy { it.stampId }
 
@@ -826,9 +862,7 @@ private fun StampHistorySection(
                 stamp = stamp,
                 isCollected = isCollected,
                 collectedAt = userStamp?.collectedAt,
-                onClick = if (!isCollected) {
-                    { onUncollectedClick(stamp) }
-                } else null,
+                onClick = { onStampClick(stamp) },
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -909,7 +943,7 @@ private fun StampHistoryRow(
                 )
             } else if (!isCollected) {
                 Text(
-                    text = "미획득 · 탭하여 지도에서 확인",
+                    text = "미획득 · 탭하여 미션 확인",
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Normal,
                     fontSize = 12.sp,

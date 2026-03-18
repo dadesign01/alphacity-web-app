@@ -32,6 +32,7 @@ export async function PUT(
     const updateData: Record<string, unknown> = {};
     if (body.status) updateData.status = body.status;
     if (body.programId !== undefined) updateData.programId = body.programId || null;
+    if (body.missionId !== undefined) updateData.missionId = body.missionId || null;
 
     const store = await prisma.store.update({
       where: { id: storeId },
@@ -52,6 +53,7 @@ export async function PUT(
       where: { id: storeId },
       include: {
         program: { select: { id: true, name: true } },
+        mission: { select: { id: true, name: true, type: true } },
         storeCoupons: { include: { coupon: { select: { id: true, name: true } } } },
       },
     });

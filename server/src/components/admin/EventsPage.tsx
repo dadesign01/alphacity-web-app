@@ -26,7 +26,7 @@ interface EventItem {
 const TYPE_MAP: Record<string, string> = { raffle: '추첨', first_come: '선착순', experience: '체험' };
 const STATUS_MAP: Record<string, string> = { scheduled: '예정', in_progress: '진행중', ended: '종료' };
 
-const defaultForm = { programId: 0, name: '', description: '', imageUrl: '', type: 'raffle', startDate: '', endDate: '', reward: '', winnerCount: 0, participantLimit: 100, status: 'scheduled', price: 0, duration: 0, capacity: 0, location: '' };
+const defaultForm = { programId: 0, name: '', description: '', imageUrl: '', type: 'raffle', startDate: '', endDate: '', reward: '', winnerCount: 0, participantLimit: 100, price: 0, duration: 0, capacity: 0, location: '' };
 
 export default function EventsPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -111,7 +111,6 @@ export default function EventsPage() {
       reward: event.reward || '',
       winnerCount: event.winnerCount || 0,
       participantLimit: event.participantLimit,
-      status: event.status,
       price: event.price || 0,
       duration: event.duration || 0,
       capacity: event.capacity || 0,
@@ -247,17 +246,6 @@ export default function EventsPage() {
                       placeholder="10" min="0" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                   </div>
                 </>
-              )}
-              {editingId && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">상태</label>
-                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="scheduled">예정</option>
-                    <option value="in_progress">진행중</option>
-                    <option value="ended">종료</option>
-                  </select>
-                </div>
               )}
             </div>
             {form.type === 'experience' && (

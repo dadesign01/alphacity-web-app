@@ -64,7 +64,7 @@ fun MainScreen(
     val deepLinkProgram by deepLinkViewModel.program.collectAsState()
     val activity = LocalContext.current as? Activity
 
-    // 뒤로가기: 오버레이 화면이 열려있으면 닫고, 메인이면 백그라운드로
+    // 뒤로가기: 오버레이 화면이 열려있으면 닫고, 다른 탭이면 홈으로, 홈이면 백그라운드로
     BackHandler {
         when {
             selectedProgram != null -> selectedProgram = null
@@ -72,6 +72,7 @@ fun MainScreen(
             showMyCoupons -> showMyCoupons = false
             showEventHighlight -> showEventHighlight = false
             showProgramList -> { showProgramList = false; programListCategory = null }
+            selectedTab != BottomTab.HOME -> selectedTab = BottomTab.HOME
             else -> activity?.moveTaskToBack(true)
         }
     }

@@ -195,6 +195,7 @@ model Mission {
   program     Program?            @relation(fields: [programId], references: [id], onDelete: SetNull)
   stamp       Stamp?              @relation(fields: [stampId], references: [id], onDelete: SetNull)
   completions MissionCompletion[]
+  stores      Store[]
 
   @@map("missions")
 }
@@ -316,12 +317,14 @@ model Store {
   closeTime     String?       @map("close_time") @db.VarChar(10)
   userId        Int?          @map("user_id")
   programId     Int?          @map("program_id")
+  missionId     Int?          @map("mission_id")
   status        StoreStatus   @default(pending)
   requestDate   DateTime      @map("request_date") @db.Date
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
   program      Program?      @relation(fields: [programId], references: [id], onDelete: SetNull)
+  mission      Mission?      @relation(fields: [missionId], references: [id], onDelete: SetNull)
   userCoupons  UserCoupon[]
   storeCoupons StoreCoupon[]
 
@@ -366,12 +369,14 @@ model Banner {
 }
 
 model Notification {
-  id             Int                @id @default(autoincrement())
-  title          String             @db.VarChar(255)
-  message        String             @db.Text
-  target         NotificationTarget @default(all)
-  sentAt         DateTime           @default(now()) @map("sent_at")
-  recipientCount Int                @default(0) @map("recipient_count")
+  id             Int                  @id @default(autoincrement())
+  title          String               @db.VarChar(255)
+  message        String               @db.Text
+  target         NotificationTarget   @default(all)
+  status         NotificationStatus   @default(sent)
+  scheduledAt    DateTime?            @map("scheduled_at")
+  sentAt         DateTime             @default(now()) @map("sent_at")
+  recipientCount Int                  @default(0) @map("recipient_count")
 
   @@map("notifications")
 }
@@ -380,4 +385,10 @@ enum NotificationTarget {
   all
   active
   specific_group
+}
+
+enum NotificationStatus {
+  scheduled
+  sent
+  failed
 }

@@ -23,6 +23,8 @@ interface StoreItem {
   closeTime?: string;
   programId?: number | null;
   program?: { id: number; name: string } | null;
+  missionId?: number | null;
+  mission?: { id: number; name: string; type: string } | null;
   storeCoupons?: StoreCouponItem[];
   requestDate: string;
   status: string;
@@ -33,6 +35,12 @@ interface StoreItem {
 interface ProgramOption {
   id: number;
   name: string;
+}
+
+interface MissionOption {
+  id: number;
+  name: string;
+  type: string;
 }
 
 interface CouponOption {
@@ -61,8 +69,10 @@ export default function StoresPage() {
   const [stats, setStats] = useState<Stats>({ totalCount: 0, pendingCount: 0, approvedCount: 0, rejectedCount: 0 });
   const [selected, setSelected] = useState<StoreItem | null>(null);
   const [programs, setPrograms] = useState<ProgramOption[]>([]);
+  const [missions, setMissions] = useState<MissionOption[]>([]);
   const [coupons, setCoupons] = useState<CouponOption[]>([]);
   const [editProgramId, setEditProgramId] = useState<number | null>(null);
+  const [editMissionId, setEditMissionId] = useState<number | null>(null);
   const [editCouponIds, setEditCouponIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -76,6 +86,9 @@ export default function StoresPage() {
     fetch('/api/v1/admin/programs').then((r) => r.json()).then((d) => {
       if (d.success) setPrograms(d.data.map((p: ProgramOption) => ({ id: p.id, name: p.name })));
     });
+    fetch('/api/v1/admin/missions').then((r) => r.json()).then((d) => {
+      if (d.success) setMissions(d.data.map((m: MissionOption) => ({ id: m.id, name: m.name, type: m.type })));
+    });
     fetch('/api/v1/admin/coupons').then((r) => r.json()).then((d) => {
       if (d.success) setCoupons(d.data.map((c: CouponOption) => ({ id: c.id, name: c.name })));
     });
@@ -86,6 +99,7 @@ export default function StoresPage() {
   const openDetail = (store: StoreItem) => {
     setSelected(store);
     setEditProgramId(store.programId ?? null);
+    setEditMissionId(store.missionId ?? null);
     setEditCouponIds(store.storeCoupons?.map(sc => sc.coupon.id) ?? []);
   };
 
@@ -114,7 +128,7 @@ export default function StoresPage() {
       const res = await fetch(`/api/v1/admin/stores/${selected.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ programId: editProgramId, couponIds: editCouponIds }),
+        body: JSON.stringify({ programId: editProgramId, missionId: editMissionId, couponIds: editCouponIds }),
       });
       const data = await res.json();
       if (data.success) {
@@ -150,7 +164,7 @@ export default function StoresPage() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상점명</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">연결 프로그램</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">연결 미션</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">연결 쿠폰</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
@@ -166,8 +180,8 @@ export default function StoresPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">
-                  {store.program ? (
-                    <span className="inline-flex px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">{store.program.name}</span>
+                  {store.mission ? (
+                    <span className="inline-flex px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">{store.mission.name}</span>
                   ) : (
                     <span className="text-gray-400">미연결</span>
                   )}
@@ -322,17 +336,17 @@ export default function StoresPage() {
                 </div>
               </div>
 
-              {/* 프로그램 연결 */}
+              {/* 미션 연결 */}
               <div className="border-t border-gray-200 pt-4">
-                <p className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1"><Link className="w-4 h-4" /> 프로그램 연결</p>
+                <p className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1"><Link className="w-4 h-4" /> 미션 연결</p>
                 <select
-                  value={editProgramId ?? ''}
-                  onChange={(e) => setEditProgramId(e.target.value ? parseInt(e.target.value) : null)}
+                  value={editMissionId ?? ''}
+                  onChange={(e) => setEditMissionId(e.target.value ? parseInt(e.target.value) : null)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">프로그램 선택 (미연결)</option>
-                  {programs.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
+                  <option value="">미션 선택 (미연결)</option>
+                  {missions.map(m => (
+                    <option key={m.id} value={m.id}>{m.name} ({m.type === 'quiz' ? '퀴즈' : m.type === 'location_auth' ? '위치인증' : '체류시간'})</option>
                   ))}
                 </select>
               </div>
@@ -365,7 +379,7 @@ export default function StoresPage() {
                 disabled={saving}
                 className="w-full py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {saving ? '저장 중...' : '프로그램/쿠폰 연결 저장'}
+                {saving ? '저장 중...' : '미션/쿠폰 연결 저장'}
               </button>
             </div>
             <div className="sticky bottom-0 bg-white flex justify-end gap-2 p-6 pt-4 border-t border-gray-200">

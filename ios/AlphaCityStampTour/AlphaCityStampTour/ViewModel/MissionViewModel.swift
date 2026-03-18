@@ -15,6 +15,10 @@ final class MissionViewModel: ObservableObject {
     @Published var alertMessage = ""
     @Published var earnedStamp: StampData? = nil
 
+    // 위치 확인 관련
+    @Published var locationVerified = false
+    @Published var currentDistance: Int? = nil
+
     // 체류시간 미션
     @Published var isTimerRunning = false
     @Published var remainingSeconds: Int = 0
@@ -87,13 +91,14 @@ final class MissionViewModel: ObservableObject {
 
             let targetLocation = CLLocation(latitude: targetLat, longitude: targetLng)
             let distance = location.distance(from: targetLocation)
+            currentDistance = Int(distance)
 
             if distance <= 50 {
                 do {
                     let result = try await repository.completeMission(missionId: missionId)
                     earnedStamp = result.stamp
                     isCompleted = true
-                    message = "위치 인증 완료!"
+                    message = "위치 인증 완료! (현재 거리: \(Int(distance))m)"
                 } catch let error as APIError {
                     switch error {
                     case .serverError(let msg):
@@ -112,7 +117,41 @@ final class MissionViewModel: ObservableObject {
                     showAlert = true
                 }
             } else {
-                alertMessage = "해당 장소 근처에서 인증해주세요.\n(남은 거리: \(Int(distance))m)"
+                alertMessage = "현재 거리: \(Int(distance))m\n목표 장소까지 \(Int(distance) - 50)m 더 이동해주세요."
+                showAlert = true
+            }
+            isLoading = false
+        }
+    }
+
+    // MARK: - 위치 확인 (퀴즈/체류시간 미션 전 위치 인증)
+
+    func verifyLocation(targetLat: Double, targetLng: Double) {
+        guard !isLoading else { return }
+
+        isLoading = true
+
+        locationManager.requestWhenInUseAuthorization()
+
+        Task {
+            let location = await getCurrentLocation()
+
+            guard let location = location else {
+                alertMessage = "위치를 가져올 수 없습니다. 위치 권한을 확인해주세요."
+                showAlert = true
+                isLoading = false
+                return
+            }
+
+            let targetLocation = CLLocation(latitude: targetLat, longitude: targetLng)
+            let distance = location.distance(from: targetLocation)
+            currentDistance = Int(distance)
+
+            if distance <= 50 {
+                locationVerified = true
+                message = "위치 확인 완료! (현재 거리: \(Int(distance))m)"
+            } else {
+                alertMessage = "현재 거리: \(Int(distance))m\n목표 장소까지 \(Int(distance) - 50)m 더 이동해주세요."
                 showAlert = true
             }
             isLoading = false

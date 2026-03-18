@@ -45,6 +45,7 @@ fun LocationMissionScreen(
     val showAlert by viewModel.showAlert.collectAsState()
     val alertMessage by viewModel.alertMessage.collectAsState()
     val earnedStamp by viewModel.earnedStamp.collectAsState()
+    val currentDistance by viewModel.currentDistance.collectAsState()
 
     if (isCompleted && earnedStamp != null) {
         StampEarnedDialog(
@@ -127,6 +128,16 @@ fun LocationMissionScreen(
                 mission.place?.let {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(it.name, fontFamily = Pretendard, fontSize = 14.sp, color = Color(0xFF828282))
+                }
+                currentDistance?.let { dist ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "현재 거리: ${dist}m",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp,
+                        color = Color(0xFF16A34A),
+                    )
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 Box(

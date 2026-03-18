@@ -15,11 +15,13 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.alphacity.stamptour.network.TokenManager
 import com.alphacity.stamptour.ui.screen.ForgotPasswordScreen
 import com.alphacity.stamptour.ui.screen.LoginScreen
 import com.alphacity.stamptour.ui.screen.RegisterScreen
 import com.alphacity.stamptour.ui.screen.MainScreen
 import com.alphacity.stamptour.ui.screen.SplashScreen
+import androidx.compose.ui.platform.LocalContext
 
 object Routes {
     const val LOGIN = "login"
@@ -31,31 +33,15 @@ object Routes {
 @Composable
 fun AppNavigation(deepLinkProgramId: Int? = null) {
     val navController = rememberNavController()
-    var showSplash by rememberSaveable { mutableStateOf(true) }
-    var hasBeenStopped by rememberSaveable { mutableStateOf(false) }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_STOP -> hasBeenStopped = true
-                Lifecycle.Event.ON_START -> {
-                    if (hasBeenStopped) {
-                        showSplash = true
-                        hasBeenStopped = false
-                    }
-                }
-                else -> {}
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
+    val context = LocalContext.current
+    val tokenManager = TokenManager(context)
+    val isLoggedIn = tokenManager.isLoggedIn
+    var showSplash by rememberSaveable { mutableStateOf(!isLoggedIn) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
-            startDestination = Routes.LOGIN,
+            startDestination = if (isLoggedIn) Routes.HOME else Routes.LOGIN,
         ) {
             composable(Routes.LOGIN) {
                 LoginScreen(

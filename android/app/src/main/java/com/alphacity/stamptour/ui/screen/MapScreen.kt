@@ -153,7 +153,9 @@ fun MapScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             KakaoMapContent(
                 programs = filteredPrograms,
-                onProgramClick = onProgramClick,
+                onProgramClick = { program ->
+                    onProgramClick(program)
+                },
                 focusLat = focusLat,
                 focusLng = focusLng,
                 onFocusConsumed = onFocusConsumed,
@@ -478,7 +480,13 @@ private fun addClusteredMarkers(
         val position = LatLng.from(cluster.centerLat, cluster.centerLng)
 
         val bitmap = if (cluster.isSingle) {
-            createNameBubbleBitmap(cluster.programs.first().name, context)
+            val program = cluster.programs.first()
+            val markerName = if (program.category == "food") {
+                program.stores?.firstOrNull()?.name ?: program.name
+            } else {
+                program.name
+            }
+            createNameBubbleBitmap(markerName, context)
         } else {
             createClusterBitmap(cluster.count, context)
         }
@@ -534,8 +542,8 @@ private fun createLocationMarkerBitmap(context: android.content.Context): Bitmap
 }
 
 // 원본 비율: 1443×1152 (가로:세로 ≈ 5:4)
-private const val DUCK_W_DP = 36f
-private const val DUCK_H_DP = 29f  // 36 * 1152 / 1443
+private const val DUCK_W_DP = 54f
+private const val DUCK_H_DP = 43f  // 54 * 1152 / 1443 ≈ 43
 
 // 매번 디코딩하지 않도록 캐시
 private var cachedDuckBitmap: Bitmap? = null
@@ -560,8 +568,8 @@ private fun createClusterBitmap(count: Int, context: android.content.Context): B
     val d = context.resources.displayMetrics.density
     val duckW = (DUCK_W_DP * d).toInt()
     val duckH = (DUCK_H_DP * d).toInt()
-    val badgeRadius = (9 * d)
-    val badgeBorder = (2 * d)
+    val badgeRadius = (14 * d)
+    val badgeBorder = (3 * d)
     val extra = ((badgeRadius + badgeBorder) * 0.7f).toInt()
     val totalW = duckW + extra
     val totalH = duckH + extra
@@ -589,7 +597,7 @@ private fun createClusterBitmap(count: Int, context: android.content.Context): B
 
     val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFFFFFFFF.toInt()
-        textSize = 10 * d
+        textSize = 14 * d
         textAlign = Paint.Align.CENTER
         isFakeBoldText = true
     }
@@ -605,11 +613,11 @@ private fun createNameBubbleBitmap(name: String, context: android.content.Contex
 
     val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF121212.toInt()
-        textSize = 11 * d
+        textSize = 13 * d
         textAlign = Paint.Align.CENTER
     }
-    val paddingH = 10 * d
-    val paddingV = 6 * d
+    val paddingH = 12 * d
+    val paddingV = 8 * d
     val boxWidth = textPaint.measureText(name) + paddingH * 2
     val boxHeight = textPaint.textSize + paddingV * 2
     val cornerRadius = 7 * d

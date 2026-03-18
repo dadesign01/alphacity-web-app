@@ -172,6 +172,12 @@ struct LocationMissionView: View {
                     .foregroundColor(Color(hex: "828282"))
             }
 
+            if let dist = viewModel.currentDistance {
+                Text("현재 거리: \(dist)m")
+                    .font(AppFont.medium(14))
+                    .foregroundColor(Color(hex: "16A34A"))
+            }
+
             Spacer()
 
             Button(action: {

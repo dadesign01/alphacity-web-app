@@ -16,10 +16,9 @@ enum AppScreen {
 
 struct ContentView: View {
     @StateObject private var loginViewModel = LoginViewModel()
-    @State private var currentScreen: AppScreen = .login
+    @State private var currentScreen: AppScreen = TokenManager.shared.isLoggedIn ? .home : .login
     @State private var deepLinkProgramId: Int? = nil
-    @State private var showSplash = true
-    @Environment(\.scenePhase) private var scenePhase
+    @State private var showSplash = !TokenManager.shared.isLoggedIn
 
     var body: some View {
         ZStack {
@@ -83,11 +82,6 @@ struct ContentView: View {
                 SplashView(onStartTapped: {
                     showSplash = false
                 })
-            }
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active && !showSplash {
-                showSplash = true
             }
         }
     }

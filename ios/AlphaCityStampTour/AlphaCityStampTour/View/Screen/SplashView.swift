@@ -94,7 +94,7 @@ struct SplashView: View {
                     Spacer()
 
                     GIFImageView(name: "alphacity_splash")
-                        .frame(width: 160, height: 160)
+                        .frame(width: 320, height: 320)
 
                     Button(action: onStartTapped) {
                         Text("투어 시작하기")

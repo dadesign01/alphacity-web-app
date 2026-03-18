@@ -7,6 +7,7 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
       include: {
         program: { select: { id: true, name: true } },
+        mission: { select: { id: true, name: true, type: true } },
         storeCoupons: {
           include: { coupon: { select: { id: true, name: true } } },
         },

@@ -34,6 +34,7 @@ struct ProgramData: Decodable, Identifiable {
     let status: String
     let events: [EventData]?
     let storeCoupons: [StoreCouponInfo]?
+    let stores: [ProgramStoreData]?
 }
 
 struct StoreCouponInfo: Decodable {
@@ -44,6 +45,11 @@ struct StoreCouponInfo: Decodable {
     let couponDescription: String?
 }
 
+struct ProgramStoreData: Decodable, Identifiable {
+    let id: Int
+    let name: String
+}
+
 // MARK: - 미션
 
 struct MissionData: Decodable, Identifiable {
@@ -52,6 +58,7 @@ struct MissionData: Decodable, Identifiable {
     let type: String
     let placeId: Int?
     let programId: Int?
+    let stampId: Int?
     let question: String?
     let answer: String?
     let options: [String]?

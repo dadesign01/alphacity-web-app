@@ -1,6 +1,20 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { EventStatus } from '@prisma/client';
+
+function computeEventStatus(startDate: Date, endDate: Date): EventStatus {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+
+  if (today < start) return 'scheduled';
+  if (today > end) return 'ended';
+  return 'in_progress';
+}
 
 export async function GET() {
   try {
@@ -11,7 +25,14 @@ export async function GET() {
       },
       orderBy: { createdAt: 'desc' },
     });
-    return successResponse(events);
+
+    // 날짜 기반으로 상태 자동 계산
+    const eventsWithStatus = events.map(e => ({
+      ...e,
+      status: computeEventStatus(e.startDate, e.endDate),
+    }));
+
+    return successResponse(eventsWithStatus);
   } catch {
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }
@@ -38,6 +59,7 @@ export async function POST(request: NextRequest) {
         reward: reward || null,
         winnerCount: winnerCount || 0,
         participantLimit: participantLimit || 0,
+        status: computeEventStatus(new Date(startDate), new Date(endDate)),
         price: price || null,
         duration: duration || null,
         capacity: capacity || null,

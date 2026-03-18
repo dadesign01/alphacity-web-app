@@ -33,6 +33,7 @@ data class ProgramItem(
     val phone: String? = null,
     val events: List<EventItem>? = null,
     val storeCoupons: List<StoreCouponInfo>? = null,
+    val stores: List<ProgramStoreItem>? = null,
 )
 
 @Serializable
@@ -42,6 +43,12 @@ data class StoreCouponInfo(
     val couponId: Int,
     val couponName: String,
     val couponDescription: String? = null,
+)
+
+@Serializable
+data class ProgramStoreItem(
+    val id: Int,
+    val name: String,
 )
 
 // === 이벤트 ===

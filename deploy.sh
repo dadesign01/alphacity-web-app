@@ -14,11 +14,8 @@ npm install
 echo ">>> Generating Prisma client..."
 npx prisma generate
 
-echo ">>> Syncing database schema (force-reset)..."
-npx prisma db push --force-reset --accept-data-loss
-
-echo ">>> Seeding database..."
-npm run seed
+echo ">>> Syncing database schema..."
+npx prisma db push --accept-data-loss
 
 echo ">>> Building..."
 npm run build

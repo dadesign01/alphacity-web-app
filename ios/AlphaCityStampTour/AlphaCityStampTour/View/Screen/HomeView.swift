@@ -138,33 +138,46 @@ private struct BannerCarouselView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
         } else {
-            TabView(selection: $currentIndex) {
-                ForEach(Array(banners.enumerated()), id: \.element.id) { index, banner in
-                    let fullURL = banner.imageUrl.hasPrefix("http")
-                        ? banner.imageUrl
-                        : "\(APIClient.serverURL)\(banner.imageUrl)"
+            ZStack(alignment: .bottom) {
+                TabView(selection: $currentIndex) {
+                    ForEach(Array(banners.enumerated()), id: \.element.id) { index, banner in
+                        let fullURL = banner.imageUrl.hasPrefix("http")
+                            ? banner.imageUrl
+                            : "\(APIClient.serverURL)\(banner.imageUrl)"
 
-                    AsyncImage(url: URL(string: fullURL)) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(height: 150)
-                                .clipped()
-                        case .failure:
-                            Color(hex: "EDF7FF")
-                                .frame(height: 150)
-                        default:
-                            Color(hex: "EDF7FF")
-                                .frame(height: 150)
+                        AsyncImage(url: URL(string: fullURL)) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(height: 150)
+                                    .clipped()
+                            case .failure:
+                                Color(hex: "EDF7FF")
+                                    .frame(height: 150)
+                            default:
+                                Color(hex: "EDF7FF")
+                                    .frame(height: 150)
+                            }
                         }
+                        .tag(index)
                     }
-                    .tag(index)
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: 150)
+                .animation(.easeInOut, value: currentIndex)
+
+                // Paging dots overlay
+                HStack(spacing: 6) {
+                    ForEach(0..<banners.count, id: \.self) { index in
+                        Circle()
+                            .fill(Color.white.opacity(index == currentIndex ? 1.0 : 0.5))
+                            .frame(width: 8, height: 8)
+                    }
+                }
+                .padding(.bottom, 12)
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 150)
             .clipShape(RoundedRectangle(cornerRadius: 15))
             .padding(.horizontal, 20)
             .padding(.top, 12)

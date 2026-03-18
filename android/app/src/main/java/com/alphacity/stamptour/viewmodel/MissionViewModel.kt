@@ -45,6 +45,13 @@ class MissionViewModel @Inject constructor(
     private val _earnedStamp = MutableStateFlow<StampItem?>(null)
     val earnedStamp: StateFlow<StampItem?> = _earnedStamp
 
+    // 위치 확인 관련
+    private val _locationVerified = MutableStateFlow(false)
+    val locationVerified: StateFlow<Boolean> = _locationVerified
+
+    private val _currentDistance = MutableStateFlow<Int?>(null)
+    val currentDistance: StateFlow<Int?> = _currentDistance
+
     // 체류시간 미션
     private val _isTimerRunning = MutableStateFlow(false)
     val isTimerRunning: StateFlow<Boolean> = _isTimerRunning
@@ -110,13 +117,14 @@ class MissionViewModel @Inject constructor(
                 longitude = targetLng
             }
             val distance = location.distanceTo(target)
+            _currentDistance.value = distance.toInt()
 
             if (distance <= 50f) {
                 homeRepository.completeMission(missionId)
                     .onSuccess { result ->
                         _earnedStamp.value = result.stamp
                         _isCompleted.value = true
-                        _message.value = "위치 인증 완료!"
+                        _message.value = "위치 인증 완료! (현재 거리: ${distance.toInt()}m)"
                     }
                     .onFailure { e ->
                         val msg = e.message ?: "미션 완료에 실패했습니다"
@@ -129,7 +137,42 @@ class MissionViewModel @Inject constructor(
                         _showAlert.value = true
                     }
             } else {
-                _alertMessage.value = "해당 장소 근처에서 인증해주세요.\n(남은 거리: ${distance.toInt()}m)"
+                _alertMessage.value = "현재 거리: ${distance.toInt()}m\n목표 장소까지 ${distance.toInt() - 50}m 더 이동해주세요."
+                _showAlert.value = true
+            }
+            _isLoading.value = false
+        }
+    }
+
+    // MARK: - 위치 확인 (퀴즈/체류시간 미션 전 위치 인증)
+
+    @SuppressLint("MissingPermission")
+    fun verifyLocation(context: Context, targetLat: Double, targetLng: Double) {
+        if (_isLoading.value) return
+        _isLoading.value = true
+
+        viewModelScope.launch {
+            val location = getCurrentLocation(context)
+
+            if (location == null) {
+                _alertMessage.value = "위치를 가져올 수 없습니다. 위치 권한을 확인해주세요."
+                _showAlert.value = true
+                _isLoading.value = false
+                return@launch
+            }
+
+            val target = Location("target").apply {
+                latitude = targetLat
+                longitude = targetLng
+            }
+            val distance = location.distanceTo(target)
+            _currentDistance.value = distance.toInt()
+
+            if (distance <= 50f) {
+                _locationVerified.value = true
+                _message.value = "위치 확인 완료! (현재 거리: ${distance.toInt()}m)"
+            } else {
+                _alertMessage.value = "현재 거리: ${distance.toInt()}m\n목표 장소까지 ${distance.toInt() - 50}m 더 이동해주세요."
                 _showAlert.value = true
             }
             _isLoading.value = false

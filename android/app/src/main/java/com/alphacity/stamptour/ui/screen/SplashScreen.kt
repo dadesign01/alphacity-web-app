@@ -165,7 +165,7 @@ fun SplashScreen(
                 imageLoader = gifImageLoader,
                 contentDescription = "뚜비 캐릭터",
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.size(160.dp)
+                modifier = Modifier.size(320.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))

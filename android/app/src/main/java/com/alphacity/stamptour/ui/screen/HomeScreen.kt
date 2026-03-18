@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -194,12 +196,14 @@ private fun BannerCarousel(banners: List<BannerItem> = emptyList()) {
         return
     }
 
-    var currentIndex by remember { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState(pageCount = { banners.size })
 
+    // Auto-scroll with smooth animation
     LaunchedEffect(banners.size) {
         while (true) {
             delay(4000)
-            currentIndex = (currentIndex + 1) % banners.size
+            val nextPage = (pagerState.currentPage + 1) % banners.size
+            pagerState.animateScrollToPage(nextPage)
         }
     }
 
@@ -211,19 +215,45 @@ private fun BannerCarousel(banners: List<BannerItem> = emptyList()) {
             .height(150.dp)
             .clip(RoundedCornerShape(15.dp)),
     ) {
-        val banner = banners[currentIndex.coerceIn(0, banners.lastIndex)]
-        val fullUrl = if (banner.imageUrl.startsWith("http")) {
-            banner.imageUrl
-        } else {
-            BuildConfig.SERVER_URL + banner.imageUrl
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            val banner = banners[page]
+            val fullUrl = if (banner.imageUrl.startsWith("http")) {
+                banner.imageUrl
+            } else {
+                BuildConfig.SERVER_URL + banner.imageUrl
+            }
+
+            AsyncImage(
+                model = fullUrl,
+                contentDescription = banner.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
         }
 
-        AsyncImage(
-            model = fullUrl,
-            contentDescription = banner.title,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-        )
+        // Paging dots indicator overlaid at the bottom
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            repeat(banners.size) { index ->
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (index == pagerState.currentPage) Color.White
+                            else Color.White.copy(alpha = 0.5f)
+                        ),
+                )
+            }
+        }
     }
 }
 

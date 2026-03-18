@@ -71,7 +71,6 @@ struct MapContentView: View {
     var onProfileTap: (() -> Void)? = nil
     @Binding var focusLat: Double?
     @Binding var focusLng: Double?
-    @State private var storeDetailProgram: ProgramData? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -87,11 +86,7 @@ struct MapContentView: View {
                     programs: viewModel.filteredPrograms,
                     onMarkerTapped: { programId in
                         if let program = viewModel.filteredPrograms.first(where: { $0.id == programId }) {
-                            if program.category == "food" {
-                                storeDetailProgram = program
-                            } else {
-                                onProgramTapped?(program)
-                            }
+                            onProgramTapped?(program)
                         }
                     },
                     focusLat: $focusLat,
@@ -132,13 +127,6 @@ struct MapContentView: View {
         }
         .onAppear {
             viewModel.fetchPrograms()
-        }
-        .sheet(item: $storeDetailProgram) { program in
-            StoreDetailSheet(
-                program: program,
-                onDismiss: { storeDetailProgram = nil }
-            )
-            .presentationDetents([.large])
         }
     }
 }
@@ -340,7 +328,14 @@ struct KakaoMapRepresentable: UIViewRepresentable {
 
                 if cluster.isSingle {
                     styleID = "single_\(index)"
-                    markerImage = createNameBubbleImage(name: cluster.programs.first?.name ?? "")
+                    let program = cluster.programs.first
+                    let markerName: String
+                    if program?.category == "food", let storeName = program?.stores?.first?.name {
+                        markerName = storeName
+                    } else {
+                        markerName = program?.name ?? ""
+                    }
+                    markerImage = createNameBubbleImage(name: markerName)
                 } else {
                     styleID = "cluster_\(index)"
                     markerImage = createClusterImage(count: cluster.count)

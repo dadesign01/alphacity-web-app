@@ -1,6 +1,10 @@
 package com.alphacity.stamptour.ui.screen
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -10,20 +14,24 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.ui.component.StampEarnedDialog
 import com.alphacity.stamptour.ui.theme.Pretendard
+import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.viewmodel.MissionViewModel
 
 @Composable
@@ -33,6 +41,7 @@ fun StayTimeMissionScreen(
     onCompleted: () -> Unit = {},
     viewModel: MissionViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val isLoading by viewModel.isLoading.collectAsState()
     val isCompleted by viewModel.isCompleted.collectAsState()
     val isTimerRunning by viewModel.isTimerRunning.collectAsState()
@@ -40,6 +49,22 @@ fun StayTimeMissionScreen(
     val showAlert by viewModel.showAlert.collectAsState()
     val alertMessage by viewModel.alertMessage.collectAsState()
     val earnedStamp by viewModel.earnedStamp.collectAsState()
+    val locationVerified by viewModel.locationVerified.collectAsState()
+    val currentDistance by viewModel.currentDistance.collectAsState()
+
+    val hasPlace = mission.place != null
+    val needsLocationVerification = hasPlace && !locationVerified
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions.values.all { it }
+        if (granted) {
+            val lat = mission.place?.latitude ?: return@rememberLauncherForActivityResult
+            val lng = mission.place?.longitude ?: return@rememberLauncherForActivityResult
+            viewModel.verifyLocation(context, lat, lng)
+        }
+    }
 
     if (isCompleted && earnedStamp != null) {
         StampEarnedDialog(
@@ -118,12 +143,181 @@ fun StayTimeMissionScreen(
                     Text("확인", fontFamily = Pretendard, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Color.White)
                 }
             }
+        } else if (needsLocationVerification) {
+            // 위치 확인 단계
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(modifier = Modifier.weight(1f))
+
+                // 위치 아이콘
+                Box(contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .size(140.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, Color(0xFFFDE68A), CircleShape),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFFFBEB)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = Color(0xFFD97706),
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // 안내 카드
+                mission.place?.let { place ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color(0xFFFFFBEB))
+                            .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(14.dp))
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.Start,
+                    ) {
+                        Text(
+                            text = "위치 확인 필요",
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp,
+                            color = Color(0xFF121212),
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "${place.name}에서 위치를 먼저 확인해야\n체류시간 미션에 참여할 수 있습니다.",
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp,
+                            color = Color(0xFF595959),
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MyLocation,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = Color(0xFFD97706),
+                            )
+                            Text(
+                                text = "100m 이내에서 인증 가능",
+                                fontFamily = Pretendard,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 13.sp,
+                                color = Color(0xFFD97706),
+                            )
+                        }
+                    }
+                }
+
+                // 현재 거리 표시
+                currentDistance?.let { dist ->
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "현재 거리: ${dist}m",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        color = if (dist <= 100) Color(0xFF16A34A) else Color(0xFFEA580C),
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // 위치 확인 버튼
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFD97706))
+                            .clickable(enabled = !isLoading) {
+                                locationPermissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                                    )
+                                )
+                            }
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Icon(Icons.Default.MyLocation, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                Text("위치 확인", fontFamily = Pretendard, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Color.White)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "위치 서비스가 켜져있는지 확인해주세요",
+                        fontFamily = Pretendard,
+                        fontSize = 13.sp,
+                        color = Color(0xFF94A3B8),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(40.dp))
+            }
         } else {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Spacer(modifier = Modifier.weight(1f))
+
+                // 위치 확인 완료 배지 (위치가 있는 미션인 경우)
+                if (hasPlace) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF0FFF4))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF16A34A), modifier = Modifier.size(14.dp))
+                        Text(
+                            text = "위치 확인 완료 (${currentDistance ?: 0}m)",
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.sp,
+                            color = Color(0xFF16A34A),
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
                 // 배지
                 Text(
