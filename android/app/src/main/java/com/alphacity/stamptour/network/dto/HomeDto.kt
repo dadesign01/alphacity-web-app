@@ -177,7 +177,9 @@ data class UserProfile(
     val id: Int,
     val email: String,
     val nickname: String,
+    val phone: String? = null,
     val profileImage: String? = null,
+    val provider: String? = null,
     val stampCount: Int? = null,
     val couponCount: Int? = null,
     val missionCount: Int? = null,
@@ -187,4 +189,5 @@ data class UserProfile(
 data class UpdateProfileRequest(
     val nickname: String,
     val password: String? = null,
+    val phone: String? = null,
 )

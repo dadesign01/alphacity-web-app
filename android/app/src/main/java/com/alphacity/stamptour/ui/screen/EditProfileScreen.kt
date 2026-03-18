@@ -14,13 +14,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +36,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -48,6 +53,7 @@ fun EditProfileScreen(
     onLogout: () -> Unit,
     initialNickname: String = "",
     initialEmail: String = "",
+    initialProvider: String? = null,
     viewModel: MyPageViewModel? = null,
 ) {
     var nickname by remember { mutableStateOf(initialNickname) }
@@ -58,10 +64,18 @@ fun EditProfileScreen(
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var addressDetail by remember { mutableStateOf("") }
+    var verificationCode by remember { mutableStateOf("") }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val isSocialLogin = initialProvider != null
     val context = LocalContext.current
     val isLoading by (viewModel?.isLoading ?: MutableStateFlow(false)).collectAsState()
     val saveSuccess by (viewModel?.saveSuccess ?: MutableStateFlow(false)).collectAsState()
     val saveError by (viewModel?.saveError ?: MutableStateFlow(null)).collectAsState()
+    val deleteSuccess by (viewModel?.deleteSuccess ?: MutableStateFlow(false)).collectAsState()
+    val deleteError by (viewModel?.deleteError ?: MutableStateFlow(null)).collectAsState()
+    val isCodeSent by (viewModel?.isCodeSent ?: MutableStateFlow(false)).collectAsState()
+    val isPhoneVerified by (viewModel?.isPhoneVerified ?: MutableStateFlow(false)).collectAsState()
+    val verificationError by (viewModel?.verificationError ?: MutableStateFlow(null)).collectAsState()
 
     // ViewModel에서 현재 프로필 이미지 URI 읽기 (화면 재진입 시 유지됨)
     val persistedImageUri by (viewModel?.profileImageUri ?: MutableStateFlow(null)).collectAsState()
@@ -84,6 +98,46 @@ fun EditProfileScreen(
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             viewModel?.clearSaveState()
         }
+    }
+    LaunchedEffect(deleteSuccess) {
+        if (deleteSuccess) {
+            Toast.makeText(context, "회원 탈퇴가 완료되었습니다.", Toast.LENGTH_SHORT).show()
+            viewModel?.clearDeleteState()
+            onLogout()
+        }
+    }
+    LaunchedEffect(deleteError) {
+        deleteError?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel?.clearDeleteState()
+        }
+    }
+    LaunchedEffect(verificationError) {
+        verificationError?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // 회원탈퇴 확인 다이얼로그
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("회원탈퇴", fontFamily = Pretendard, fontWeight = FontWeight.SemiBold, fontSize = 18.sp) },
+            text = { Text("정말 탈퇴하시겠습니까?\n모든 데이터가 삭제됩니다.", fontFamily = Pretendard, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    viewModel?.deleteAccount()
+                }) {
+                    Text("탈퇴", fontFamily = Pretendard, fontWeight = FontWeight.SemiBold, color = Color(0xFFEA580C))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("취소", fontFamily = Pretendard, fontWeight = FontWeight.Medium, color = Color(0xFF8F8F8F))
+                }
+            },
+        )
     }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -215,25 +269,27 @@ fun EditProfileScreen(
                     helperText = "이메일은 로그인 시 사용됩니다.",
                 )
 
-                // 비밀번호
-                FormField(
-                    label = "비밀번호",
-                    required = true,
-                    value = password,
-                    onValueChange = { password = it },
-                    placeholder = "8자 이상 입력해주세요.",
-                    isPassword = true,
-                )
+                // 비밀번호 (소셜 로그인 사용자에게는 숨김)
+                if (!isSocialLogin) {
+                    FormField(
+                        label = "비밀번호",
+                        required = true,
+                        value = password,
+                        onValueChange = { password = it },
+                        placeholder = "8자 이상 입력해주세요.",
+                        isPassword = true,
+                    )
 
-                // 비밀번호 확인
-                FormField(
-                    label = "비밀번호 확인",
-                    required = true,
-                    value = passwordConfirm,
-                    onValueChange = { passwordConfirm = it },
-                    placeholder = "비밀번호를 다시 입력해주세요.",
-                    isPassword = true,
-                )
+                    // 비밀번호 확인
+                    FormField(
+                        label = "비밀번호 확인",
+                        required = true,
+                        value = passwordConfirm,
+                        onValueChange = { passwordConfirm = it },
+                        placeholder = "비밀번호를 다시 입력해주세요.",
+                        isPassword = true,
+                    )
+                }
 
                 // 이름 (disabled)
                 FormField(
@@ -263,25 +319,101 @@ fun EditProfileScreen(
                         Box(modifier = Modifier.weight(1f)) {
                             ProfileTextField(
                                 value = phone,
-                                onValueChange = { phone = it },
+                                onValueChange = {
+                                    phone = it
+                                    // 전화번호 변경 시 인증 상태 초기화
+                                    if (isPhoneVerified || isCodeSent) {
+                                        viewModel?.resetVerificationState()
+                                        verificationCode = ""
+                                    }
+                                },
                                 placeholder = "010-0000-0000",
+                                enabled = !isPhoneVerified,
+                                keyboardType = KeyboardType.Phone,
                             )
                         }
                         Box(
                             modifier = Modifier
                                 .height(48.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFEDF7FF))
-                                .clickable { /* TODO: 본인인증 */ }
+                                .background(
+                                    if (isPhoneVerified) Color(0xFFF5F5F5)
+                                    else Color(0xFFEDF7FF)
+                                )
+                                .clickable(enabled = !isPhoneVerified && phone.isNotBlank()) {
+                                    viewModel?.sendCode(phone)
+                                }
                                 .padding(horizontal = 16.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "본인인증",
+                                text = if (isCodeSent) "재전송" else "본인인증",
                                 fontFamily = Pretendard,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 14.sp,
-                                color = Primary,
+                                color = if (isPhoneVerified) Color(0xFF8F8F8F) else Primary,
+                            )
+                        }
+                    }
+
+                    // 인증번호 입력 (코드 발송 후, 인증 완료 전)
+                    if (isCodeSent && !isPhoneVerified) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                ProfileTextField(
+                                    value = verificationCode,
+                                    onValueChange = { verificationCode = it },
+                                    placeholder = "인증번호 6자리",
+                                    keyboardType = KeyboardType.Number,
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .height(48.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (verificationCode.length == 6) Primary
+                                        else Primary.copy(alpha = 0.5f)
+                                    )
+                                    .clickable(enabled = verificationCode.length == 6) {
+                                        viewModel?.verifyCode(phone, verificationCode)
+                                    }
+                                    .padding(horizontal = 16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "확인",
+                                    fontFamily = Pretendard,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp,
+                                    color = Color.White,
+                                )
+                            }
+                        }
+                    }
+
+                    // 인증 완료 표시
+                    if (isPhoneVerified) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = "인증 완료",
+                                modifier = Modifier.size(14.dp),
+                                tint = Color(0xFF22C55E),
+                            )
+                            Text(
+                                text = "인증완료",
+                                fontFamily = Pretendard,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 12.sp,
+                                color = Color(0xFF22C55E),
                             )
                         }
                     }
@@ -353,7 +485,11 @@ fun EditProfileScreen(
                             Toast.makeText(context, "비밀번호가 일치하지 않습니다.", Toast.LENGTH_SHORT).show()
                             return@clickable
                         }
-                        viewModel?.updateProfile(nickname, password.ifBlank { null })
+                        viewModel?.updateProfile(
+                            nickname,
+                            password.ifBlank { null },
+                            if (isPhoneVerified) phone else null,
+                        )
                     },
                 contentAlignment = Alignment.Center,
             ) {
@@ -401,7 +537,7 @@ fun EditProfileScreen(
                     fontWeight = FontWeight.Normal,
                     fontSize = 12.sp,
                     color = Color(0xFF8F8F8F),
-                    modifier = Modifier.clickable { /* TODO */ },
+                    modifier = Modifier.clickable { showDeleteDialog = true },
                 )
             }
 
@@ -492,6 +628,7 @@ private fun ProfileTextField(
     placeholder: String,
     isPassword: Boolean = false,
     enabled: Boolean = true,
+    keyboardType: KeyboardType = KeyboardType.Text,
     trailingIcon: @Composable (() -> Unit)? = null,
 ) {
     BasicTextField(
@@ -499,6 +636,7 @@ private fun ProfileTextField(
         onValueChange = onValueChange,
         enabled = enabled,
         singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         textStyle = androidx.compose.ui.text.TextStyle(
             fontFamily = Pretendard,
             fontWeight = FontWeight.Normal,

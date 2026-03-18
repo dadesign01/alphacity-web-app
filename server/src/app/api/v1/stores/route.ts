@@ -6,6 +6,13 @@ export async function GET() {
     const stores = await prisma.store.findMany({
       where: { status: 'approved' },
       orderBy: { name: 'asc' },
+      include: {
+        mission: { select: { id: true, name: true, type: true } },
+        storeCoupons: {
+          include: { coupon: { select: { id: true, name: true, description: true, imageUrl: true } } },
+        },
+        program: { select: { id: true, name: true } },
+      },
     });
     return successResponse(stores);
   } catch {

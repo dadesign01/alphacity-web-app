@@ -97,14 +97,27 @@ class HomeRepository @Inject constructor(
         }
     }
 
-    suspend fun updateProfile(nickname: String, password: String?): Result<UserProfile> {
+    suspend fun updateProfile(nickname: String, password: String?, phone: String? = null): Result<UserProfile> {
         return try {
-            val request = UpdateProfileRequest(nickname = nickname, password = password?.ifBlank { null })
+            val request = UpdateProfileRequest(nickname = nickname, password = password?.ifBlank { null }, phone = phone)
             val response = apiService.updateProfile(request)
             if (response.success && response.data != null) {
                 Result.success(response.data)
             } else {
                 Result.failure(Exception(response.error?.message ?: "프로필 저장 실패"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteAccount(): Result<Unit> {
+        return try {
+            val response = apiService.deleteAccount()
+            if (response.success) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception(response.error?.message ?: "회원 탈퇴 실패"))
             }
         } catch (e: Exception) {
             Result.failure(e)

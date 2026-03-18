@@ -34,6 +34,7 @@ struct MainTabView: View {
     @State private var showStampExchange = false
     @StateObject private var stampViewModel = StampViewModel()
     @State private var selectedProgram: ProgramData? = nil
+    @State private var selectedStore: StoreData? = nil
     @State private var showGuestDialog = false
     @State private var mapFocusLat: Double? = nil
     @State private var mapFocusLng: Double? = nil
@@ -41,7 +42,20 @@ struct MainTabView: View {
     private var isGuest: Bool { !TokenManager.shared.isLoggedIn }
 
     var body: some View {
-        if let program = selectedProgram {
+        if let store = selectedStore {
+            StoreDetailView(
+                store: store,
+                onBackTapped: {
+                    selectedStore = nil
+                },
+                onNavigateToMap: { lat, lng in
+                    selectedStore = nil
+                    mapFocusLat = lat
+                    mapFocusLng = lng
+                    selectedTab = .map
+                }
+            )
+        } else if let program = selectedProgram {
             ProgramDetailView(
                 program: program,
                 onBackTapped: {
@@ -105,6 +119,7 @@ struct MainTabView: View {
                 case .map:
                     MapContentView(
                         onProgramTapped: { program in selectedProgram = program },
+                        onStoreTapped: { store in selectedStore = store },
                         onProfileTap: { selectedTab = .mypage },
                         focusLat: $mapFocusLat,
                         focusLng: $mapFocusLng

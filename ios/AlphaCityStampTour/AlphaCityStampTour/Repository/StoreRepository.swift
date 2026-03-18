@@ -11,6 +11,10 @@ final class StoreRepository {
 
     private init() {}
 
+    func fetchApprovedStores() async throws -> [StoreData] {
+        return try await client.request(path: "stores")
+    }
+
     func registerStore(_ request: StoreRegisterRequest) async throws -> StoreData {
         return try await client.request(
             path: "stores/register",

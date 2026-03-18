@@ -37,7 +37,9 @@ struct MyPageView: View {
                 onBackTapped: { showEditProfile = false },
                 onLogout: onLogout,
                 initialNickname: viewModel.userProfile?.nickname ?? "",
-                initialEmail: viewModel.userProfile?.email ?? ""
+                initialEmail: viewModel.userProfile?.email ?? "",
+                initialProvider: viewModel.userProfile?.provider,
+                viewModel: viewModel
             )
         } else if showSettings {
             SettingsView(onBackTapped: { showSettings = false })

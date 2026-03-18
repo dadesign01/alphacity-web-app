@@ -59,6 +59,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.alphacity.stamptour.R
 import com.alphacity.stamptour.network.dto.ProgramItem
+import com.alphacity.stamptour.network.dto.StoreData
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.viewmodel.MapViewModel
@@ -132,6 +133,7 @@ private val categories = listOf(
 @Composable
 fun MapScreen(
     onProgramClick: (ProgramItem) -> Unit = {},
+    onStoreClick: (StoreData) -> Unit = {},
     onNavigateToMyPage: () -> Unit = {},
     viewModel: MapViewModel = hiltViewModel(),
     focusLat: Double? = null,
@@ -139,10 +141,12 @@ fun MapScreen(
     onFocusConsumed: () -> Unit = {},
 ) {
     val filteredPrograms by viewModel.filteredPrograms.collectAsState()
+    val filteredStores by viewModel.filteredStores.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.fetchPrograms()
+        viewModel.fetchStores()
     }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
@@ -153,8 +157,12 @@ fun MapScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             KakaoMapContent(
                 programs = filteredPrograms,
+                stores = filteredStores,
                 onProgramClick = { program ->
                     onProgramClick(program)
+                },
+                onStoreClick = { store ->
+                    onStoreClick(store)
                 },
                 focusLat = focusLat,
                 focusLng = focusLng,
@@ -238,7 +246,9 @@ private fun MapHeader(onProfileClick: () -> Unit) {
 @Composable
 private fun KakaoMapContent(
     programs: List<ProgramItem>,
+    stores: List<StoreData> = emptyList(),
     onProgramClick: (ProgramItem) -> Unit,
+    onStoreClick: (StoreData) -> Unit = {},
     focusLat: Double? = null,
     focusLng: Double? = null,
     onFocusConsumed: () -> Unit = {},
@@ -259,6 +269,7 @@ private fun KakaoMapContent(
 
     // 최신 programs를 ref로 유지 (zoom 체커 클로저 stale 방지)
     val programsRef = remember { mutableListOf<ProgramItem>() }
+    val storesRef = remember { mutableListOf<StoreData>() }
 
     // 현위치 마커용 상태
     var userLat by remember { mutableStateOf<Double?>(null) }
@@ -317,6 +328,15 @@ private fun KakaoMapContent(
         }
     }
 
+    // stores가 바뀔 때마다 ref 동기화 + 마커 갱신
+    LaunchedEffect(stores) {
+        storesRef.clear()
+        storesRef.addAll(stores)
+        mapState.kakaoMap?.let { map ->
+            addStoreMarkers(map, stores, context)
+        }
+    }
+
     // 현위치 마커 갱신
     LaunchedEffect(userLat, userLng) {
         val lat = userLat ?: return@LaunchedEffect
@@ -364,6 +384,11 @@ private fun KakaoMapContent(
                                 )
                             }
 
+                            // 상점 마커
+                            if (storesRef.isNotEmpty()) {
+                                addStoreMarkers(map, storesRef, context)
+                            }
+
                             // 현위치 마커 (이미 위치 있으면)
                             val lat = userLat
                             val lng = userLng
@@ -374,6 +399,18 @@ private fun KakaoMapContent(
                             // 라벨 클릭
                             map.setOnLabelClickListener { _, _, label ->
                                 val labelId = label.labelId
+
+                                // 상점 마커 클릭
+                                if (labelId != null && labelId.startsWith("store_")) {
+                                    val storeIdx = labelId.removePrefix("store_").toIntOrNull()
+                                    val store = if (storeIdx != null) storesRef.getOrNull(storeIdx) else null
+                                    if (store != null) {
+                                        onStoreClick(store)
+                                        return@setOnLabelClickListener true
+                                    }
+                                }
+
+                                // 프로그램 클러스터 클릭
                                 val idx = labelId?.removePrefix("cluster_")?.toIntOrNull()
                                 val cluster = if (idx != null) currentClusters.getOrNull(idx) else null
 
@@ -406,6 +443,7 @@ private fun KakaoMapContent(
                                             currentClusters.addAll(
                                                 addClusteredMarkers(map, programsRef, mapState.zoomLevel, context)
                                             )
+                                            addStoreMarkers(map, storesRef, context)
                                         }
                                     } catch (_: Exception) {}
                                     handler.postDelayed(this, 300)
@@ -602,6 +640,104 @@ private fun createClusterBitmap(count: Int, context: android.content.Context): B
         isFakeBoldText = true
     }
     canvas.drawText(count.toString(), badgeCx, badgeCy + textPaint.textSize / 3f, textPaint)
+
+    return bitmap
+}
+
+private fun addStoreMarkers(
+    map: KakaoMap,
+    stores: List<StoreData>,
+    context: android.content.Context,
+) {
+    val labelManager = map.labelManager ?: return
+
+    val existingLayer = labelManager.getLayer("storeMarkers")
+    existingLayer?.removeAll()
+
+    val validStores = stores.filter { it.latitude != null && it.longitude != null }
+    if (validStores.isEmpty()) return
+
+    val layer = existingLayer ?: labelManager.addLayer(
+        com.kakao.vectormap.label.LabelLayerOptions.from("storeMarkers")
+    ) ?: return
+
+    validStores.forEachIndexed { index, store ->
+        val position = LatLng.from(store.latitude!!, store.longitude!!)
+        val bitmap = createStoreNameBubbleBitmap(store.name, context)
+
+        val style = LabelStyles.from(
+            LabelStyle.from(bitmap).setApplyDpScale(false)
+        )
+
+        val options = LabelOptions.from("store_$index", position)
+            .setStyles(style)
+            .setTexts(LabelTextBuilder().setTexts("$index"))
+            .setClickable(true)
+
+        layer.addLabel(options)
+    }
+}
+
+private fun createStoreNameBubbleBitmap(name: String, context: android.content.Context): Bitmap {
+    val d = context.resources.displayMetrics.density
+    val duckW = (DUCK_W_DP * d).toInt()
+    val duckH = (DUCK_H_DP * d).toInt()
+
+    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFFFFF.toInt()
+        textSize = 13 * d
+        textAlign = Paint.Align.CENTER
+    }
+    val paddingH = 12 * d
+    val paddingV = 8 * d
+    val boxWidth = textPaint.measureText(name) + paddingH * 2
+    val boxHeight = textPaint.textSize + paddingV * 2
+    val cornerRadius = 7 * d
+    val pointerH = 5 * d
+    val shadowPad = 5 * d
+
+    val totalW = maxOf(boxWidth.toInt() + (shadowPad * 2).toInt(), duckW)
+    val totalH = (shadowPad + boxHeight + pointerH + duckH).toInt()
+
+    val bitmap = Bitmap.createBitmap(totalW, totalH, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    val cx = totalW / 2f
+    val boxLeft = cx - boxWidth / 2
+    val boxTop = shadowPad
+
+    // 녹색 배경 + 그림자 (상점 구분)
+    val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF16A34A.toInt()
+        style = Paint.Style.FILL
+        setShadowLayer(4 * d, 0f, 2 * d, 0x33000000)
+    }
+    canvas.drawRoundRect(
+        RectF(boxLeft, boxTop, boxLeft + boxWidth, boxTop + boxHeight),
+        cornerRadius, cornerRadius, boxPaint
+    )
+
+    // 포인터 삼각형
+    val pointerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF16A34A.toInt()
+        style = Paint.Style.FILL
+    }
+    val pointerY = boxTop + boxHeight
+    val path = Path().apply {
+        moveTo(cx - 4 * d, pointerY)
+        lineTo(cx, pointerY + pointerH)
+        lineTo(cx + 4 * d, pointerY)
+        close()
+    }
+    canvas.drawPath(path, pointerPaint)
+
+    // 텍스트 (흰색)
+    canvas.drawText(name, cx, boxTop + boxHeight / 2 + textPaint.textSize / 3f, textPaint)
+
+    // 오리 이미지 (이름 박스 아래)
+    val duckLeft = (totalW - duckW) / 2f
+    val duckTop = boxTop + boxHeight + pointerH
+    canvas.drawBitmap(getDuckBitmap(context, duckW, duckH), duckLeft, duckTop, null)
 
     return bitmap
 }

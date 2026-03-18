@@ -25,6 +25,7 @@ import com.alphacity.stamptour.network.dto.UserProfile
 import com.alphacity.stamptour.network.dto.UserStampItem
 import com.alphacity.stamptour.network.dto.VerifyCodeRequest
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -81,6 +82,9 @@ interface ApiService {
     @PUT("users/me")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): ApiResponse<UserProfile>
 
+    @DELETE("users/me")
+    suspend fun deleteAccount(): ApiResponse<Unit>
+
     // 이벤트 상세
     @GET("events/{id}")
     suspend fun getEventDetail(@Path("id") eventId: Int): ApiResponse<EventItem>
@@ -112,7 +116,10 @@ interface ApiService {
     @POST("coupons/{id}/redeem")
     suspend fun redeemCoupon(@Path("id") couponId: Int): ApiResponse<UserCouponItem>
 
-    // 상점 등록
+    // 상점
+    @GET("stores")
+    suspend fun getStores(): ApiResponse<List<StoreData>>
+
     @POST("stores/register")
     suspend fun registerStore(@Body request: StoreRegisterRequest): ApiResponse<StoreData>
 }

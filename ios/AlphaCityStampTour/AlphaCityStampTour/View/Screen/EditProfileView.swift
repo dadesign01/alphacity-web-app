@@ -11,6 +11,8 @@ struct EditProfileView: View {
     var onLogout: () -> Void
     var initialNickname: String = ""
     var initialEmail: String = ""
+    var initialProvider: String? = nil
+    @ObservedObject var viewModel: MyPageViewModel
 
     @State private var nickname = ""
     @State private var email = ""
@@ -18,10 +20,17 @@ struct EditProfileView: View {
     @State private var passwordConfirm = ""
     private let name = ""
     @State private var phone = ""
+    @State private var verificationCode = ""
     @State private var address = ""
     @State private var addressDetail = ""
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var selectedImage: UIImage? = nil
+    @State private var showDeleteAlert = false
+    @State private var showToast: String?
+
+    private var isSocialLogin: Bool {
+        initialProvider != nil
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -112,23 +121,25 @@ struct EditProfileView: View {
                             helperText: "이메일은 로그인 시 사용됩니다."
                         )
 
-                        // 비밀번호
-                        ProfileFormField(
-                            label: "비밀번호",
-                            required: true,
-                            text: $password,
-                            placeholder: "8자 이상 입력해주세요.",
-                            isSecure: true
-                        )
+                        // 비밀번호 (소셜 로그인 사용자에게는 숨김)
+                        if !isSocialLogin {
+                            ProfileFormField(
+                                label: "비밀번호",
+                                required: true,
+                                text: $password,
+                                placeholder: "8자 이상 입력해주세요.",
+                                isSecure: true
+                            )
 
-                        // 비밀번호 확인
-                        ProfileFormField(
-                            label: "비밀번호 확인",
-                            required: true,
-                            text: $passwordConfirm,
-                            placeholder: "비밀번호를 다시 입력해주세요.",
-                            isSecure: true
-                        )
+                            // 비밀번호 확인
+                            ProfileFormField(
+                                label: "비밀번호 확인",
+                                required: true,
+                                text: $passwordConfirm,
+                                placeholder: "비밀번호를 다시 입력해주세요.",
+                                isSecure: true
+                            )
+                        }
 
                         // 이름 (disabled)
                         VStack(alignment: .leading, spacing: 6) {
@@ -159,17 +170,67 @@ struct EditProfileView: View {
                                     text: $phone,
                                     placeholder: "010-0000-0000"
                                 )
+                                .disabled(viewModel.isPhoneVerified)
+                                .onChange(of: phone) { _ in
+                                    if viewModel.isPhoneVerified || viewModel.isCodeSent {
+                                        viewModel.resetVerificationState()
+                                        verificationCode = ""
+                                    }
+                                }
                                 Button {
-                                    // TODO: 본인인증
+                                    viewModel.sendCode(phone: phone)
                                 } label: {
-                                    Text("본인인증")
+                                    Text(viewModel.isCodeSent ? "재전송" : "본인인증")
                                         .font(AppFont.semibold(14))
-                                        .foregroundColor(AppColor.primary)
+                                        .foregroundColor(viewModel.isPhoneVerified ? Color(hex: "8F8F8F") : AppColor.primary)
                                         .padding(.horizontal, 16)
                                         .frame(height: 48)
-                                        .background(Color(hex: "EDF7FF"))
+                                        .background(viewModel.isPhoneVerified ? Color(hex: "F5F5F5") : Color(hex: "EDF7FF"))
                                         .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
+                                .disabled(viewModel.isPhoneVerified || phone.isEmpty)
+                            }
+
+                            // 인증번호 입력 (코드 발송 후, 인증 완료 전)
+                            if viewModel.isCodeSent && !viewModel.isPhoneVerified {
+                                Spacer().frame(height: 6)
+                                HStack(spacing: 8) {
+                                    ProfileTextFieldView(
+                                        text: $verificationCode,
+                                        placeholder: "인증번호 6자리"
+                                    )
+                                    .keyboardType(.numberPad)
+                                    Button {
+                                        viewModel.verifyCode(phone: phone, code: verificationCode)
+                                    } label: {
+                                        Text("확인")
+                                            .font(AppFont.semibold(14))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 16)
+                                            .frame(height: 48)
+                                            .background(
+                                                verificationCode.count == 6
+                                                    ? AppColor.primary
+                                                    : AppColor.primary.opacity(0.5)
+                                            )
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    }
+                                    .disabled(verificationCode.count != 6)
+                                }
+                            }
+
+                            // 인증 완료 표시
+                            if viewModel.isPhoneVerified {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(Color(hex: "22C55E"))
+                                    Text("인증완료")
+                                        .font(AppFont.medium(12))
+                                        .foregroundColor(Color(hex: "22C55E"))
+                                    Spacer()
+                                }
+                                .padding(.top, 2)
                             }
                         }
 
@@ -209,7 +270,21 @@ struct EditProfileView: View {
 
                     // === Save Button ===
                     Button {
-                        // TODO: save
+                        guard !nickname.trimmingCharacters(in: .whitespaces).isEmpty else {
+                            showToast = "닉네임을 입력해주세요."
+                            return
+                        }
+                        if !isSocialLogin && !password.isEmpty && password != passwordConfirm {
+                            showToast = "비밀번호가 일치하지 않습니다."
+                            return
+                        }
+                        Task {
+                            await viewModel.updateProfile(
+                                nickname: nickname,
+                                password: (!isSocialLogin && !password.isEmpty) ? password : nil,
+                                phone: viewModel.isPhoneVerified ? phone : nil
+                            )
+                        }
                     } label: {
                         Text("저장하기")
                             .font(AppFont.semibold(16))
@@ -246,7 +321,7 @@ struct EditProfileView: View {
                             .font(AppFont.regular(12))
                             .foregroundColor(Color(hex: "D9D9D9"))
                         Button {
-                            // TODO: withdraw
+                            showDeleteAlert = true
                         } label: {
                             Text("회원탈퇴")
                                 .font(AppFont.regular(12))
@@ -270,6 +345,46 @@ struct EditProfileView: View {
         .onAppear {
             nickname = initialNickname
             email = initialEmail
+        }
+        .alert("회원탈퇴", isPresented: $showDeleteAlert) {
+            Button("취소", role: .cancel) {}
+            Button("탈퇴", role: .destructive) {
+                Task {
+                    await viewModel.deleteAccount()
+                }
+            }
+        } message: {
+            Text("정말 탈퇴하시겠습니까?\n모든 데이터가 삭제됩니다.")
+        }
+        .onChange(of: viewModel.saveSuccess) { success in
+            if success {
+                showToast = "저장되었습니다."
+                viewModel.clearSaveState()
+                onBackTapped()
+            }
+        }
+        .onChange(of: viewModel.saveError) { error in
+            if let error = error {
+                showToast = error
+                viewModel.clearSaveState()
+            }
+        }
+        .onChange(of: viewModel.deleteSuccess) { success in
+            if success {
+                viewModel.clearDeleteState()
+                onLogout()
+            }
+        }
+        .onChange(of: viewModel.deleteError) { error in
+            if let error = error {
+                showToast = error
+                viewModel.clearDeleteState()
+            }
+        }
+        .onChange(of: viewModel.verificationError) { error in
+            if let error = error {
+                showToast = error
+            }
         }
     }
 }
@@ -343,5 +458,5 @@ private struct ProfileTextFieldView: View {
 }
 
 #Preview {
-    EditProfileView(onBackTapped: {}, onLogout: {}, initialNickname: "테스트유저", initialEmail: "test@example.com")
+    EditProfileView(onBackTapped: {}, onLogout: {}, initialNickname: "테스트유저", initialEmail: "test@example.com", viewModel: MyPageViewModel())
 }

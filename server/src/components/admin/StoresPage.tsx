@@ -21,6 +21,8 @@ interface StoreItem {
   operatingDays?: string;
   openTime?: string;
   closeTime?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   programId?: number | null;
   program?: { id: number; name: string } | null;
   missionId?: number | null;
@@ -74,6 +76,8 @@ export default function StoresPage() {
   const [editProgramId, setEditProgramId] = useState<number | null>(null);
   const [editMissionId, setEditMissionId] = useState<number | null>(null);
   const [editCouponIds, setEditCouponIds] = useState<number[]>([]);
+  const [editLatitude, setEditLatitude] = useState<string>('');
+  const [editLongitude, setEditLongitude] = useState<string>('');
   const [saving, setSaving] = useState(false);
 
   const fetchData = () => {
@@ -101,6 +105,8 @@ export default function StoresPage() {
     setEditProgramId(store.programId ?? null);
     setEditMissionId(store.missionId ?? null);
     setEditCouponIds(store.storeCoupons?.map(sc => sc.coupon.id) ?? []);
+    setEditLatitude(store.latitude != null ? String(store.latitude) : '');
+    setEditLongitude(store.longitude != null ? String(store.longitude) : '');
   };
 
   const handleAction = async (id: number, status: 'approved' | 'rejected') => {
@@ -128,7 +134,7 @@ export default function StoresPage() {
       const res = await fetch(`/api/v1/admin/stores/${selected.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ programId: editProgramId, missionId: editMissionId, couponIds: editCouponIds }),
+        body: JSON.stringify({ programId: editProgramId, missionId: editMissionId, couponIds: editCouponIds, latitude: editLatitude || null, longitude: editLongitude || null }),
       });
       const data = await res.json();
       if (data.success) {
@@ -336,6 +342,34 @@ export default function StoresPage() {
                 </div>
               </div>
 
+              {/* 좌표 입력 */}
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1"><MapPin className="w-4 h-4" /> 지도 좌표</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">위도</label>
+                    <input
+                      type="text"
+                      value={editLatitude}
+                      onChange={(e) => setEditLatitude(e.target.value)}
+                      placeholder="35.8420000"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">경도</label>
+                    <input
+                      type="text"
+                      value={editLongitude}
+                      onChange={(e) => setEditLongitude(e.target.value)}
+                      placeholder="128.6900000"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">지도에 상점 위치를 표시하려면 좌표를 입력하세요</p>
+              </div>
+
               {/* 미션 연결 */}
               <div className="border-t border-gray-200 pt-4">
                 <p className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1"><Link className="w-4 h-4" /> 미션 연결</p>
@@ -379,7 +413,7 @@ export default function StoresPage() {
                 disabled={saving}
                 className="w-full py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {saving ? '저장 중...' : '미션/쿠폰 연결 저장'}
+                {saving ? '저장 중...' : '좌표/미션/쿠폰 저장'}
               </button>
             </div>
             <div className="sticky bottom-0 bg-white flex justify-end gap-2 p-6 pt-4 border-t border-gray-200">

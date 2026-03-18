@@ -427,18 +427,6 @@ fun ProgramDetailScreen(
             }
 
             // Action buttons: "지도에서 보기" + "참여하기"
-            if (!isNearLocation && !isCheckingLocation) {
-                Text(
-                    text = "장소 근처에 도착하면 참여할 수 있습니다",
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 12.sp,
-                    color = Color(0xFF9CA3AF),
-                    modifier = Modifier
-                        .padding(horizontal = 20.dp)
-                        .padding(bottom = 6.dp),
-                )
-            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -480,37 +468,23 @@ fun ProgramDetailScreen(
                     }
                 }
 
-                // "참여하기" button
+                // "참여하기" button - 항상 활성화 (미션 내부에서 위치 체크)
                 Box(
                     modifier = Modifier
                         .width(101.dp)
                         .height(56.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (isNearLocation) GradientBlue else GradientGray)
-                        .then(
-                            if (isNearLocation && !isCheckingLocation) {
-                                Modifier.clickable { showMissionSheet = true }
-                            } else {
-                                Modifier
-                            }
-                        ),
+                        .background(GradientBlue)
+                        .clickable { showMissionSheet = true },
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (isCheckingLocation) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
-                        Text(
-                            text = if (isNearLocation) "참여하기" else "위치확인",
-                            fontFamily = Pretendard,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 16.sp,
-                            color = Color.White,
-                        )
-                    }
+                    Text(
+                        text = "참여하기",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 16.sp,
+                        color = Color.White,
+                    )
                 }
             }
         }

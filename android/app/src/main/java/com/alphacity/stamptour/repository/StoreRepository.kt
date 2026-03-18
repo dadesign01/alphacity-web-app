@@ -10,6 +10,19 @@ import javax.inject.Singleton
 class StoreRepository @Inject constructor(
     private val apiService: ApiService,
 ) {
+    suspend fun getApprovedStores(): Result<List<StoreData>> {
+        return try {
+            val response = apiService.getStores()
+            if (response.success && response.data != null) {
+                Result.success(response.data)
+            } else {
+                Result.failure(Exception(response.error?.message ?: "상점 로드 실패"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun registerStore(request: StoreRegisterRequest): Result<StoreData> {
         return try {
             val response = apiService.registerStore(request)

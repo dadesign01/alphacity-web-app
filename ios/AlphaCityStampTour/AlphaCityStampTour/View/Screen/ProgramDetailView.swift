@@ -235,14 +235,6 @@ struct ProgramDetailView: View {
                     }
 
                     // Action buttons: "지도에서 보기" + "참여하기"
-                    if !viewModel.isNearLocation && !viewModel.isCheckingLocation {
-                        Text("장소 근처에 도착하면 참여할 수 있습니다")
-                            .font(AppFont.regular(12))
-                            .foregroundColor(Color(hex: "9CA3AF"))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 6)
-                    }
                     HStack(spacing: 11) {
                         // "지도에서 보기" button
                         Button(action: {
@@ -271,28 +263,18 @@ struct ProgramDetailView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
 
-                        // "참여하기" button
+                        // "참여하기" button - 항상 활성화 (미션 내부에서 위치 체크)
                         Button(action: { showMissionSheet = true }) {
-                            Group {
-                                if viewModel.isCheckingLocation {
-                                    ProgressView()
-                                        .tint(.white)
-                                } else {
-                                    Text(viewModel.isNearLocation ? "참여하기" : "위치확인")
-                                        .font(AppFont.medium(16))
-                                        .tracking(-0.32)
-                                }
-                            }
+                            Text("참여하기")
+                                .font(AppFont.medium(16))
+                                .tracking(-0.32)
                             .foregroundColor(.white)
                             .frame(width: 101, height: 56)
                             .background(
-                                viewModel.isNearLocation
-                                ? LinearGradient(colors: [Color(hex: "6092FF"), Color(hex: "2563EB"), Color(hex: "1551D3")], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                : LinearGradient(colors: [Color(hex: "9CA3AF"), Color(hex: "6B7280")], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                LinearGradient(colors: [Color(hex: "6092FF"), Color(hex: "2563EB"), Color(hex: "1551D3")], startPoint: .topLeading, endPoint: .bottomTrailing)
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
-                        .disabled(!viewModel.isNearLocation || viewModel.isCheckingLocation)
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 40)

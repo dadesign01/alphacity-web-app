@@ -8,10 +8,12 @@ import Foundation
 @MainActor
 final class MapViewModel: ObservableObject {
     @Published var programs: [ProgramData] = []
+    @Published var stores: [StoreData] = []
     @Published var selectedCategory: String = "all"
     @Published var isLoading = false
 
     private let repository = HomeRepository.shared
+    private let storeRepository = StoreRepository.shared
 
     var filteredPrograms: [ProgramData] {
         let withCoords = programs.filter { $0.latitude != nil && $0.longitude != nil }
@@ -19,6 +21,14 @@ final class MapViewModel: ObservableObject {
             return withCoords
         }
         return withCoords.filter { $0.category == selectedCategory }
+    }
+
+    var filteredStores: [StoreData] {
+        let withCoords = stores.filter { $0.latitude != nil && $0.longitude != nil }
+        if selectedCategory == "all" || selectedCategory == "food" {
+            return withCoords
+        }
+        return []
     }
 
     func fetchPrograms() {
@@ -32,6 +42,16 @@ final class MapViewModel: ObservableObject {
                 print("[MapVM] 프로그램 로드 실패: \(error)")
             }
             isLoading = false
+        }
+    }
+
+    func fetchStores() {
+        Task {
+            do {
+                stores = try await storeRepository.fetchApprovedStores()
+            } catch {
+                print("[MapVM] 상점 로드 실패: \(error)")
+            }
         }
     }
 

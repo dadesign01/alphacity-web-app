@@ -32,11 +32,33 @@ export async function GET(request: NextRequest) {
       id: user.id,
       email: user.email,
       nickname: user.nickname,
+      phone: user.phone,
       profileImage: user.profileImage,
+      provider: user.provider,
       stampCount: user._count.userStamps,
       couponCount: user._count.userCoupons,
       missionCount: user._count.missionCompletions,
     });
+  } catch {
+    return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const userId = await getUserId(request);
+    if (!userId) return errorResponse('UNAUTHORIZED', '인증이 필요합니다', 401);
+
+    // 관련 데이터 삭제 후 사용자 삭제 (Prisma cascading 이 설정되어 있지만 명시적으로 처리)
+    await prisma.$transaction([
+      prisma.eventParticipant.deleteMany({ where: { userId } }),
+      prisma.missionCompletion.deleteMany({ where: { userId } }),
+      prisma.userStamp.deleteMany({ where: { userId } }),
+      prisma.userCoupon.deleteMany({ where: { userId } }),
+      prisma.user.delete({ where: { id: userId } }),
+    ]);
+
+    return successResponse(null, '회원 탈퇴가 완료되었습니다');
   } catch {
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }
@@ -52,12 +74,13 @@ export async function PUT(request: NextRequest) {
       where: { id: userId },
       data: {
         ...(body.nickname && { nickname: body.nickname }),
+        ...(body.phone !== undefined && { phone: body.phone }),
         ...(body.profileImage !== undefined && { profileImage: body.profileImage }),
       },
     });
 
     return successResponse({
-      id: user.id, email: user.email, nickname: user.nickname, profileImage: user.profileImage,
+      id: user.id, email: user.email, nickname: user.nickname, phone: user.phone, profileImage: user.profileImage, provider: user.provider,
     }, '프로필이 수정되었습니다');
   } catch {
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);

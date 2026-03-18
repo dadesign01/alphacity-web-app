@@ -68,6 +68,7 @@ private func clusterPrograms(_ programs: [ProgramData], zoomLevel: Int) -> [MapC
 struct MapContentView: View {
     @StateObject private var viewModel = MapViewModel()
     var onProgramTapped: ((ProgramData) -> Void)? = nil
+    var onStoreTapped: ((StoreData) -> Void)? = nil
     var onProfileTap: (() -> Void)? = nil
     @Binding var focusLat: Double?
     @Binding var focusLng: Double?
@@ -84,9 +85,15 @@ struct MapContentView: View {
             ZStack(alignment: .top) {
                 KakaoMapRepresentable(
                     programs: viewModel.filteredPrograms,
+                    stores: viewModel.filteredStores,
                     onMarkerTapped: { programId in
                         if let program = viewModel.filteredPrograms.first(where: { $0.id == programId }) {
                             onProgramTapped?(program)
+                        }
+                    },
+                    onStoreTapped: { storeId in
+                        if let store = viewModel.filteredStores.first(where: { $0.id == storeId }) {
+                            onStoreTapped?(store)
                         }
                     },
                     focusLat: $focusLat,
@@ -127,6 +134,7 @@ struct MapContentView: View {
         }
         .onAppear {
             viewModel.fetchPrograms()
+            viewModel.fetchStores()
         }
     }
 }
@@ -135,12 +143,14 @@ struct MapContentView: View {
 
 struct KakaoMapRepresentable: UIViewRepresentable {
     let programs: [ProgramData]
+    let stores: [StoreData]
     var onMarkerTapped: ((Int) -> Void)?
+    var onStoreTapped: ((Int) -> Void)?
     @Binding var focusLat: Double?
     @Binding var focusLng: Double?
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(programs: programs, onMarkerTapped: onMarkerTapped)
+        Coordinator(programs: programs, stores: stores, onMarkerTapped: onMarkerTapped, onStoreTapped: onStoreTapped)
     }
 
     func makeUIView(context: Context) -> UIView {
@@ -151,8 +161,11 @@ struct KakaoMapRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: UIView, context: Context) {
         context.coordinator.programs = programs
+        context.coordinator.stores = stores
         context.coordinator.onMarkerTapped = onMarkerTapped
+        context.coordinator.onStoreTapped = onStoreTapped
         context.coordinator.updateMarkers()
+        context.coordinator.updateStoreMarkers()
 
         if let lat = focusLat, let lng = focusLng {
             context.coordinator.moveCameraTo(lat: lat, lng: lng)
@@ -197,7 +210,9 @@ struct KakaoMapRepresentable: UIViewRepresentable {
         var controller: KMController?
         var kakaoMap: KakaoMap?
         var programs: [ProgramData]
+        var stores: [StoreData]
         var onMarkerTapped: ((Int) -> Void)?
+        var onStoreTapped: ((Int) -> Void)?
         private var isMapReady = false
         private var currentZoomLevel: Int = 15
         private var clusters: [MapCluster] = []
@@ -207,9 +222,11 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             zoomCheckTimer?.invalidate()
         }
 
-        init(programs: [ProgramData], onMarkerTapped: ((Int) -> Void)?) {
+        init(programs: [ProgramData], stores: [StoreData], onMarkerTapped: ((Int) -> Void)?, onStoreTapped: ((Int) -> Void)?) {
             self.programs = programs
+            self.stores = stores
             self.onMarkerTapped = onMarkerTapped
+            self.onStoreTapped = onStoreTapped
         }
 
         func createController() {
@@ -239,6 +256,7 @@ struct KakaoMapRepresentable: UIViewRepresentable {
 
             currentZoomLevel = Int(mapView.zoomLevel)
             updateMarkers()
+            updateStoreMarkers()
 
             // 줌 변경 감지 타이머 (0.3초 간격)
             zoomCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
@@ -247,6 +265,7 @@ struct KakaoMapRepresentable: UIViewRepresentable {
                 if newZoom != self.currentZoomLevel {
                     self.currentZoomLevel = newZoom
                     self.updateMarkers()
+                    self.updateStoreMarkers()
                 }
             }
         }
@@ -276,6 +295,17 @@ struct KakaoMapRepresentable: UIViewRepresentable {
         // MARK: - KakaoMapEventDelegate (Poi 탭)
 
         func poiDidTapped(kakaoMap: KakaoMap, layerID: String, poiID: String, position: MapPoint) {
+            // 상점 마커 클릭
+            if layerID == "storeMarkers" {
+                let idx = poiID.replacingOccurrences(of: "store_", with: "")
+                let validStores = stores.filter { $0.latitude != nil && $0.longitude != nil }
+                guard let index = Int(idx), index < validStores.count else { return }
+                let store = validStores[index]
+                onStoreTapped?(store.id)
+                return
+            }
+
+            // 프로그램 마커 클릭
             guard layerID == "programMarkers" else { return }
             let idx = poiID.replacingOccurrences(of: "poi_", with: "")
             guard let index = Int(idx), index < clusters.count else { return }
@@ -284,7 +314,7 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             if cluster.isSingle, let program = cluster.programs.first {
                 onMarkerTapped?(program.id)
             } else {
-                // 클러스터 탭 → 줌 인
+                // 클러스터 탭 -> 줌 인
                 let pos = MapPoint(longitude: cluster.center.lng, latitude: cluster.center.lat)
                 let newZoom = min(currentZoomLevel + 2, 17)
                 let cameraUpdate = CameraUpdate.make(target: pos, zoomLevel: newZoom, mapView: kakaoMap)
@@ -357,9 +387,48 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             }
         }
 
+        func updateStoreMarkers() {
+            guard isMapReady, let map = kakaoMap else { return }
+
+            let manager = map.getLabelManager()
+            manager.removeLabelLayer(layerID: "storeMarkers")
+
+            let validStores = stores.filter { $0.latitude != nil && $0.longitude != nil }
+            guard !validStores.isEmpty else { return }
+
+            let layerOption = LabelLayerOptions(
+                layerID: "storeMarkers",
+                competitionType: .none,
+                competitionUnit: .symbolFirst,
+                orderType: .rank,
+                zOrder: 10002
+            )
+            guard let layer = manager.addLabelLayer(option: layerOption) else { return }
+
+            for (index, store) in validStores.enumerated() {
+                let position = MapPoint(longitude: store.longitude!, latitude: store.latitude!)
+                let styleID = "store_style_\(index)"
+                let markerImage = createStoreNameBubbleImage(name: store.name)
+
+                let iconStyle = PoiIconStyle(symbol: markerImage, anchorPoint: CGPoint(x: 0.5, y: 1.0))
+                let poiStyle = PoiStyle(styleID: styleID, styles: [
+                    PerLevelPoiStyle(iconStyle: iconStyle, level: 0)
+                ])
+                manager.addPoiStyle(poiStyle)
+
+                let options = PoiOptions(styleID: styleID, poiID: "store_\(index)")
+                options.rank = validStores.count - index
+
+                if let poi = layer.addPoi(option: options, at: position) {
+                    poi.clickable = true
+                    poi.show()
+                }
+            }
+        }
+
         // MARK: - Marker Images
 
-        // 원본 비율: 1443×1152 (가로:세로 ≈ 5:4)
+        // 원본 비율: 1443x1152 (가로:세로 = 5:4)
         private let duckW: CGFloat = 36
         private let duckH: CGFloat = 29  // 36 * 1152 / 1443
         private var cachedDuckImage: UIImage?
@@ -479,6 +548,67 @@ struct KakaoMapRepresentable: UIViewRepresentable {
                 pointer.fill()
 
                 // 텍스트
+                textNS.draw(at: CGPoint(x: boxLeft + paddingH, y: boxTop + paddingV),
+                            withAttributes: textAttrs)
+
+                // 오리 이미지
+                let duckLeft = (totalW - duckW) / 2
+                let duckTop = boxTop + boxHeight + pointerH
+                duck.draw(in: CGRect(x: duckLeft, y: duckTop, width: duckW, height: duckH))
+            }
+        }
+
+        private func createStoreNameBubbleImage(name: String) -> UIImage {
+            guard let duck = getDuckImage() else { return UIImage() }
+
+            let textAttrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 11, weight: .medium),
+                .foregroundColor: UIColor.white,
+            ]
+            let textNS = name as NSString
+            let textSize = textNS.size(withAttributes: textAttrs)
+            let paddingH: CGFloat = 10
+            let paddingV: CGFloat = 6
+            let boxWidth = textSize.width + paddingH * 2
+            let boxHeight = textSize.height + paddingV * 2
+            let cornerRadius: CGFloat = 7
+            let pointerH: CGFloat = 5
+            let shadowPad: CGFloat = 5
+
+            let totalW = max(boxWidth + shadowPad * 2, duckW)
+            let totalH = shadowPad + boxHeight + pointerH + duckH
+
+            let storeGreen = UIColor(red: 22/255, green: 163/255, blue: 74/255, alpha: 1)
+
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: totalW, height: totalH))
+            return renderer.image { ctx in
+                let cgCtx = ctx.cgContext
+                let cx = totalW / 2
+
+                let boxLeft = cx - boxWidth / 2
+                let boxTop = shadowPad
+                let boxRect = CGRect(x: boxLeft, y: boxTop, width: boxWidth, height: boxHeight)
+
+                // 그림자 설정
+                cgCtx.setShadow(offset: CGSize(width: 0, height: 2), blur: 4,
+                                color: UIColor.black.withAlphaComponent(0.2).cgColor)
+
+                // 녹색 배경 (상점 구분)
+                storeGreen.setFill()
+                UIBezierPath(roundedRect: boxRect, cornerRadius: cornerRadius).fill()
+
+                // 그림자 해제 후 포인터
+                cgCtx.setShadow(offset: .zero, blur: 0, color: nil)
+                let pointerY = boxTop + boxHeight
+                let pointer = UIBezierPath()
+                pointer.move(to: CGPoint(x: cx - 4, y: pointerY))
+                pointer.addLine(to: CGPoint(x: cx, y: pointerY + pointerH))
+                pointer.addLine(to: CGPoint(x: cx + 4, y: pointerY))
+                pointer.close()
+                storeGreen.setFill()
+                pointer.fill()
+
+                // 텍스트 (흰색)
                 textNS.draw(at: CGPoint(x: boxLeft + paddingH, y: boxTop + paddingV),
                             withAttributes: textAttrs)
 

@@ -169,7 +169,9 @@ struct UserProfileData: Decodable {
     let id: Int
     let email: String
     let nickname: String
+    let phone: String?
     let profileImage: String?
+    let provider: String?
     let stampCount: Int?
     let couponCount: Int?
     let missionCount: Int?

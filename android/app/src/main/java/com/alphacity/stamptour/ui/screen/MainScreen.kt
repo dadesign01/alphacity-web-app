@@ -25,6 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.alphacity.stamptour.R
 import com.alphacity.stamptour.network.TokenManager
 import com.alphacity.stamptour.network.dto.ProgramItem
+import com.alphacity.stamptour.network.dto.StoreData
 import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.viewmodel.DeepLinkViewModel
@@ -56,6 +57,7 @@ fun MainScreen(
     var showMyCoupons by remember { mutableStateOf(false) }
     var showStampExchange by remember { mutableStateOf(false) }
     var selectedProgram by remember { mutableStateOf<ProgramItem?>(null) }
+    var selectedStore by remember { mutableStateOf<StoreData?>(null) }
     var showGuestDialog by remember { mutableStateOf(false) }
     var mapFocusLat by remember { mutableStateOf<Double?>(null) }
     var mapFocusLng by remember { mutableStateOf<Double?>(null) }
@@ -67,6 +69,7 @@ fun MainScreen(
     // 뒤로가기: 오버레이 화면이 열려있으면 닫고, 다른 탭이면 홈으로, 홈이면 백그라운드로
     BackHandler {
         when {
+            selectedStore != null -> selectedStore = null
             selectedProgram != null -> selectedProgram = null
             showStampExchange -> showStampExchange = false
             showMyCoupons -> showMyCoupons = false
@@ -88,6 +91,20 @@ fun MainScreen(
             selectedProgram = it
             deepLinkViewModel.clear()
         }
+    }
+
+    selectedStore?.let { store ->
+        StoreDetailScreen(
+            store = store,
+            onBackClick = { selectedStore = null },
+            onNavigateToMap = { lat, lng ->
+                selectedStore = null
+                mapFocusLat = lat
+                mapFocusLng = lng
+                selectedTab = BottomTab.MAP
+            },
+        )
+        return
     }
 
     selectedProgram?.let { program ->
@@ -173,6 +190,7 @@ fun MainScreen(
                 )
                 BottomTab.MAP -> MapScreen(
                     onProgramClick = { program -> selectedProgram = program },
+                    onStoreClick = { store -> selectedStore = store },
                     onNavigateToMyPage = {
                         if (isGuest) showGuestDialog = true
                         else selectedTab = BottomTab.MYPAGE

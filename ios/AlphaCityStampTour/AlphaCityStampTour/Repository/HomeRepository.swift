@@ -35,6 +35,30 @@ final class HomeRepository {
         return try await client.request(path: "users/me", authenticated: true)
     }
 
+    func updateProfile(nickname: String, password: String?, phone: String? = nil) async throws -> UserProfileData {
+        var body: [String: String] = ["nickname": nickname]
+        if let password = password, !password.isEmpty {
+            body["password"] = password
+        }
+        if let phone = phone {
+            body["phone"] = phone
+        }
+        return try await client.request(
+            path: "users/me",
+            method: "PUT",
+            body: body,
+            authenticated: true
+        )
+    }
+
+    func deleteAccount() async throws {
+        let _: EmptyData? = try await client.request(
+            path: "users/me",
+            method: "DELETE",
+            authenticated: true
+        )
+    }
+
     func fetchEventDetail(eventId: Int) async throws -> EventData {
         return try await client.request(path: "events/\(eventId)", authenticated: true)
     }
