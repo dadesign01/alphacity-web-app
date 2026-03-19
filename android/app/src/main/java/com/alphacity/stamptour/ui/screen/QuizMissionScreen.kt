@@ -38,11 +38,19 @@ import com.alphacity.stamptour.viewmodel.MissionViewModel
 @Composable
 fun QuizMissionScreen(
     mission: MissionItem,
+    programLat: Double? = null,
+    programLng: Double? = null,
     onDismiss: () -> Unit = {},
     onCompleted: () -> Unit = {},
     viewModel: MissionViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+
+    // 이전 미션 상태 초기화 (같은 ViewModel 인스턴스가 재사용되므로 필수)
+    LaunchedEffect(mission.id) {
+        viewModel.reset()
+    }
+
     val isLoading by viewModel.isLoading.collectAsState()
     val isCompleted by viewModel.isCompleted.collectAsState()
     val showAlert by viewModel.showAlert.collectAsState()
@@ -54,17 +62,18 @@ fun QuizMissionScreen(
     var textAnswer by remember { mutableStateOf(TextFieldValue("")) }
     val isShortAnswer = mission.options.isNullOrEmpty()
 
-    val hasPlace = mission.place != null
-    val needsLocationVerification = hasPlace && !locationVerified
+    // 미션 장소 좌표 우선, 없으면 프로그램 좌표 사용
+    val targetLat = mission.place?.latitude ?: programLat
+    val targetLng = mission.place?.longitude ?: programLng
+    val hasLocation = targetLat != null && targetLng != null
+    val needsLocationVerification = hasLocation && !locationVerified
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val granted = permissions.values.all { it }
-        if (granted) {
-            val lat = mission.place?.latitude ?: return@rememberLauncherForActivityResult
-            val lng = mission.place?.longitude ?: return@rememberLauncherForActivityResult
-            viewModel.verifyLocation(context, lat, lng)
+        if (granted && targetLat != null && targetLng != null) {
+            viewModel.verifyLocation(context, targetLat, targetLng)
         }
     }
 
@@ -206,7 +215,8 @@ fun QuizMissionScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 // 안내 카드
-                mission.place?.let { place ->
+                val placeName = mission.place?.name ?: "지정 장소"
+                run {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -226,7 +236,7 @@ fun QuizMissionScreen(
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            text = "${place.name}에서 위치를 먼저 확인해야\n퀴즈 미션에 참여할 수 있습니다.",
+                            text = "${placeName}에서 위치를 먼저 확인해야\n퀴즈 미션에 참여할 수 있습니다.",
                             fontFamily = Pretendard,
                             fontWeight = FontWeight.Normal,
                             fontSize = 14.sp,
@@ -328,7 +338,7 @@ fun QuizMissionScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // 위치 확인 완료 배지 (위치가 있는 미션인 경우)
-                if (hasPlace) {
+                if (hasLocation) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),

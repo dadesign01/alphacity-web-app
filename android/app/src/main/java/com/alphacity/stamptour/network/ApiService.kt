@@ -1,5 +1,6 @@
 package com.alphacity.stamptour.network
 
+import com.alphacity.stamptour.network.dto.ActivityItemDto
 import com.alphacity.stamptour.network.dto.ApiResponse
 import com.alphacity.stamptour.network.dto.AuthData
 import com.alphacity.stamptour.network.dto.LoginRequest
@@ -122,4 +123,8 @@ interface ApiService {
 
     @POST("stores/register")
     suspend fun registerStore(@Body request: StoreRegisterRequest): ApiResponse<StoreData>
+
+    // 활동 이력
+    @GET("users/activity")
+    suspend fun getActivityHistory(): ApiResponse<List<ActivityItemDto>>
 }

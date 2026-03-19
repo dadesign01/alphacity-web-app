@@ -35,13 +35,22 @@ final class HomeRepository {
         return try await client.request(path: "users/me", authenticated: true)
     }
 
-    func updateProfile(nickname: String, password: String?, phone: String? = nil) async throws -> UserProfileData {
+    func updateProfile(nickname: String, password: String?, phone: String? = nil, name: String? = nil, address: String? = nil, addressDetail: String? = nil) async throws -> UserProfileData {
         var body: [String: String] = ["nickname": nickname]
         if let password = password, !password.isEmpty {
             body["password"] = password
         }
         if let phone = phone {
             body["phone"] = phone
+        }
+        if let name = name, !name.isEmpty {
+            body["name"] = name
+        }
+        if let address = address {
+            body["address"] = address
+        }
+        if let addressDetail = addressDetail {
+            body["addressDetail"] = addressDetail
         }
         return try await client.request(
             path: "users/me",
@@ -90,5 +99,9 @@ final class HomeRepository {
             body: body,
             authenticated: true
         )
+    }
+
+    func fetchActivityHistory() async throws -> [ActivityItemDTO] {
+        return try await client.request(path: "users/activity", authenticated: true)
     }
 }

@@ -11,6 +11,10 @@ struct EditProfileView: View {
     var onLogout: () -> Void
     var initialNickname: String = ""
     var initialEmail: String = ""
+    var initialName: String? = nil
+    var initialPhone: String? = nil
+    var initialAddress: String? = nil
+    var initialAddressDetail: String? = nil
     var initialProvider: String? = nil
     @ObservedObject var viewModel: MyPageViewModel
 
@@ -18,7 +22,7 @@ struct EditProfileView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var passwordConfirm = ""
-    private let name = ""
+    @State private var name = ""
     @State private var phone = ""
     @State private var verificationCode = ""
     @State private var address = ""
@@ -30,6 +34,13 @@ struct EditProfileView: View {
 
     private var isSocialLogin: Bool {
         initialProvider != nil
+    }
+
+    private var isNameLocked: Bool {
+        if let initialName = initialName, !initialName.isEmpty {
+            return true
+        }
+        return false
     }
 
     var body: some View {
@@ -141,24 +152,37 @@ struct EditProfileView: View {
                             )
                         }
 
-                        // 이름 (disabled)
-                        VStack(alignment: .leading, spacing: 6) {
-                            ProfileFieldLabel(label: "이름", required: true)
-                            HStack {
-                                Text(name)
-                                    .font(AppFont.regular(14))
-                                    .foregroundColor(Color(hex: "BFBFBF"))
-                                Spacer()
-                                Image("IconLock")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(height: 18)
+                        // 이름
+                        if isNameLocked {
+                            VStack(alignment: .leading, spacing: 6) {
+                                ProfileFieldLabel(label: "이름", required: true)
+                                HStack {
+                                    Text(name)
+                                        .font(AppFont.regular(14))
+                                        .foregroundColor(Color(hex: "BFBFBF"))
+                                    Spacer()
+                                    Image("IconLock")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(height: 18)
+                                }
+                                .padding(.horizontal, 14)
+                                .frame(height: 48)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color(hex: "F5F5F5"))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color(hex: "E9E9E9"), lineWidth: 1)
+                                )
                             }
-                            .padding(.horizontal, 14)
-                            .frame(height: 48)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color(hex: "E9E9E9"), lineWidth: 1)
+                        } else {
+                            ProfileFormField(
+                                label: "이름",
+                                required: true,
+                                text: $name,
+                                placeholder: "이름을 입력해주세요."
                             )
                         }
 
@@ -282,7 +306,10 @@ struct EditProfileView: View {
                             await viewModel.updateProfile(
                                 nickname: nickname,
                                 password: (!isSocialLogin && !password.isEmpty) ? password : nil,
-                                phone: viewModel.isPhoneVerified ? phone : nil
+                                phone: viewModel.isPhoneVerified ? phone : nil,
+                                name: name.trimmingCharacters(in: .whitespaces).isEmpty ? nil : name,
+                                address: address.trimmingCharacters(in: .whitespaces).isEmpty ? nil : address,
+                                addressDetail: addressDetail.trimmingCharacters(in: .whitespaces).isEmpty ? nil : addressDetail
                             )
                         }
                     } label: {
@@ -345,6 +372,10 @@ struct EditProfileView: View {
         .onAppear {
             nickname = initialNickname
             email = initialEmail
+            name = initialName ?? ""
+            phone = initialPhone ?? ""
+            address = initialAddress ?? ""
+            addressDetail = initialAddressDetail ?? ""
         }
         .alert("회원탈퇴", isPresented: $showDeleteAlert) {
             Button("취소", role: .cancel) {}
@@ -458,5 +489,5 @@ private struct ProfileTextFieldView: View {
 }
 
 #Preview {
-    EditProfileView(onBackTapped: {}, onLogout: {}, initialNickname: "테스트유저", initialEmail: "test@example.com", viewModel: MyPageViewModel())
+    EditProfileView(onBackTapped: {}, onLogout: {}, initialNickname: "테스트유저", initialEmail: "test@example.com", initialName: nil, viewModel: MyPageViewModel())
 }

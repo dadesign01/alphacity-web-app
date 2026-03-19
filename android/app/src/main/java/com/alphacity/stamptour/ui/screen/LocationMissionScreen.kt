@@ -40,6 +40,12 @@ fun LocationMissionScreen(
     viewModel: MissionViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+
+    // 이전 미션 상태 초기화 (같은 ViewModel 인스턴스가 재사용되므로 필수)
+    LaunchedEffect(mission.id) {
+        viewModel.reset()
+    }
+
     val isLoading by viewModel.isLoading.collectAsState()
     val isCompleted by viewModel.isCompleted.collectAsState()
     val showAlert by viewModel.showAlert.collectAsState()

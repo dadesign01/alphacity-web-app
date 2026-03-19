@@ -116,11 +116,11 @@ class MyPageViewModel @Inject constructor(
         _verificationError.value = null
     }
 
-    fun updateProfile(nickname: String, password: String?, phone: String? = null) {
+    fun updateProfile(nickname: String, password: String?, phone: String? = null, name: String? = null, address: String? = null, addressDetail: String? = null) {
         _isLoading.value = true
         _saveError.value = null
         viewModelScope.launch {
-            homeRepository.updateProfile(nickname, password, phone)
+            homeRepository.updateProfile(nickname, password, phone, name, address, addressDetail)
                 .onSuccess { updated ->
                     _userProfile.value = updated
                     _saveSuccess.value = true

@@ -66,3 +66,30 @@ data class StoreProgramInfo(
     val id: Int,
     val name: String,
 )
+
+// StoreData → ProgramItem 변환 (ProgramDetailScreen 재사용)
+fun StoreData.toProgramItem(): ProgramItem {
+    val hours = if (openTime != null && closeTime != null) "$openTime - $closeTime" else null
+    val fullAddress = listOfNotNull(address, addressDetail).joinToString(" ")
+    return ProgramItem(
+        id = -id,
+        name = name,
+        description = description,
+        category = "food",
+        imageUrl = imageUrl,
+        operatingHours = hours,
+        location = fullAddress.ifBlank { null },
+        latitude = latitude,
+        longitude = longitude,
+        startDate = "",
+        endDate = "",
+        status = "in_progress",
+        phone = phone,
+        ownerName = ownerName,
+        storeCode = storeCode,
+        operatingDays = operatingDays,
+        storeCoupons = storeCoupons?.map {
+            StoreCouponInfo(storeId = id, storeName = name, couponId = it.coupon.id, couponName = it.coupon.name, couponDescription = it.coupon.description)
+        },
+    )
+}

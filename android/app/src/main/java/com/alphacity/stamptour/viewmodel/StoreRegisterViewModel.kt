@@ -34,6 +34,7 @@ class StoreRegisterViewModel @Inject constructor(
         operatingDays: String,
         openTime: String,
         closeTime: String,
+        imageUrl: String? = null,
     ) {
         if (_isSubmitting.value) return
         _isSubmitting.value = true
@@ -51,6 +52,7 @@ class StoreRegisterViewModel @Inject constructor(
                 operatingDays = operatingDays.ifBlank { null },
                 openTime = openTime.ifBlank { null },
                 closeTime = closeTime.ifBlank { null },
+                imageUrl = imageUrl,
             )
 
             storeRepository.registerStore(request)

@@ -72,6 +72,10 @@ fun MyPageScreen(
             onLogout = onLogout,
             initialNickname = userProfile?.nickname ?: "",
             initialEmail = userProfile?.email ?: "",
+            initialName = userProfile?.name,
+            initialPhone = userProfile?.phone,
+            initialAddress = userProfile?.address,
+            initialAddressDetail = userProfile?.addressDetail,
             initialProvider = userProfile?.provider,
             viewModel = viewModel,
         )

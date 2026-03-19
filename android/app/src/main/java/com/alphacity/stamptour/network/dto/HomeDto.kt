@@ -31,6 +31,9 @@ data class ProgramItem(
     val endDate: String,
     val status: String,
     val phone: String? = null,
+    val ownerName: String? = null,
+    val storeCode: String? = null,
+    val operatingDays: String? = null,
     val events: List<EventItem>? = null,
     val storeCoupons: List<StoreCouponInfo>? = null,
     val stores: List<ProgramStoreItem>? = null,
@@ -177,7 +180,10 @@ data class UserProfile(
     val id: Int,
     val email: String,
     val nickname: String,
+    val name: String? = null,
     val phone: String? = null,
+    val address: String? = null,
+    val addressDetail: String? = null,
     val profileImage: String? = null,
     val provider: String? = null,
     val stampCount: Int? = null,
@@ -188,6 +194,19 @@ data class UserProfile(
 @Serializable
 data class UpdateProfileRequest(
     val nickname: String,
+    val name: String? = null,
     val password: String? = null,
     val phone: String? = null,
+    val address: String? = null,
+    val addressDetail: String? = null,
+)
+
+// === 활동 이력 ===
+
+@Serializable
+data class ActivityItemDto(
+    val type: String,
+    val title: String,
+    val date: String,
+    val validUntil: String? = null,
 )

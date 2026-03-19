@@ -90,6 +90,14 @@ struct ProgramDetailView: View {
                             )
                         }
 
+                        if let days = program.operatingDays, !days.isEmpty {
+                            DetailInfoRow(
+                                systemIcon: "calendar.badge.clock",
+                                assetIcon: nil,
+                                text: days
+                            )
+                        }
+
                         if let speaker = program.speaker, !speaker.isEmpty {
                             DetailInfoRow(
                                 systemIcon: "person.fill",
@@ -98,11 +106,21 @@ struct ProgramDetailView: View {
                             )
                         }
 
-                        DetailInfoRow(
-                            systemIcon: "calendar",
-                            assetIcon: nil,
-                            text: formatDateRange(start: program.startDate, end: program.endDate)
-                        )
+                        if let owner = program.ownerName, !owner.isEmpty {
+                            DetailInfoRow(
+                                systemIcon: "person.crop.circle",
+                                assetIcon: nil,
+                                text: "운영자: \(owner)"
+                            )
+                        }
+
+                        if !program.startDate.isEmpty && !program.endDate.isEmpty {
+                            DetailInfoRow(
+                                systemIcon: "calendar",
+                                assetIcon: nil,
+                                text: formatDateRange(start: program.startDate, end: program.endDate)
+                            )
+                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 14)
@@ -331,6 +349,8 @@ struct ProgramDetailView: View {
         case "quiz":
             QuizMissionView(
                 mission: mission,
+                programLat: program.latitude,
+                programLng: program.longitude,
                 onDismiss: { selectedMission = nil },
                 onCompleted: { viewModel.fetchMissions(programId: program.id) }
             )
@@ -343,6 +363,8 @@ struct ProgramDetailView: View {
         case "stay_time":
             StayTimeMissionView(
                 mission: mission,
+                programLat: program.latitude,
+                programLng: program.longitude,
                 onDismiss: { selectedMission = nil },
                 onCompleted: { viewModel.fetchMissions(programId: program.id) }
             )

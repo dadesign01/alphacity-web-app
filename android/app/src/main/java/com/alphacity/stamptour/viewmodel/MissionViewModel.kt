@@ -61,6 +61,26 @@ class MissionViewModel @Inject constructor(
 
     private var timerJob: Job? = null
 
+    /**
+     * 새 미션 화면을 열 때 호출하여 이전 미션 상태를 초기화한다.
+     * hiltViewModel()이 동일 NavBackStackEntry 내에서 같은 인스턴스를 반환하므로,
+     * 이전 미션의 완료 상태가 남아있어 새 미션이 자동 완료되는 버그를 방지한다.
+     */
+    fun reset() {
+        timerJob?.cancel()
+        timerJob = null
+        _isLoading.value = false
+        _isCompleted.value = false
+        _message.value = null
+        _showAlert.value = false
+        _alertMessage.value = ""
+        _earnedStamp.value = null
+        _locationVerified.value = false
+        _currentDistance.value = null
+        _isTimerRunning.value = false
+        _remainingSeconds.value = 0
+    }
+
     // MARK: - 퀴즈 미션 완료
 
     fun completeQuizMission(missionId: Int, answer: String) {

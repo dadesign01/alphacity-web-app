@@ -7,6 +7,8 @@ import SwiftUI
 
 struct QuizMissionView: View {
     let mission: MissionData
+    var programLat: Double? = nil
+    var programLng: Double? = nil
     var onDismiss: (() -> Void)?
     var onCompleted: (() -> Void)?
 
@@ -22,12 +24,17 @@ struct QuizMissionView: View {
         isShortAnswer ? !textAnswer.trimmingCharacters(in: .whitespaces).isEmpty : selectedOption != nil
     }
 
-    private var hasPlace: Bool {
-        mission.place != nil
+    private var targetLat: Double? {
+        mission.place?.latitude ?? programLat
     }
-
+    private var targetLng: Double? {
+        mission.place?.longitude ?? programLng
+    }
+    private var hasLocation: Bool {
+        targetLat != nil && targetLng != nil
+    }
     private var needsLocationVerification: Bool {
-        hasPlace && !viewModel.locationVerified
+        hasLocation && !viewModel.locationVerified
     }
 
     var body: some View {
@@ -98,13 +105,13 @@ struct QuizMissionView: View {
             Spacer().frame(height: 32)
 
             // 안내 카드
-            if let place = mission.place {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("위치 확인 필요")
-                        .font(AppFont.semibold(18))
-                        .foregroundColor(Color(hex: "121212"))
+            let placeName = mission.place?.name ?? "지정 장소"
+            VStack(alignment: .leading, spacing: 10) {
+                Text("위치 확인 필요")
+                    .font(AppFont.semibold(18))
+                    .foregroundColor(Color(hex: "121212"))
 
-                    Text("\(place.name)에서 위치를 먼저 확인해야\n퀴즈 미션에 참여할 수 있습니다.")
+                Text("\(placeName)에서 위치를 먼저 확인해야\n퀴즈 미션에 참여할 수 있습니다.")
                         .font(AppFont.regular(14))
                         .foregroundColor(Color(hex: "595959"))
                         .lineSpacing(3)
@@ -130,7 +137,6 @@ struct QuizMissionView: View {
                         .stroke(Color(hex: "E2E8F0"), lineWidth: 1)
                 )
                 .padding(.horizontal, 20)
-            }
 
             // 현재 거리 표시
             if let dist = viewModel.currentDistance {
@@ -145,8 +151,7 @@ struct QuizMissionView: View {
             // 위치 확인 버튼
             VStack(spacing: 12) {
                 Button(action: {
-                    guard let lat = mission.place?.latitude,
-                          let lng = mission.place?.longitude else { return }
+                    guard let lat = targetLat, let lng = targetLng else { return }
                     viewModel.verifyLocation(targetLat: lat, targetLng: lng)
                 }) {
                     HStack(spacing: 8) {
@@ -184,7 +189,7 @@ struct QuizMissionView: View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 // 위치 확인 완료 배지 (위치가 있는 미션인 경우)
-                if hasPlace {
+                if hasLocation {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 12))
@@ -211,7 +216,7 @@ struct QuizMissionView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 3)
                     .background(Capsule().fill(AppColor.primary))
-                    .padding(.top, hasPlace ? 0 : 24)
+                    .padding(.top, hasLocation ? 0 : 24)
 
                 // 미션명
                 Text(mission.name)

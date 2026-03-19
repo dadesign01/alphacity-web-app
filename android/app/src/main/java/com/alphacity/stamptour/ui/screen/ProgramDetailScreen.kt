@@ -236,16 +236,30 @@ fun ProgramDetailScreen(
                         text = program.speaker,
                     )
                 }
+                if (!program.operatingDays.isNullOrBlank()) {
+                    DetailInfoRow(
+                        icon = Icons.Outlined.CalendarMonth,
+                        text = program.operatingDays,
+                    )
+                }
                 if (!program.phone.isNullOrBlank()) {
                     DetailInfoRow(
                         icon = Icons.Filled.Phone,
                         text = program.phone,
                     )
                 }
-                DetailInfoRow(
-                    icon = Icons.Outlined.CalendarMonth,
-                    text = formatDetailDate(program.startDate, program.endDate),
-                )
+                if (!program.ownerName.isNullOrBlank()) {
+                    DetailInfoRow(
+                        icon = Icons.Filled.Person,
+                        text = "운영자: ${program.ownerName}",
+                    )
+                }
+                if (program.startDate.isNotBlank() && program.endDate.isNotBlank()) {
+                    DetailInfoRow(
+                        icon = Icons.Outlined.CalendarMonth,
+                        text = formatDetailDate(program.startDate, program.endDate),
+                    )
+                }
             }
 
             // Divider
@@ -534,6 +548,8 @@ fun ProgramDetailScreen(
         when (mission.type) {
             "quiz" -> QuizMissionScreen(
                 mission = mission,
+                programLat = program.latitude,
+                programLng = program.longitude,
                 onDismiss = { selectedMission = null },
                 onCompleted = { viewModel.fetchMissions(program.id) },
             )
@@ -544,6 +560,8 @@ fun ProgramDetailScreen(
             )
             "stay_time" -> StayTimeMissionScreen(
                 mission = mission,
+                programLat = program.latitude,
+                programLng = program.longitude,
                 onDismiss = { selectedMission = null },
                 onCompleted = { viewModel.fetchMissions(program.id) },
             )

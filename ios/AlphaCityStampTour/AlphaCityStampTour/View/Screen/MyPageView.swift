@@ -38,6 +38,10 @@ struct MyPageView: View {
                 onLogout: onLogout,
                 initialNickname: viewModel.userProfile?.nickname ?? "",
                 initialEmail: viewModel.userProfile?.email ?? "",
+                initialName: viewModel.userProfile?.name,
+                initialPhone: viewModel.userProfile?.phone,
+                initialAddress: viewModel.userProfile?.address,
+                initialAddressDetail: viewModel.userProfile?.addressDetail,
                 initialProvider: viewModel.userProfile?.provider,
                 viewModel: viewModel
             )

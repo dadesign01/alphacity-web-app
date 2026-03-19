@@ -37,11 +37,19 @@ import com.alphacity.stamptour.viewmodel.MissionViewModel
 @Composable
 fun StayTimeMissionScreen(
     mission: MissionItem,
+    programLat: Double? = null,
+    programLng: Double? = null,
     onDismiss: () -> Unit = {},
     onCompleted: () -> Unit = {},
     viewModel: MissionViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+
+    // 이전 미션 상태 초기화 (같은 ViewModel 인스턴스가 재사용되므로 필수)
+    LaunchedEffect(mission.id) {
+        viewModel.reset()
+    }
+
     val isLoading by viewModel.isLoading.collectAsState()
     val isCompleted by viewModel.isCompleted.collectAsState()
     val isTimerRunning by viewModel.isTimerRunning.collectAsState()
@@ -52,17 +60,17 @@ fun StayTimeMissionScreen(
     val locationVerified by viewModel.locationVerified.collectAsState()
     val currentDistance by viewModel.currentDistance.collectAsState()
 
-    val hasPlace = mission.place != null
-    val needsLocationVerification = hasPlace && !locationVerified
+    val targetLat = mission.place?.latitude ?: programLat
+    val targetLng = mission.place?.longitude ?: programLng
+    val hasLocation = targetLat != null && targetLng != null
+    val needsLocationVerification = hasLocation && !locationVerified
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val granted = permissions.values.all { it }
-        if (granted) {
-            val lat = mission.place?.latitude ?: return@rememberLauncherForActivityResult
-            val lng = mission.place?.longitude ?: return@rememberLauncherForActivityResult
-            viewModel.verifyLocation(context, lat, lng)
+        if (granted && targetLat != null && targetLng != null) {
+            viewModel.verifyLocation(context, targetLat, targetLng)
         }
     }
 
@@ -178,7 +186,8 @@ fun StayTimeMissionScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 // 안내 카드
-                mission.place?.let { place ->
+                val placeName = mission.place?.name ?: "지정 장소"
+                run {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -198,7 +207,7 @@ fun StayTimeMissionScreen(
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            text = "${place.name}에서 위치를 먼저 확인해야\n체류시간 미션에 참여할 수 있습니다.",
+                            text = "${placeName}에서 위치를 먼저 확인해야\n체류시간 미션에 참여할 수 있습니다.",
                             fontFamily = Pretendard,
                             fontWeight = FontWeight.Normal,
                             fontSize = 14.sp,
@@ -298,7 +307,7 @@ fun StayTimeMissionScreen(
                 Spacer(modifier = Modifier.weight(1f))
 
                 // 위치 확인 완료 배지 (위치가 있는 미션인 경우)
-                if (hasPlace) {
+                if (hasLocation) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -336,11 +345,12 @@ fun StayTimeMissionScreen(
                 Text(mission.name, fontFamily = Pretendard, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = Color(0xFF121212))
 
                 // 장소명
-                mission.place?.let { place ->
+                if (hasLocation) {
+                    val locationName = mission.place?.name ?: "지정 장소"
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Icon(Icons.Default.LocationOn, null, tint = Color(0xFFD97706), modifier = Modifier.size(16.dp))
-                        Text(place.name, fontFamily = Pretendard, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color(0xFF595959))
+                        Text(locationName, fontFamily = Pretendard, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color(0xFF595959))
                     }
                 }
 

@@ -7,18 +7,17 @@ import SwiftUI
 
 struct StayTimeMissionView: View {
     let mission: MissionData
+    var programLat: Double? = nil
+    var programLng: Double? = nil
     var onDismiss: (() -> Void)?
     var onCompleted: (() -> Void)?
 
     @StateObject private var viewModel = MissionViewModel()
 
-    private var hasPlace: Bool {
-        mission.place != nil
-    }
-
-    private var needsLocationVerification: Bool {
-        hasPlace && !viewModel.locationVerified
-    }
+    private var targetLat: Double? { mission.place?.latitude ?? programLat }
+    private var targetLng: Double? { mission.place?.longitude ?? programLng }
+    private var hasLocation: Bool { targetLat != nil && targetLng != nil }
+    private var needsLocationVerification: Bool { hasLocation && !viewModel.locationVerified }
 
     var body: some View {
         ZStack {
@@ -91,13 +90,13 @@ struct StayTimeMissionView: View {
             Spacer().frame(height: 32)
 
             // 안내 카드
-            if let place = mission.place {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("위치 확인 필요")
-                        .font(AppFont.semibold(18))
-                        .foregroundColor(Color(hex: "121212"))
+            let placeName = mission.place?.name ?? "지정 장소"
+            VStack(alignment: .leading, spacing: 10) {
+                Text("위치 확인 필요")
+                    .font(AppFont.semibold(18))
+                    .foregroundColor(Color(hex: "121212"))
 
-                    Text("\(place.name)에서 위치를 먼저 확인해야\n체류시간 미션에 참여할 수 있습니다.")
+                Text("\(placeName)에서 위치를 먼저 확인해야\n체류시간 미션에 참여할 수 있습니다.")
                         .font(AppFont.regular(14))
                         .foregroundColor(Color(hex: "595959"))
                         .lineSpacing(3)
@@ -123,7 +122,6 @@ struct StayTimeMissionView: View {
                         .stroke(Color(hex: "FDE68A"), lineWidth: 1)
                 )
                 .padding(.horizontal, 20)
-            }
 
             // 현재 거리 표시
             if let dist = viewModel.currentDistance {
@@ -138,8 +136,7 @@ struct StayTimeMissionView: View {
             // 위치 확인 버튼
             VStack(spacing: 12) {
                 Button(action: {
-                    guard let lat = mission.place?.latitude,
-                          let lng = mission.place?.longitude else { return }
+                    guard let lat = targetLat, let lng = targetLng else { return }
                     viewModel.verifyLocation(targetLat: lat, targetLng: lng)
                 }) {
                     HStack(spacing: 8) {
@@ -179,7 +176,7 @@ struct StayTimeMissionView: View {
 
             VStack(spacing: 20) {
                 // 위치 확인 완료 배지 (위치가 있는 미션인 경우)
-                if hasPlace {
+                if hasLocation {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 12))
@@ -211,12 +208,13 @@ struct StayTimeMissionView: View {
                     .multilineTextAlignment(.center)
 
                 // 장소명
-                if let place = mission.place {
+                if hasLocation {
+                    let locationName = mission.place?.name ?? "지정 장소"
                     HStack(spacing: 6) {
                         Image(systemName: "mappin.and.ellipse")
                             .foregroundColor(Color(hex: "D97706"))
                             .font(.system(size: 14))
-                        Text(place.name)
+                        Text(locationName)
                             .font(AppFont.medium(14))
                             .foregroundColor(Color(hex: "595959"))
                     }

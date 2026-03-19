@@ -40,32 +40,67 @@ enum ActivityType: String, CaseIterable {
     }
 }
 
-struct ActivityItemData: Identifiable {
-    let id: Int
+struct ActivityDisplayItem: Identifiable {
+    let id: String
     let type: ActivityType
     let title: String
     let datetime: String
     let validUntil: String?
 }
 
-private let mockActivities: [ActivityItemData] = [
-    ActivityItemData(id: 1, type: .coupon, title: "스탬프 3개 쿠폰 교환", datetime: "2026.01.28 16:55", validUntil: nil),
-    ActivityItemData(id: 2, type: .stamp, title: "디지털 갤러리 스탬프 획득", datetime: "2026.01.28 15:30", validUntil: "2026년 03월 31일까지 사용 가능"),
-    ActivityItemData(id: 3, type: .mission, title: "디지털 갤러리 퀴즈 미션 완료", datetime: "2026.01.28 15:30", validUntil: nil),
-    ActivityItemData(id: 4, type: .event, title: "디지털 아트 전시회 참여", datetime: "2026.01.28 12:23", validUntil: nil),
-    ActivityItemData(id: 5, type: .stamp, title: "VR 스튜디오 스탬프 획득", datetime: "2026.01.28 12:00", validUntil: "2026년 03월 31일까지 사용 가능"),
-    ActivityItemData(id: 6, type: .stamp, title: "AI 스터디 스탬프 획득", datetime: "2026.01.28 11:48", validUntil: "2026년 03월 31일까지 사용 가능"),
-]
+private func formatISODate(_ isoString: String) -> String {
+    let isoFormatter = ISO8601DateFormatter()
+    isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = isoFormatter.date(from: isoString) {
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateFormat = "yyyy.MM.dd HH:mm"
+        return displayFormatter.string(from: date)
+    }
+    // Fallback without fractional seconds
+    let isoFormatter2 = ISO8601DateFormatter()
+    isoFormatter2.formatOptions = [.withInternetDateTime]
+    if let date = isoFormatter2.date(from: isoString) {
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateFormat = "yyyy.MM.dd HH:mm"
+        return displayFormatter.string(from: date)
+    }
+    return isoString
+}
+
+private func convertDTO(_ dto: ActivityItemDTO, index: Int) -> ActivityDisplayItem {
+    let activityType: ActivityType
+    switch dto.type {
+    case "stamp": activityType = .stamp
+    case "mission": activityType = .mission
+    case "event": activityType = .event
+    case "coupon": activityType = .coupon
+    default: activityType = .stamp
+    }
+    return ActivityDisplayItem(
+        id: "\(dto.type)-\(index)-\(dto.date)",
+        type: activityType,
+        title: dto.title,
+        datetime: formatISODate(dto.date),
+        validUntil: dto.validUntil
+    )
+}
 
 struct ActivityHistoryView: View {
     var onBackTapped: () -> Void
+    @StateObject private var viewModel = ActivityHistoryViewModel()
     @State private var selectedFilter: ActivityType? = nil
 
-    private var filteredActivities: [ActivityItemData] {
-        if let filter = selectedFilter {
-            return mockActivities.filter { $0.type == filter }
+    private var allActivities: [ActivityDisplayItem] {
+        viewModel.activities.enumerated().map { (index, dto) in
+            convertDTO(dto, index: index)
         }
-        return mockActivities
+    }
+
+    private var filteredActivities: [ActivityDisplayItem] {
+        if let filter = selectedFilter {
+            return allActivities.filter { $0.type == filter }
+        }
+        return allActivities
     }
 
     var body: some View {
@@ -114,31 +149,41 @@ struct ActivityHistoryView: View {
             .padding(.vertical, 12)
 
             // === Activity List ===
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(filteredActivities) { activity in
-                        ActivityItemRow(activity: activity)
-                        Divider()
-                            .background(Color(hex: "B5B5B5"))
-                            .padding(.horizontal, 20)
-                    }
+            if viewModel.isLoading {
+                Spacer()
+                ProgressView()
+                    .tint(AppColor.primary)
+                Spacer()
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(filteredActivities) { activity in
+                            ActivityItemRow(activity: activity)
+                            Divider()
+                                .background(Color(hex: "B5B5B5"))
+                                .padding(.horizontal, 20)
+                        }
 
-                    // Footer
-                    Text("© 2026 Alpha Stamp. All rights reserved.")
-                        .font(AppFont.regular(10))
-                        .foregroundColor(Color(hex: "8F8F8F"))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 40)
-                        .background(Color(hex: "F9F9F9"))
+                        // Footer
+                        Text("© 2026 Alpha Stamp. All rights reserved.")
+                            .font(AppFont.regular(10))
+                            .foregroundColor(Color(hex: "8F8F8F"))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                            .background(Color(hex: "F9F9F9"))
+                    }
                 }
             }
         }
         .background(Color.white)
+        .onAppear {
+            viewModel.fetchActivities()
+        }
     }
 }
 
 private struct ActivityItemRow: View {
-    let activity: ActivityItemData
+    let activity: ActivityDisplayItem
 
     var body: some View {
         HStack(alignment: .top, spacing: 20) {

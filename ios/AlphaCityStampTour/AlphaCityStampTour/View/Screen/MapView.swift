@@ -408,7 +408,7 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             for (index, store) in validStores.enumerated() {
                 let position = MapPoint(longitude: store.longitude!, latitude: store.latitude!)
                 let styleID = "store_style_\(index)"
-                let markerImage = createStoreNameBubbleImage(name: store.name)
+                let markerImage = createNameBubbleImage(name: store.name)
 
                 let iconStyle = PoiIconStyle(symbol: markerImage, anchorPoint: CGPoint(x: 0.5, y: 1.0))
                 let poiStyle = PoiStyle(styleID: styleID, styles: [

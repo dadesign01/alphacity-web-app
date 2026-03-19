@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import bcrypt from 'bcryptjs';
 
 async function getUserId(request: NextRequest): Promise<number | null> {
   const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -32,7 +33,10 @@ export async function GET(request: NextRequest) {
       id: user.id,
       email: user.email,
       nickname: user.nickname,
+      name: user.name,
       phone: user.phone,
+      address: user.address,
+      addressDetail: user.addressDetail,
       profileImage: user.profileImage,
       provider: user.provider,
       stampCount: user._count.userStamps,
@@ -70,17 +74,39 @@ export async function PUT(request: NextRequest) {
     if (!userId) return errorResponse('UNAUTHORIZED', '인증이 필요합니다', 401);
 
     const body = await request.json();
+
+    // 이름은 한번 저장하면 수정 불가
+    const existingUser = await prisma.user.findUnique({ where: { id: userId } });
+    const nameUpdate = body.name && !existingUser?.name ? { name: body.name } : {};
+
+    // 비밀번호 변경 처리
+    const passwordUpdate = body.password
+      ? { passwordHash: await bcrypt.hash(body.password, 10) }
+      : {};
+
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
         ...(body.nickname && { nickname: body.nickname }),
+        ...nameUpdate,
+        ...passwordUpdate,
         ...(body.phone !== undefined && { phone: body.phone }),
+        ...(body.address !== undefined && { address: body.address }),
+        ...(body.addressDetail !== undefined && { addressDetail: body.addressDetail }),
         ...(body.profileImage !== undefined && { profileImage: body.profileImage }),
       },
     });
 
     return successResponse({
-      id: user.id, email: user.email, nickname: user.nickname, phone: user.phone, profileImage: user.profileImage, provider: user.provider,
+      id: user.id,
+      email: user.email,
+      nickname: user.nickname,
+      name: user.name,
+      phone: user.phone,
+      address: user.address,
+      addressDetail: user.addressDetail,
+      profileImage: user.profileImage,
+      provider: user.provider,
     }, '프로필이 수정되었습니다');
   } catch {
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);

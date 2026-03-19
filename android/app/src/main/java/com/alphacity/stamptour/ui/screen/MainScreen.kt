@@ -26,6 +26,7 @@ import com.alphacity.stamptour.R
 import com.alphacity.stamptour.network.TokenManager
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StoreData
+import com.alphacity.stamptour.network.dto.toProgramItem
 import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.viewmodel.DeepLinkViewModel
@@ -94,8 +95,8 @@ fun MainScreen(
     }
 
     selectedStore?.let { store ->
-        StoreDetailScreen(
-            store = store,
+        ProgramDetailScreen(
+            program = store.toProgramItem(),
             onBackClick = { selectedStore = null },
             onNavigateToMap = { lat, lng ->
                 selectedStore = null

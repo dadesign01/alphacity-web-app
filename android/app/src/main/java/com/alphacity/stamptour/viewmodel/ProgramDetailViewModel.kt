@@ -163,7 +163,7 @@ class ProgramDetailViewModel @Inject constructor(
                     latitude = targetLat
                     longitude = targetLng
                 }
-                location.distanceTo(target) <= 50f
+                location.distanceTo(target) <= 100f
             }
             _isCheckingLocation.value = false
         }

@@ -24,12 +24,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.alphacity.stamptour.BuildConfig
 import com.alphacity.stamptour.R
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.viewmodel.StoreRegisterViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.UUID
 
 private enum class StoreCategory(val label: String) {
@@ -59,6 +70,22 @@ fun StoreRegisterScreen(
     var closeTime by remember { mutableStateOf("20 : 00") }
     var storeCode by remember { mutableStateOf("") }
     var storeDescription by remember { mutableStateOf("") }
+    var imageUrl by remember { mutableStateOf<String?>(null) }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var isUploading by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        imageUri = uri
+        isUploading = true
+        scope.launch {
+            val url = uploadImage(context, uri)
+            imageUrl = url
+            isUploading = false
+        }
+    }
 
     val isSubmitting by viewModel.isSubmitting.collectAsStateWithLifecycle()
     val submitResult by viewModel.submitResult.collectAsStateWithLifecycle()
@@ -168,6 +195,9 @@ fun StoreRegisterScreen(
                 },
                 storeDescription = storeDescription,
                 onStoreDescriptionChange = { storeDescription = it },
+                imageUri = imageUri,
+                isUploading = isUploading,
+                onImagePick = { imagePicker.launch("image/*") },
                 onSubmit = {
                     if (!isSubmitting) {
                         viewModel.registerStore(
@@ -182,6 +212,7 @@ fun StoreRegisterScreen(
                             operatingDays = selectedDays.joinToString(","),
                             openTime = openTime.replace(" ", ""),
                             closeTime = closeTime.replace(" ", ""),
+                            imageUrl = imageUrl,
                         )
                     }
                 },
@@ -331,6 +362,9 @@ private fun StoreRegisterStep2(
     onGenerateCode: () -> Unit,
     storeDescription: String,
     onStoreDescriptionChange: (String) -> Unit,
+    imageUri: Uri?,
+    isUploading: Boolean,
+    onImagePick: () -> Unit,
     onSubmit: () -> Unit,
 ) {
     Column(
@@ -371,7 +405,7 @@ private fun StoreRegisterStep2(
             modifier = Modifier.padding(horizontal = 21.dp),
         )
         Spacer(modifier = Modifier.height(8.dp))
-        // Image upload placeholder
+        // Image upload
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -379,24 +413,41 @@ private fun StoreRegisterStep2(
                 .height(229.dp)
                 .clip(RoundedCornerShape(15.dp))
                 .background(Color(0xFFF8F8F8))
-                .clickable { /* TODO: image picker */ },
+                .clickable { onImagePick() },
             contentAlignment = Alignment.Center,
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Image(
-                    painter = painterResource(id = R.drawable.icon_upload),
-                    contentDescription = "업로드",
-                    modifier = Modifier.size(24.dp),
-                    contentScale = ContentScale.Fit,
+            if (imageUri != null) {
+                AsyncImage(
+                    model = imageUri,
+                    contentDescription = "상점 이미지",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "이미지를 업로드하세요",
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 16.sp,
-                    color = Color(0xFFBFBFBF),
-                )
+                if (isUploading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("업로드 중...", color = Color.White, fontFamily = Pretendard, fontWeight = FontWeight.Medium)
+                    }
+                }
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(
+                        painter = painterResource(id = R.drawable.icon_upload),
+                        contentDescription = "업로드",
+                        modifier = Modifier.size(24.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "이미지를 업로드하세요",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 16.sp,
+                        color = Color(0xFFBFBFBF),
+                    )
+                }
             }
         }
 
@@ -851,5 +902,38 @@ private fun GradientButton(
             fontSize = 16.sp,
             color = Color(0xFFF8F8F8),
         )
+    }
+}
+
+private suspend fun uploadImage(context: android.content.Context, uri: Uri): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return@withContext null
+            val bytes = inputStream.readBytes()
+            inputStream.close()
+
+            val boundary = "----${UUID.randomUUID()}"
+            val url = URL("${BuildConfig.API_BASE_URL.removeSuffix("/api/v1")}/api/v1/admin/upload")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+            conn.doOutput = true
+
+            val fileName = "store_${System.currentTimeMillis()}.jpg"
+            conn.outputStream.use { os ->
+                os.write("--$boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"$fileName\"\r\nContent-Type: image/jpeg\r\n\r\n".toByteArray())
+                os.write(bytes)
+                os.write("\r\n--$boundary--\r\n".toByteArray())
+            }
+
+            if (conn.responseCode == 200) {
+                val response = conn.inputStream.bufferedReader().readText()
+                val match = Regex("\"imageUrl\"\\s*:\\s*\"([^\"]+)\"").find(response)
+                match?.groupValues?.get(1)
+            } else null
+        } catch (e: Exception) {
+            android.util.Log.e("StoreRegister", "Image upload failed", e)
+            null
+        }
     }
 }

@@ -90,11 +90,11 @@ final class MyPageViewModel: ObservableObject {
         verificationError = nil
     }
 
-    func updateProfile(nickname: String, password: String?, phone: String? = nil) async {
+    func updateProfile(nickname: String, password: String?, phone: String? = nil, name: String? = nil, address: String? = nil, addressDetail: String? = nil) async {
         isLoading = true
         saveError = nil
         do {
-            let updated = try await repository.updateProfile(nickname: nickname, password: password, phone: phone)
+            let updated = try await repository.updateProfile(nickname: nickname, password: password, phone: phone, name: name, address: address, addressDetail: addressDetail)
             userProfile = updated
             saveSuccess = true
         } catch {

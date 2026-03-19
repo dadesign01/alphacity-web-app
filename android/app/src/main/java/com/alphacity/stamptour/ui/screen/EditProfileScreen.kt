@@ -53,6 +53,10 @@ fun EditProfileScreen(
     onLogout: () -> Unit,
     initialNickname: String = "",
     initialEmail: String = "",
+    initialName: String? = null,
+    initialPhone: String? = null,
+    initialAddress: String? = null,
+    initialAddressDetail: String? = null,
     initialProvider: String? = null,
     viewModel: MyPageViewModel? = null,
 ) {
@@ -60,10 +64,11 @@ fun EditProfileScreen(
     var email by remember { mutableStateOf(initialEmail) }
     var password by remember { mutableStateOf("") }
     var passwordConfirm by remember { mutableStateOf("") }
-    val name = ""
-    var phone by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    var addressDetail by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(initialName ?: "") }
+    val isNameLocked = !initialName.isNullOrBlank()
+    var phone by remember { mutableStateOf(initialPhone ?: "") }
+    var address by remember { mutableStateOf(initialAddress ?: "") }
+    var addressDetail by remember { mutableStateOf(initialAddressDetail ?: "") }
     var verificationCode by remember { mutableStateOf("") }
     var showDeleteDialog by remember { mutableStateOf(false) }
     val isSocialLogin = initialProvider != null
@@ -291,22 +296,24 @@ fun EditProfileScreen(
                     )
                 }
 
-                // 이름 (disabled)
+                // 이름
                 FormField(
                     label = "이름",
                     required = true,
                     value = name,
-                    onValueChange = {},
-                    placeholder = "",
-                    enabled = false,
-                    trailingIcon = {
-                        Image(
-                            painter = painterResource(id = R.drawable.icon_lock),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            contentScale = ContentScale.Fit,
-                        )
-                    },
+                    onValueChange = { if (!isNameLocked) name = it },
+                    placeholder = if (isNameLocked) "" else "이름을 입력해주세요.",
+                    enabled = !isNameLocked,
+                    trailingIcon = if (isNameLocked) {
+                        {
+                            Image(
+                                painter = painterResource(id = R.drawable.icon_lock),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                contentScale = ContentScale.Fit,
+                            )
+                        }
+                    } else null,
                 )
 
                 // 휴대폰
@@ -489,6 +496,9 @@ fun EditProfileScreen(
                             nickname,
                             password.ifBlank { null },
                             if (isPhoneVerified) phone else null,
+                            name.ifBlank { null },
+                            address.ifBlank { null },
+                            addressDetail.ifBlank { null },
                         )
                     },
                 contentAlignment = Alignment.Center,
@@ -649,6 +659,12 @@ private fun ProfileTextField(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
+                    .then(
+                        if (!enabled) Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF5F5F5))
+                        else Modifier
+                    )
                     .border(1.dp, Color(0xFFE9E9E9), RoundedCornerShape(8.dp))
                     .padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,

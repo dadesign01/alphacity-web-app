@@ -43,8 +43,8 @@ struct MainTabView: View {
 
     var body: some View {
         if let store = selectedStore {
-            StoreDetailView(
-                store: store,
+            ProgramDetailView(
+                program: store.toProgramData(),
                 onBackTapped: {
                     selectedStore = nil
                 },

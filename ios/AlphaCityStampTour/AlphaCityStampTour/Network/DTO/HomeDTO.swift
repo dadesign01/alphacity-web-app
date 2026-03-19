@@ -29,6 +29,9 @@ struct ProgramData: Decodable, Identifiable {
     let longitude: Double?
     let phone: String?
     let speaker: String?
+    let ownerName: String?
+    let storeCode: String?
+    let operatingDays: String?
     let startDate: String
     let endDate: String
     let status: String
@@ -163,13 +166,25 @@ struct UserCouponData: Decodable, Identifiable {
     let createdAt: String?
 }
 
+// MARK: - 활동 이력
+
+struct ActivityItemDTO: Decodable {
+    let type: String
+    let title: String
+    let date: String
+    let validUntil: String?
+}
+
 // MARK: - 유저 프로필
 
 struct UserProfileData: Decodable {
     let id: Int
     let email: String
     let nickname: String
+    let name: String?
     let phone: String?
+    let address: String?
+    let addressDetail: String?
     let profileImage: String?
     let provider: String?
     let stampCount: Int?

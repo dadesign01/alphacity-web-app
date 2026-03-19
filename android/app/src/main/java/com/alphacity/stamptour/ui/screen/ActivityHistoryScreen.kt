@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -21,9 +22,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.alphacity.stamptour.R
+import com.alphacity.stamptour.network.dto.ActivityItemDto
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
+import com.alphacity.stamptour.viewmodel.ActivityHistoryViewModel
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 enum class ActivityType(val label: String) {
     STAMP("스탬프"),
@@ -33,36 +40,61 @@ enum class ActivityType(val label: String) {
 }
 
 data class ActivityItem(
-    val id: Int,
     val type: ActivityType,
     val title: String,
     val datetime: String,
     val validUntil: String? = null,
 )
 
-enum class ActivityFilter(val label: String) {
-    STAMP("스탬프"),
-    MISSION("미션"),
-    EVENT("행사"),
-    COUPON("쿠폰 교환"),
+enum class ActivityFilter(val label: String, val apiType: String) {
+    STAMP("스탬프", "stamp"),
+    MISSION("미션", "mission"),
+    EVENT("행사", "event"),
+    COUPON("쿠폰 교환", "coupon"),
 }
 
-private fun getMockActivities(): List<ActivityItem> = listOf(
-    ActivityItem(1, ActivityType.COUPON, "스탬프 3개 쿠폰 교환", "2026.01.28 16:55"),
-    ActivityItem(2, ActivityType.STAMP, "디지털 갤러리 스탬프 획득", "2026.01.28 15:30", "2026년 03월 31일까지 사용 가능"),
-    ActivityItem(3, ActivityType.MISSION, "디지털 갤러리 퀴즈 미션 완료", "2026.01.28 15:30"),
-    ActivityItem(4, ActivityType.EVENT, "디지털 아트 전시회 참여", "2026.01.28 12:23"),
-    ActivityItem(5, ActivityType.STAMP, "VR 스튜디오 스탬프 획득", "2026.01.28 12:00", "2026년 03월 31일까지 사용 가능"),
-    ActivityItem(6, ActivityType.STAMP, "AI 스터디 스탬프 획득", "2026.01.28 11:48", "2026년 03월 31일까지 사용 가능"),
-)
+private fun ActivityItemDto.toActivityItem(): ActivityItem {
+    val activityType = when (type) {
+        "stamp" -> ActivityType.STAMP
+        "mission" -> ActivityType.MISSION
+        "event" -> ActivityType.EVENT
+        "coupon" -> ActivityType.COUPON
+        else -> ActivityType.STAMP
+    }
+    val formattedDate = try {
+        val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+        isoFormat.timeZone = TimeZone.getTimeZone("UTC")
+        val parsed = isoFormat.parse(date)
+        val displayFormat = SimpleDateFormat("yyyy.MM.dd HH:mm", Locale.getDefault())
+        if (parsed != null) displayFormat.format(parsed) else date
+    } catch (_: Exception) {
+        date
+    }
+    return ActivityItem(
+        type = activityType,
+        title = title,
+        datetime = formattedDate,
+        validUntil = validUntil,
+    )
+}
 
 @Composable
 fun ActivityHistoryScreen(
     onBackClick: () -> Unit,
+    viewModel: ActivityHistoryViewModel = hiltViewModel(),
 ) {
     var selectedFilter by remember { mutableStateOf<ActivityFilter?>(null) }
-    val allActivities = remember { getMockActivities() }
-    val filteredActivities = remember(selectedFilter) {
+    val activitiesDto by viewModel.activities.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.fetchActivities()
+    }
+
+    val allActivities = remember(activitiesDto) {
+        activitiesDto.map { it.toActivityItem() }
+    }
+    val filteredActivities = remember(selectedFilter, allActivities) {
         if (selectedFilter == null) {
             allActivities
         } else {
@@ -142,34 +174,43 @@ fun ActivityHistoryScreen(
         }
 
         // === Activity List ===
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            items(filteredActivities) { activity ->
-                ActivityItemRow(activity = activity)
-                Divider(
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                    color = Color(0xFFB5B5B5),
-                    thickness = 0.5.dp,
-                )
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = Primary)
             }
-
-            // Footer
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFFF9F9F9))
-                        .padding(vertical = 40.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "© 2026 Alpha Stamp. All rights reserved.",
-                        fontFamily = Pretendard,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 10.sp,
-                        color = Color(0xFF8F8F8F),
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                items(filteredActivities) { activity ->
+                    ActivityItemRow(activity = activity)
+                    Divider(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = Color(0xFFB5B5B5),
+                        thickness = 0.5.dp,
                     )
+                }
+
+                // Footer
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFF9F9F9))
+                            .padding(vertical = 40.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "© 2026 Alpha Stamp. All rights reserved.",
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 10.sp,
+                            color = Color(0xFF8F8F8F),
+                        )
+                    }
                 }
             }
         }

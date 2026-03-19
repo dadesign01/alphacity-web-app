@@ -663,7 +663,7 @@ private fun addStoreMarkers(
 
     validStores.forEachIndexed { index, store ->
         val position = LatLng.from(store.latitude!!, store.longitude!!)
-        val bitmap = createStoreNameBubbleBitmap(store.name, context)
+        val bitmap = createNameBubbleBitmap(store.name, context)
 
         val style = LabelStyles.from(
             LabelStyle.from(bitmap).setApplyDpScale(false)

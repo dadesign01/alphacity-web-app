@@ -63,3 +63,37 @@ struct StoreProgramInfo: Decodable {
     let id: Int
     let name: String
 }
+
+// StoreData → ProgramData 변환 (ProgramDetailView 재사용)
+extension StoreData {
+    func toProgramData() -> ProgramData {
+        let hours = [openTime, closeTime].compactMap { $0 }.joined(separator: " - ")
+        let fullAddress = [address, addressDetail].compactMap { $0 }.joined(separator: " ")
+        return ProgramData(
+            id: -id,
+            name: name,
+            description: description,
+            category: "food",
+            subcategory: nil,
+            hasCoupon: !(storeCoupons?.isEmpty ?? true),
+            imageUrl: imageUrl,
+            operatingHours: hours.isEmpty ? nil : hours,
+            location: fullAddress.isEmpty ? nil : fullAddress,
+            latitude: latitude,
+            longitude: longitude,
+            phone: phone,
+            speaker: nil,
+            ownerName: ownerName,
+            storeCode: storeCode,
+            operatingDays: operatingDays,
+            startDate: "",
+            endDate: "",
+            status: "in_progress",
+            events: nil,
+            storeCoupons: storeCoupons?.map {
+                StoreCouponInfo(storeId: id, storeName: name, couponId: $0.coupon.id, couponName: $0.coupon.name, couponDescription: $0.coupon.description)
+            },
+            stores: nil
+        )
+    }
+}
