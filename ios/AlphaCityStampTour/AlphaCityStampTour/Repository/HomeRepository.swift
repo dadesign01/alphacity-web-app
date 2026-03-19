@@ -35,10 +35,13 @@ final class HomeRepository {
         return try await client.request(path: "users/me", authenticated: true)
     }
 
-    func updateProfile(nickname: String, password: String?, phone: String? = nil, name: String? = nil, address: String? = nil, addressDetail: String? = nil) async throws -> UserProfileData {
+    func updateProfile(nickname: String, currentPassword: String?, newPassword: String?, phone: String? = nil, name: String? = nil, address: String? = nil, addressDetail: String? = nil, birthDate: String? = nil, gender: String? = nil) async throws -> UserProfileData {
         var body: [String: String] = ["nickname": nickname]
-        if let password = password, !password.isEmpty {
-            body["password"] = password
+        if let currentPassword = currentPassword, !currentPassword.isEmpty {
+            body["currentPassword"] = currentPassword
+        }
+        if let newPassword = newPassword, !newPassword.isEmpty {
+            body["newPassword"] = newPassword
         }
         if let phone = phone {
             body["phone"] = phone
@@ -51,6 +54,12 @@ final class HomeRepository {
         }
         if let addressDetail = addressDetail {
             body["addressDetail"] = addressDetail
+        }
+        if let birthDate = birthDate, !birthDate.isEmpty {
+            body["birthDate"] = birthDate
+        }
+        if let gender = gender, !gender.isEmpty {
+            body["gender"] = gender
         }
         return try await client.request(
             path: "users/me",

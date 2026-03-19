@@ -37,6 +37,8 @@ export async function GET(request: NextRequest) {
       phone: user.phone,
       address: user.address,
       addressDetail: user.addressDetail,
+      birthDate: user.birthDate ? user.birthDate.toISOString().split('T')[0] : null,
+      gender: user.gender,
       profileImage: user.profileImage,
       provider: user.provider,
       stampCount: user._count.userStamps,
@@ -79,10 +81,21 @@ export async function PUT(request: NextRequest) {
     const existingUser = await prisma.user.findUnique({ where: { id: userId } });
     const nameUpdate = body.name && !existingUser?.name ? { name: body.name } : {};
 
-    // 비밀번호 변경 처리
-    const passwordUpdate = body.password
-      ? { passwordHash: await bcrypt.hash(body.password, 10) }
-      : {};
+    // 비밀번호 변경 처리 (현재 비밀번호 확인 필수)
+    let passwordUpdate = {};
+    if (body.newPassword) {
+      if (!body.currentPassword) {
+        return errorResponse('INVALID_INPUT', '현재 비밀번호를 입력해주세요');
+      }
+      if (!existingUser?.passwordHash) {
+        return errorResponse('INVALID_INPUT', '소셜 로그인 계정은 비밀번호를 변경할 수 없습니다');
+      }
+      const isMatch = await bcrypt.compare(body.currentPassword, existingUser.passwordHash);
+      if (!isMatch) {
+        return errorResponse('WRONG_PASSWORD', '현재 비밀번호가 일치하지 않습니다');
+      }
+      passwordUpdate = { passwordHash: await bcrypt.hash(body.newPassword, 10) };
+    }
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -94,6 +107,8 @@ export async function PUT(request: NextRequest) {
         ...(body.address !== undefined && { address: body.address }),
         ...(body.addressDetail !== undefined && { addressDetail: body.addressDetail }),
         ...(body.profileImage !== undefined && { profileImage: body.profileImage }),
+        ...(body.birthDate !== undefined && { birthDate: body.birthDate ? new Date(body.birthDate) : null }),
+        ...(body.gender !== undefined && { gender: body.gender }),
       },
     });
 
@@ -105,10 +120,15 @@ export async function PUT(request: NextRequest) {
       phone: user.phone,
       address: user.address,
       addressDetail: user.addressDetail,
+      birthDate: user.birthDate ? user.birthDate.toISOString().split('T')[0] : null,
+      gender: user.gender,
       profileImage: user.profileImage,
       provider: user.provider,
     }, '프로필이 수정되었습니다');
-  } catch {
+  } catch (e: unknown) {
+    if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'P2002') {
+      return errorResponse('DUPLICATE_PHONE', '이미 사용 중인 전화번호입니다', 409);
+    }
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }
 }

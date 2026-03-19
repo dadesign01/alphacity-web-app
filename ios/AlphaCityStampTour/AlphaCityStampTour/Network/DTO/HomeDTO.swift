@@ -166,6 +166,21 @@ struct UserCouponData: Decodable, Identifiable {
     let createdAt: String?
 }
 
+struct MyCouponData: Decodable, Identifiable {
+    let id: Int
+    let couponId: Int
+    let name: String
+    let description: String?
+    let imageUrl: String?
+    let code: String
+    let status: String
+    let validUntil: String
+    let storeName: String?
+    let requestedAt: String?
+    let usedAt: String?
+    let createdAt: String?
+}
+
 // MARK: - 활동 이력
 
 struct ActivityItemDTO: Decodable {
@@ -187,6 +202,8 @@ struct UserProfileData: Decodable {
     let addressDetail: String?
     let profileImage: String?
     let provider: String?
+    let birthDate: String?
+    let gender: String?
     let stampCount: Int?
     let couponCount: Int?
     let missionCount: Int?

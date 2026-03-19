@@ -35,35 +35,30 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import com.alphacity.stamptour.BuildConfig
 import com.alphacity.stamptour.R
+import com.alphacity.stamptour.network.dto.MyCouponItem
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
-
-private data class CouponItem(
-    val id: Int,
-    val name: String,
-    val benefit: String,
-    val validUntil: String,
-    val code: String,
-    val storeName: String,
-)
-
-private val mockCoupons = listOf(
-    CouponItem(1, "VR 체험 무료 이용권", "1회 무료", "2026.03.31까지 사용 가능", "VR2026", "VR STUDIO"),
-    CouponItem(2, "메타 카페 음료 할인", "15% 할인", "2026.03.31까지 사용 가능", "CAFE2026", "META CAFE"),
-    CouponItem(3, "푸드 코트 식사 할인권", "5,000원 할인", "2026.03.31까지 사용 가능", "FOOD2026", "FOOD COURT"),
-    CouponItem(4, "기념품샵 쇼핑 할인 쿠폰", "10,000원 할인", "2026.03.31까지 사용 가능", "SHOP2026", "GIFT SHOP"),
-    CouponItem(5, "카페 음료 20% 할인", "20% 할인", "2026.03.31까지 사용 가능", "CAFE20", "META CAFE"),
-)
+import com.alphacity.stamptour.viewmodel.MyCouponsViewModel
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun MyCouponsScreen(
     onBackClick: () -> Unit,
+    viewModel: MyCouponsViewModel = hiltViewModel(),
 ) {
-    var selectedCoupon by remember { mutableStateOf<CouponItem?>(null) }
-    var usedCouponIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    val myCoupons by viewModel.myCoupons.collectAsState()
+    var selectedCoupon by remember { mutableStateOf<MyCouponItem?>(null) }
 
-    val availableCoupons = mockCoupons.filter { it.id !in usedCouponIds }
+    LaunchedEffect(Unit) {
+        viewModel.fetchMyCoupons()
+    }
+
+    val availableCoupons = myCoupons.filter { it.status == "issued" }
 
     Box(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Column(
@@ -214,14 +209,14 @@ fun MyCouponsScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         availableCoupons.forEach { coupon ->
-                            CouponCardItem(coupon = coupon) { selectedCoupon = coupon }
+                            MyCouponCardItem(coupon = coupon) { selectedCoupon = coupon }
                         }
                     }
                 }
 
                 // Footer
                 Text(
-                    text = "© 2026 Alpha Stamp. All rights reserved.",
+                    text = "\u00A9 2026 Alpha Stamp. All rights reserved.",
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Normal,
                     fontSize = 10.sp,
@@ -237,12 +232,12 @@ fun MyCouponsScreen(
 
         // === Bottom Sheet Overlay ===
         selectedCoupon?.let { coupon ->
-            CouponDetailBottomSheet(
+            MyCouponDetailBottomSheet(
                 coupon = coupon,
                 onDismiss = { selectedCoupon = null },
                 onUseCoupon = {
-                    usedCouponIds = usedCouponIds + coupon.id
                     selectedCoupon = null
+                    // TODO: 쿠폰 사용 API 호출
                 },
             )
         }
@@ -267,8 +262,22 @@ private val CouponDecoShape = object : Shape {
     }
 }
 
+private fun formatCouponValidUntil(raw: String): String {
+    return try {
+        val date = LocalDateTime.parse(raw, DateTimeFormatter.ISO_DATE_TIME)
+        date.format(DateTimeFormatter.ofPattern("yyyy.MM.dd")) + "까지 사용 가능"
+    } catch (_: Exception) {
+        try {
+            val date = java.time.LocalDate.parse(raw.take(10))
+            date.format(DateTimeFormatter.ofPattern("yyyy.MM.dd")) + "까지 사용 가능"
+        } catch (_: Exception) {
+            raw
+        }
+    }
+}
+
 @Composable
-private fun CouponCardItem(coupon: CouponItem, onClick: () -> Unit) {
+private fun MyCouponCardItem(coupon: MyCouponItem, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -290,12 +299,26 @@ private fun CouponCardItem(coupon: CouponItem, onClick: () -> Unit) {
                     .background(Color(0xFFF8F8F8)),
                 contentAlignment = Alignment.Center,
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.icon_coupon),
-                    contentDescription = null,
-                    modifier = Modifier.size(52.dp),
-                    contentScale = ContentScale.Fit,
-                )
+                if (!coupon.imageUrl.isNullOrBlank()) {
+                    val fullUrl = if (coupon.imageUrl.startsWith("http")) {
+                        coupon.imageUrl
+                    } else {
+                        BuildConfig.SERVER_URL + coupon.imageUrl
+                    }
+                    AsyncImage(
+                        model = fullUrl,
+                        contentDescription = coupon.name,
+                        modifier = Modifier.fillMaxSize(0.7f),
+                        contentScale = ContentScale.Fit,
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.icon_coupon),
+                        contentDescription = null,
+                        modifier = Modifier.size(52.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
             }
 
             // Middle: Info
@@ -313,17 +336,19 @@ private fun CouponCardItem(coupon: CouponItem, onClick: () -> Unit) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = coupon.benefit,
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 28.sp,
-                    color = Primary,
-                )
+                if (!coupon.description.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = coupon.description,
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 28.sp,
+                        color = Primary,
+                    )
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = coupon.validUntil,
+                    text = formatCouponValidUntil(coupon.validUntil),
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Medium,
                     fontSize = 12.sp,
@@ -360,8 +385,8 @@ private fun CouponCardItem(coupon: CouponItem, onClick: () -> Unit) {
 }
 
 @Composable
-private fun CouponDetailBottomSheet(
-    coupon: CouponItem,
+private fun MyCouponDetailBottomSheet(
+    coupon: MyCouponItem,
     onDismiss: () -> Unit,
     onUseCoupon: () -> Unit,
 ) {
@@ -396,7 +421,7 @@ private fun CouponDetailBottomSheet(
 
             // Store name
             Text(
-                text = coupon.storeName,
+                text = coupon.storeName ?: coupon.name,
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.Medium,
                 fontSize = 16.sp,
@@ -406,7 +431,7 @@ private fun CouponDetailBottomSheet(
 
             // Benefit
             Text(
-                text = "카페 음료 ${coupon.benefit}",
+                text = coupon.description ?: coupon.name,
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.Bold,
                 fontSize = 28.sp,
@@ -469,7 +494,7 @@ private fun CouponDetailBottomSheet(
                 )
             }
 
-            // Caution section — 회색 배경 양끝까지
+            // Caution section
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -478,7 +503,7 @@ private fun CouponDetailBottomSheet(
                     .padding(horizontal = 20.dp, vertical = 16.dp),
             ) {
                 Text(
-                    text = "⚠ 쿠폰 사용 시 주의해주세요.",
+                    text = "\u26A0 쿠폰 사용 시 주의해주세요.",
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Medium,
                     fontSize = 10.sp,

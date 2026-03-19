@@ -94,7 +94,7 @@ class RegisterViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            authRepository.register(email, password, name)
+            authRepository.register(email, password, name, phone, name)
                 .onSuccess { data ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,

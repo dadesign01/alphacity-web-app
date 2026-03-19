@@ -5,31 +5,10 @@
 
 import SwiftUI
 
-private struct CouponItemData: Identifiable {
-    let id: Int
-    let name: String
-    let benefit: String
-    let validUntil: String
-    let code: String
-    let storeName: String
-}
-
-private let mockCoupons: [CouponItemData] = [
-    CouponItemData(id: 1, name: "VR 체험 무료 이용권", benefit: "1회 무료", validUntil: "2026.03.31까지 사용 가능", code: "VR2026", storeName: "VR STUDIO"),
-    CouponItemData(id: 2, name: "메타 카페 음료 할인", benefit: "15% 할인", validUntil: "2026.03.31까지 사용 가능", code: "CAFE2026", storeName: "META CAFE"),
-    CouponItemData(id: 3, name: "푸드 코트 식사 할인권", benefit: "5,000원 할인", validUntil: "2026.03.31까지 사용 가능", code: "FOOD2026", storeName: "FOOD COURT"),
-    CouponItemData(id: 4, name: "기념품샵 쇼핑 할인 쿠폰", benefit: "10,000원 할인", validUntil: "2026.03.31까지 사용 가능", code: "SHOP2026", storeName: "GIFT SHOP"),
-    CouponItemData(id: 5, name: "카페 음료 20% 할인", benefit: "20% 할인", validUntil: "2026.03.31까지 사용 가능", code: "CAFE20", storeName: "META CAFE"),
-]
-
 struct MyCouponsView: View {
     var onBackTapped: () -> Void
-    @State private var selectedCoupon: CouponItemData? = nil
-    @State private var usedCouponIds: Set<Int> = []
-
-    private var availableCoupons: [CouponItemData] {
-        mockCoupons.filter { !usedCouponIds.contains($0.id) }
-    }
+    @StateObject private var viewModel = MyCouponsViewModel()
+    @State private var selectedCoupon: MyCouponData? = nil
 
     var body: some View {
         ZStack {
@@ -77,7 +56,7 @@ struct MyCouponsView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .frame(height: 185)
 
-                            Text("\(availableCoupons.count)개")
+                            Text("\(viewModel.availableCoupons.count)개")
                                 .font(AppFont.bold(35))
                                 .foregroundColor(AppColor.primary)
                                 .padding(.trailing, 20)
@@ -124,7 +103,7 @@ struct MyCouponsView: View {
                             .padding(.top, 24)
 
                         // === Coupon List ===
-                        if availableCoupons.isEmpty {
+                        if viewModel.availableCoupons.isEmpty {
                             Text("사용 가능한 쿠폰이 없습니다.")
                                 .font(AppFont.medium(14))
                                 .foregroundColor(Color(hex: "9CA3AF"))
@@ -132,8 +111,8 @@ struct MyCouponsView: View {
                                 .padding(.vertical, 40)
                         } else {
                             VStack(spacing: 12) {
-                                ForEach(availableCoupons) { coupon in
-                                    CouponCard(coupon: coupon) {
+                                ForEach(viewModel.availableCoupons) { coupon in
+                                    MyCouponCard(coupon: coupon) {
                                         selectedCoupon = coupon
                                     }
                                 }
@@ -143,7 +122,7 @@ struct MyCouponsView: View {
                         }
 
                         // Footer
-                        Text("© 2026 Alpha Stamp. All rights reserved.")
+                        Text("\u{00A9} 2026 Alpha Stamp. All rights reserved.")
                             .font(AppFont.regular(10))
                             .foregroundColor(Color(hex: "8F8F8F"))
                             .frame(maxWidth: .infinity)
@@ -155,24 +134,39 @@ struct MyCouponsView: View {
 
             // === Bottom Sheet Overlay ===
             if let coupon = selectedCoupon {
-                CouponDetailSheet(
+                MyCouponDetailSheet(
                     coupon: coupon,
                     onDismiss: { selectedCoupon = nil },
                     onUseCoupon: {
-                        usedCouponIds.insert(coupon.id)
                         selectedCoupon = nil
+                        // TODO: 쿠폰 사용 API 호출
                     }
                 )
             }
+        }
+        .onAppear {
+            viewModel.fetchMyCoupons()
         }
     }
 }
 
 // MARK: - Coupon Card
 
-private struct CouponCard: View {
-    let coupon: CouponItemData
+private struct MyCouponCard: View {
+    let coupon: MyCouponData
     let onTap: () -> Void
+
+    private var validUntilText: String {
+        let raw = coupon.validUntil
+        if raw.count >= 10 {
+            let dateStr = String(raw.prefix(10))
+            let parts = dateStr.split(separator: "-")
+            if parts.count == 3 {
+                return "\(parts[0]).\(parts[1]).\(parts[2])까지 사용 가능"
+            }
+        }
+        return raw
+    }
 
     var body: some View {
         Button(action: onTap) {
@@ -181,10 +175,22 @@ private struct CouponCard: View {
                     Circle()
                         .fill(Color(hex: "F8F8F8"))
                         .frame(width: 85, height: 85)
-                    Image("IconCoupon")
-                        .resizable()
-                        .scaledToFit()
+
+                    if let imageUrl = coupon.imageUrl, !imageUrl.isEmpty {
+                        AsyncImage(url: URL(string: imageUrl.hasPrefix("http") ? imageUrl : APIClient.serverURL + imageUrl)) { image in
+                            image.resizable().scaledToFit()
+                        } placeholder: {
+                            Image("IconCoupon")
+                                .resizable()
+                                .scaledToFit()
+                        }
                         .frame(width: 52, height: 52)
+                    } else {
+                        Image("IconCoupon")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 52, height: 52)
+                    }
                 }
                 .padding(.leading, 16)
 
@@ -193,10 +199,14 @@ private struct CouponCard: View {
                         .font(AppFont.medium(16))
                         .foregroundColor(Color(hex: "121212"))
                         .lineLimit(1)
-                    Text(coupon.benefit)
-                        .font(AppFont.bold(28))
-                        .foregroundColor(AppColor.primary)
-                    Text(coupon.validUntil)
+
+                    if let desc = coupon.description, !desc.isEmpty {
+                        Text(desc)
+                            .font(AppFont.bold(28))
+                            .foregroundColor(AppColor.primary)
+                    }
+
+                    Text(validUntilText)
                         .font(AppFont.medium(12))
                         .foregroundColor(Color(hex: "8F8F8F"))
                         .padding(.horizontal, 10)
@@ -211,7 +221,7 @@ private struct CouponCard: View {
                 Spacer(minLength: 0)
 
                 ZStack {
-                    CouponDecoShape()
+                    MyCouponDecoShape()
                         .fill(
                             LinearGradient(
                                 colors: [Color(hex: "4B8BF5"), AppColor.primary],
@@ -239,7 +249,7 @@ private struct CouponCard: View {
 
 // MARK: - Coupon Deco Shape
 
-private struct CouponDecoShape: Shape {
+private struct MyCouponDecoShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         let w = rect.width
@@ -268,8 +278,8 @@ private struct CouponDecoShape: Shape {
 
 // MARK: - Coupon Detail Bottom Sheet
 
-private struct CouponDetailSheet: View {
-    let coupon: CouponItemData
+private struct MyCouponDetailSheet: View {
+    let coupon: MyCouponData
     let onDismiss: () -> Void
     let onUseCoupon: () -> Void
 
@@ -289,13 +299,13 @@ private struct CouponDetailSheet: View {
                     .padding(.top, 19)
 
                 // Store name
-                Text(coupon.storeName)
+                Text(coupon.storeName ?? coupon.name)
                     .font(AppFont.medium(16))
                     .foregroundColor(Color(hex: "121212"))
                     .padding(.top, 24)
 
                 // Benefit
-                Text("카페 음료 \(coupon.benefit)")
+                Text(coupon.description ?? coupon.name)
                     .font(AppFont.bold(28))
                     .foregroundColor(Color(hex: "121212"))
                     .padding(.top, 4)
@@ -339,7 +349,7 @@ private struct CouponDetailSheet: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
 
-                // Caution section — 회색 배경 양끝까지
+                // Caution section
                 ScrollView {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 4) {

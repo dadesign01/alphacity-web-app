@@ -12,6 +12,21 @@ final class MapViewModel: ObservableObject {
     @Published var selectedCategory: String = "all"
     @Published var isLoading = false
 
+    // 카메라 위치 보존 (네비게이션 복귀 시 복원용)
+    var savedCameraLat: Double?
+    var savedCameraLng: Double?
+    var savedCameraZoom: Int?
+
+    var hasSavedCameraPosition: Bool {
+        savedCameraLat != nil && savedCameraLng != nil && savedCameraZoom != nil
+    }
+
+    func saveCameraPosition(lat: Double, lng: Double, zoom: Int) {
+        savedCameraLat = lat
+        savedCameraLng = lng
+        savedCameraZoom = zoom
+    }
+
     private let repository = HomeRepository.shared
     private let storeRepository = StoreRepository.shared
 

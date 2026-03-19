@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.alphacity.stamptour.R
+import com.alphacity.stamptour.network.dto.UserProfile
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.viewmodel.MyPageViewModel
@@ -35,6 +37,7 @@ fun MyPageScreen(
     viewModel: MyPageViewModel = hiltViewModel(),
 ) {
     var showActivityHistory by remember { mutableStateOf(false) }
+    var showProfileInfo by remember { mutableStateOf(false) }
     var showEditProfile by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showStoreRegister by remember { mutableStateOf(false) }
@@ -49,10 +52,11 @@ fun MyPageScreen(
     }
 
     // 서브화면 뒤로가기 처리 (MainScreen BackHandler가 가로채지 못하게)
-    val hasSubScreen = showActivityHistory || showEditProfile || showSettings || showStoreRegister || showMyCoupons || showStampExchange
+    val hasSubScreen = showActivityHistory || showProfileInfo || showEditProfile || showSettings || showStoreRegister || showMyCoupons || showStampExchange
     BackHandler(enabled = hasSubScreen) {
         when {
             showEditProfile -> showEditProfile = false
+            showProfileInfo -> showProfileInfo = false
             showActivityHistory -> showActivityHistory = false
             showSettings -> showSettings = false
             showStoreRegister -> showStoreRegister = false
@@ -66,9 +70,22 @@ fun MyPageScreen(
         return
     }
 
+    if (showProfileInfo) {
+        ProfileInfoScreen(
+            onBackClick = { showProfileInfo = false },
+            onEditClick = { showEditProfile = true },
+            userProfile = userProfile,
+        )
+        return
+    }
+
     if (showEditProfile) {
         EditProfileScreen(
-            onBackClick = { showEditProfile = false },
+            onBackClick = {
+                showEditProfile = false
+                // 수정 후 프로필 정보 새로고침
+                viewModel.fetchProfile()
+            },
             onLogout = onLogout,
             initialNickname = userProfile?.nickname ?: "",
             initialEmail = userProfile?.email ?: "",
@@ -77,6 +94,8 @@ fun MyPageScreen(
             initialAddress = userProfile?.address,
             initialAddressDetail = userProfile?.addressDetail,
             initialProvider = userProfile?.provider,
+            initialBirthDate = userProfile?.birthDate,
+            initialGender = userProfile?.gender,
             viewModel = viewModel,
         )
         return
@@ -268,8 +287,8 @@ fun MyPageScreen(
 
             MenuItemRow(
                 iconRes = R.drawable.icon_edit_profile,
-                title = "개인정보 수정",
-                onClick = { showEditProfile = true },
+                title = "개인정보",
+                onClick = { showProfileInfo = true },
             )
             MenuDivider()
 
@@ -343,6 +362,143 @@ fun MyPageScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ProfileInfoScreen(
+    onBackClick: () -> Unit,
+    onEditClick: () -> Unit,
+    userProfile: UserProfile?,
+) {
+    val genderText = when (userProfile?.gender) {
+        "male" -> "남성"
+        "female" -> "여성"
+        "other" -> "기타"
+        else -> ""
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .statusBarsPadding(),
+    ) {
+        // === Header ===
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .height(50.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.icon_back_arrow),
+                contentDescription = "뒤로",
+                modifier = Modifier
+                    .size(13.dp, 26.dp)
+                    .clickable(onClick = onBackClick),
+                contentScale = ContentScale.Fit,
+            )
+            Spacer(modifier = Modifier.width(24.dp))
+            Text(
+                text = "개인정보",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp,
+                color = Color(0xFF121212),
+            )
+        }
+        Divider(color = Color(0xFFE2E2E2), thickness = 1.dp)
+
+        // === Scrollable Content ===
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                ProfileInfoRow(label = "이름", value = userProfile?.name ?: "-")
+                ProfileInfoRow(label = "닉네임", value = userProfile?.nickname ?: "-")
+                ProfileInfoRow(label = "이메일", value = userProfile?.email ?: "-")
+                ProfileInfoRow(label = "휴대폰", value = userProfile?.phone ?: "-")
+                ProfileInfoRow(label = "주소", value = buildString {
+                    val addr = userProfile?.address ?: ""
+                    val detail = userProfile?.addressDetail ?: ""
+                    if (addr.isNotBlank()) append(addr)
+                    if (detail.isNotBlank()) {
+                        if (isNotBlank()) append(" ")
+                        append(detail)
+                    }
+                    if (isBlank()) append("-")
+                })
+                ProfileInfoRow(label = "생년월일", value = userProfile?.birthDate ?: "-")
+                ProfileInfoRow(label = "성별", value = genderText.ifBlank { "-" })
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // === 수정 Button ===
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .height(52.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFF6092FF),
+                                Color(0xFF2563EB),
+                                Color(0xFF1551D3),
+                            )
+                        )
+                    )
+                    .clickable(onClick = onEditClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "수정",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    color = Color.White,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun ProfileInfoRow(
+    label: String,
+    value: String,
+) {
+    Column {
+        Text(
+            text = label,
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp,
+            color = Color(0xFF8F8F8F),
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = value,
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.Normal,
+            fontSize = 16.sp,
+            color = Color(0xFF121212),
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Divider(color = Color(0xFFEDEDED), thickness = 1.dp)
     }
 }
 

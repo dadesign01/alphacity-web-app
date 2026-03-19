@@ -173,6 +173,22 @@ data class UserCouponItem(
     val createdAt: String? = null,
 )
 
+@Serializable
+data class MyCouponItem(
+    val id: Int,
+    val couponId: Int,
+    val name: String,
+    val description: String? = null,
+    val imageUrl: String? = null,
+    val code: String,
+    val status: String,
+    val validUntil: String,
+    val storeName: String? = null,
+    val requestedAt: String? = null,
+    val usedAt: String? = null,
+    val createdAt: String? = null,
+)
+
 // === 유저 프로필 ===
 
 @Serializable
@@ -186,6 +202,8 @@ data class UserProfile(
     val addressDetail: String? = null,
     val profileImage: String? = null,
     val provider: String? = null,
+    val birthDate: String? = null,
+    val gender: String? = null,
     val stampCount: Int? = null,
     val couponCount: Int? = null,
     val missionCount: Int? = null,
@@ -195,10 +213,13 @@ data class UserProfile(
 data class UpdateProfileRequest(
     val nickname: String,
     val name: String? = null,
-    val password: String? = null,
+    val currentPassword: String? = null,
+    val newPassword: String? = null,
     val phone: String? = null,
     val address: String? = null,
     val addressDetail: String? = null,
+    val birthDate: String? = null,
+    val gender: String? = null,
 )
 
 // === 활동 이력 ===

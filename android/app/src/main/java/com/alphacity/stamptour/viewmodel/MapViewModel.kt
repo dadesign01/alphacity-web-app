@@ -21,6 +21,23 @@ class MapViewModel @Inject constructor(
     private val storeRepository: StoreRepository,
 ) : ViewModel() {
 
+    // 카메라 위치 보존 (네비게이션 복귀 시 복원용)
+    var savedCameraLat: Double? = null
+        private set
+    var savedCameraLng: Double? = null
+        private set
+    var savedCameraZoom: Int? = null
+        private set
+
+    fun saveCameraPosition(lat: Double, lng: Double, zoom: Int) {
+        savedCameraLat = lat
+        savedCameraLng = lng
+        savedCameraZoom = zoom
+    }
+
+    val hasSavedCameraPosition: Boolean
+        get() = savedCameraLat != null && savedCameraLng != null && savedCameraZoom != null
+
     private val _programs = MutableStateFlow<List<ProgramItem>>(emptyList())
 
     private val _stores = MutableStateFlow<List<StoreData>>(emptyList())

@@ -34,4 +34,8 @@ final class StampRepository {
     func redeemCoupon(couponId: Int) async throws -> UserCouponData {
         return try await client.request(path: "coupons/\(couponId)/redeem", method: "POST", authenticated: true)
     }
+
+    func fetchMyCoupons() async throws -> [MyCouponData] {
+        return try await client.request(path: "coupons?my=true", authenticated: true)
+    }
 }

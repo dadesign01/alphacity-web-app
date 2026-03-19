@@ -2,6 +2,7 @@ package com.alphacity.stamptour.ui.screen
 
 import android.Manifest
 import android.content.Intent
+import com.alphacity.stamptour.viewmodel.MissionViewModel
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -82,6 +83,7 @@ fun ProgramDetailScreen(
     onBackClick: () -> Unit = {},
     onNavigateToMap: (lat: Double, lng: Double) -> Unit = { _, _ -> },
     viewModel: ProgramDetailViewModel = hiltViewModel(),
+    missionViewModel: MissionViewModel = hiltViewModel(),
 ) {
     val isFood = program.category == "food"
     val context = LocalContext.current
@@ -94,6 +96,13 @@ fun ProgramDetailScreen(
     var selectedMission by remember { mutableStateOf<MissionItem?>(null) }
     var showRestrictionAlert by remember { mutableStateOf(false) }
     var restrictionMessage by remember { mutableStateOf("") }
+
+    // 미션이 선택될 때마다 MissionViewModel 상태 초기화
+    LaunchedEffect(selectedMission?.id) {
+        if (selectedMission != null) {
+            missionViewModel.reset()
+        }
+    }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -550,11 +559,13 @@ fun ProgramDetailScreen(
                 mission = mission,
                 programLat = program.latitude,
                 programLng = program.longitude,
+                viewModel = missionViewModel,
                 onDismiss = { selectedMission = null },
                 onCompleted = { viewModel.fetchMissions(program.id) },
             )
             "location_auth" -> LocationMissionScreen(
                 mission = mission,
+                viewModel = missionViewModel,
                 onDismiss = { selectedMission = null },
                 onCompleted = { viewModel.fetchMissions(program.id) },
             )
@@ -562,6 +573,7 @@ fun ProgramDetailScreen(
                 mission = mission,
                 programLat = program.latitude,
                 programLng = program.longitude,
+                viewModel = missionViewModel,
                 onDismiss = { selectedMission = null },
                 onCompleted = { viewModel.fetchMissions(program.id) },
             )

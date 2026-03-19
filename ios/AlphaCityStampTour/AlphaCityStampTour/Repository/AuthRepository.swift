@@ -23,11 +23,11 @@ final class AuthRepository {
         return data
     }
 
-    func register(email: String, password: String, nickname: String) async throws -> AuthData {
+    func register(email: String, password: String, nickname: String, phone: String? = nil, name: String? = nil) async throws -> AuthData {
         let data: AuthData = try await client.request(
             path: "auth/register",
             method: "POST",
-            body: RegisterRequest(email: email, password: password, nickname: nickname)
+            body: RegisterRequest(email: email, password: password, nickname: nickname, phone: phone, name: name)
         )
         tokenManager.saveTokens(access: data.token, refresh: data.refreshToken)
         registerFcmToken()

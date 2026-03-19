@@ -43,9 +43,9 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun register(email: String, password: String, nickname: String): Result<AuthData> {
+    suspend fun register(email: String, password: String, nickname: String, phone: String? = null, name: String? = null): Result<AuthData> {
         return try {
-            val response = apiService.register(RegisterRequest(email, password, nickname))
+            val response = apiService.register(RegisterRequest(email, password, nickname, phone, name))
             if (response.success && response.data != null) {
                 tokenManager.saveTokens(response.data.token, response.data.refreshToken)
                 Result.success(response.data)

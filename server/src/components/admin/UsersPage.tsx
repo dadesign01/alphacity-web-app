@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, X, Stamp, Ticket, Target, CalendarCheck } from 'lucide-react';
+import { Search, X, Stamp, Ticket, Target, CalendarCheck, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface UserItem {
@@ -22,7 +22,13 @@ interface Stats {
 interface UserDetail {
   id: number;
   nickname: string;
+  name: string | null;
   email: string;
+  phone: string | null;
+  address: string | null;
+  addressDetail: string | null;
+  birthDate: string | null;
+  gender: string | null;
   profileImage: string | null;
   isActive: boolean;
   createdAt: string;
@@ -32,6 +38,7 @@ interface UserDetail {
   eventParticipants: { id: number; joinedAt: string; event: { id: number; name: string; type: string } }[];
 }
 
+const GENDER_LABEL: Record<string, string> = { male: '남성', female: '여성', other: '기타' };
 const COUPON_STATUS: Record<string, string> = { issued: '발급됨', pending: '사용 대기', used: '사용 완료', rejected: '반려' };
 const COUPON_STATUS_COLOR: Record<string, string> = {
   issued: 'bg-blue-100 text-blue-800', pending: 'bg-yellow-100 text-yellow-800',
@@ -167,7 +174,10 @@ export default function UsersPage() {
                       {selectedUser.nickname.charAt(0)}
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{selectedUser.nickname}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {selectedUser.name || selectedUser.nickname}
+                        {selectedUser.name && <span className="text-sm font-normal text-gray-500 ml-2">({selectedUser.nickname})</span>}
+                      </h3>
                       <p className="text-sm text-gray-500">{selectedUser.email}</p>
                     </div>
                   </div>
@@ -176,22 +186,60 @@ export default function UsersPage() {
                   </button>
                 </div>
 
-                {/* Info */}
+                {/* Profile Info */}
                 <div className="px-6 py-4 border-b border-gray-200">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <User className="w-4 h-4 text-gray-600" />
+                    <h4 className="text-sm font-semibold text-gray-900">프로필 정보</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                    <div>
+                      <p className="text-xs text-gray-500">이름</p>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">{selectedUser.name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">닉네임</p>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">{selectedUser.nickname}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">이메일</p>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">{selectedUser.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">전화번호</p>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">{selectedUser.phone || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">주소</p>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">
+                        {selectedUser.address ? `${selectedUser.address}${selectedUser.addressDetail ? ` ${selectedUser.addressDetail}` : ''}` : '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">생년월일</p>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">
+                        {selectedUser.birthDate ? new Date(selectedUser.birthDate).toLocaleDateString() : '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">성별</p>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">
+                        {selectedUser.gender ? (GENDER_LABEL[selectedUser.gender] || selectedUser.gender) : '-'}
+                      </p>
+                    </div>
                     <div>
                       <p className="text-xs text-gray-500">상태</p>
-                      <span className={`inline-flex mt-1 px-2 py-0.5 text-xs rounded-full ${selectedUser.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                      <span className={`inline-flex mt-0.5 px-2 py-0.5 text-xs rounded-full ${selectedUser.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                         {selectedUser.isActive ? '활성' : '비활성'}
                       </span>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500">가입일</p>
-                      <p className="text-sm font-medium text-gray-900 mt-1">{new Date(selectedUser.createdAt).toLocaleDateString()}</p>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">{new Date(selectedUser.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500">활동 요약</p>
-                      <p className="text-sm font-medium text-gray-900 mt-1">
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">
                         스탬프 {selectedUser.userStamps.length} · 쿠폰 {selectedUser.userCoupons.length} · 미션 {selectedUser.missionCompletions.length}
                       </p>
                     </div>

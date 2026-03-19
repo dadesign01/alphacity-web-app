@@ -4,6 +4,7 @@ import com.alphacity.stamptour.network.ApiService
 import com.alphacity.stamptour.network.TokenManager
 import com.alphacity.stamptour.network.dto.CouponItem
 import com.alphacity.stamptour.network.dto.MissionItem
+import com.alphacity.stamptour.network.dto.MyCouponItem
 import com.alphacity.stamptour.network.dto.StampItem
 import com.alphacity.stamptour.network.dto.UserCouponItem
 import com.alphacity.stamptour.network.dto.UserProfile
@@ -88,6 +89,19 @@ class StampRepository @Inject constructor(
                 Result.success(response.data)
             } else {
                 Result.failure(Exception(response.error?.message ?: "쿠폰 교환 실패"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getMyCoupons(): Result<List<MyCouponItem>> {
+        return try {
+            val response = apiService.getMyCoupons()
+            if (response.success && response.data != null) {
+                Result.success(response.data)
+            } else {
+                Result.failure(Exception(response.error?.message ?: "내 쿠폰 로드 실패"))
             }
         } catch (e: Exception) {
             Result.failure(e)

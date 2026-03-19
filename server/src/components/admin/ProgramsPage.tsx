@@ -1,7 +1,7 @@
 'use client';
 
-import { Plus, Edit, Trash2, Filter, X, Save } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Plus, Upload, Edit, Trash2, Filter, X, Save } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Program {
   id: number;
@@ -82,6 +82,8 @@ export default function ProgramsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchPrograms = () => {
     const params = new URLSearchParams();
@@ -94,9 +96,30 @@ export default function ProgramsPage() {
 
   useEffect(() => { fetchPrograms(); }, [statusFilter, categoryFilter]);
 
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/v1/admin/upload', { method: 'POST', body: formData });
+      const json = await res.json();
+      if (json.success) {
+        setForm((prev) => ({ ...prev, imageUrl: json.data.url }));
+      } else {
+        alert(json.error?.message || '업로드 실패');
+      }
+    } catch {
+      alert('업로드 중 오류가 발생했습니다');
+    }
+    setUploading(false);
+  };
+
   const openCreateForm = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setShowForm(true);
   };
 
@@ -274,10 +297,23 @@ export default function ProgramsPage() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">이미지 URL</label>
-              <input type="text" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                placeholder="이미지 URL을 입력하세요"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              <label className="block text-sm font-medium text-gray-700 mb-2">행사 이미지</label>
+              <div className="flex items-center gap-4">
+                <label className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer inline-block">
+                  <Upload className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+                  <p className="text-sm text-gray-600">이미지 업로드</p>
+                  <p className="text-xs text-gray-500 mt-0.5">PNG, JPG (최대 5MB)</p>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+                </label>
+                {uploading && <span className="text-sm text-gray-500">업로드 중...</span>}
+              </div>
+              {form.imageUrl && (
+                <div className="mt-3 flex items-center gap-3">
+                  <img src={form.imageUrl} alt="미리보기" className="h-20 w-20 rounded-lg object-cover border border-gray-200" />
+                  <button onClick={() => { setForm({ ...form, imageUrl: '' }); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                    className="text-sm text-red-500 hover:text-red-700">삭제</button>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

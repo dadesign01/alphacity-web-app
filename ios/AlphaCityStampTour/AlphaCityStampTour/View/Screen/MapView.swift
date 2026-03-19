@@ -97,7 +97,8 @@ struct MapContentView: View {
                         }
                     },
                     focusLat: $focusLat,
-                    focusLng: $focusLng
+                    focusLng: $focusLng,
+                    viewModel: viewModel
                 )
 
                 // Category filter tabs
@@ -148,9 +149,10 @@ struct KakaoMapRepresentable: UIViewRepresentable {
     var onStoreTapped: ((Int) -> Void)?
     @Binding var focusLat: Double?
     @Binding var focusLng: Double?
+    var viewModel: MapViewModel?
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(programs: programs, stores: stores, onMarkerTapped: onMarkerTapped, onStoreTapped: onStoreTapped)
+        Coordinator(programs: programs, stores: stores, onMarkerTapped: onMarkerTapped, onStoreTapped: onStoreTapped, viewModel: viewModel)
     }
 
     func makeUIView(context: Context) -> UIView {
@@ -213,6 +215,7 @@ struct KakaoMapRepresentable: UIViewRepresentable {
         var stores: [StoreData]
         var onMarkerTapped: ((Int) -> Void)?
         var onStoreTapped: ((Int) -> Void)?
+        weak var viewModel: MapViewModel?
         private var isMapReady = false
         private var currentZoomLevel: Int = 15
         private var clusters: [MapCluster] = []
@@ -222,11 +225,12 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             zoomCheckTimer?.invalidate()
         }
 
-        init(programs: [ProgramData], stores: [StoreData], onMarkerTapped: ((Int) -> Void)?, onStoreTapped: ((Int) -> Void)?) {
+        init(programs: [ProgramData], stores: [StoreData], onMarkerTapped: ((Int) -> Void)?, onStoreTapped: ((Int) -> Void)?, viewModel: MapViewModel?) {
             self.programs = programs
             self.stores = stores
             self.onMarkerTapped = onMarkerTapped
             self.onStoreTapped = onStoreTapped
+            self.viewModel = viewModel
         }
 
         func createController() {
@@ -238,12 +242,23 @@ struct KakaoMapRepresentable: UIViewRepresentable {
 
         // KMControllerDelegate
         func addViews() {
-            let defaultPosition = MapPoint(longitude: 128.690, latitude: 35.842)
+            // 저장된 카메라 위치가 있으면 복원, 없으면 기본 위치
+            let defaultPosition: MapPoint
+            let defaultLevel: Int
+            if let vm = viewModel, vm.hasSavedCameraPosition,
+               let lat = vm.savedCameraLat, let lng = vm.savedCameraLng, let zoom = vm.savedCameraZoom {
+                defaultPosition = MapPoint(longitude: lng, latitude: lat)
+                defaultLevel = zoom
+                currentZoomLevel = zoom
+            } else {
+                defaultPosition = MapPoint(longitude: 128.690, latitude: 35.842)
+                defaultLevel = 15
+            }
             let mapviewInfo = MapviewInfo(
                 viewName: "mapview",
                 viewInfoName: "map",
                 defaultPosition: defaultPosition,
-                defaultLevel: 15
+                defaultLevel: defaultLevel
             )
             controller?.addView(mapviewInfo)
         }
@@ -258,10 +273,24 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             updateMarkers()
             updateStoreMarkers()
 
-            // 줌 변경 감지 타이머 (0.3초 간격)
+            // 줌 변경 감지 타이머 (0.3초 간격) + 카메라 위치 저장
             zoomCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
                 guard let self, let map = self.kakaoMap else { return }
                 let newZoom = Int(map.zoomLevel)
+
+                // 카메라 중심 좌표를 ViewModel에 저장 (네비게이션 복귀 시 복원용)
+                let viewRect = map.viewRect
+                let centerPoint = CGPoint(x: viewRect.midX, y: viewRect.midY)
+                let centerMapPoint = map.getPosition(centerPoint)
+                let coord = centerMapPoint.wgsCoord
+                Task { @MainActor [weak self] in
+                    self?.viewModel?.saveCameraPosition(
+                        lat: coord.latitude,
+                        lng: coord.longitude,
+                        zoom: newZoom
+                    )
+                }
+
                 if newZoom != self.currentZoomLevel {
                     self.currentZoomLevel = newZoom
                     self.updateMarkers()

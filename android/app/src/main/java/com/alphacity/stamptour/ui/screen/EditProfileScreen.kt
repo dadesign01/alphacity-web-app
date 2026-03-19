@@ -1,5 +1,6 @@
 package com.alphacity.stamptour.ui.screen
 
+import android.app.DatePickerDialog
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,6 +21,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
@@ -46,6 +49,7 @@ import com.alphacity.stamptour.R
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.viewmodel.MyPageViewModel
+import java.util.Calendar
 
 @Composable
 fun EditProfileScreen(
@@ -58,17 +62,21 @@ fun EditProfileScreen(
     initialAddress: String? = null,
     initialAddressDetail: String? = null,
     initialProvider: String? = null,
+    initialBirthDate: String? = null,
+    initialGender: String? = null,
     viewModel: MyPageViewModel? = null,
 ) {
     var nickname by remember { mutableStateOf(initialNickname) }
     var email by remember { mutableStateOf(initialEmail) }
-    var password by remember { mutableStateOf("") }
-    var passwordConfirm by remember { mutableStateOf("") }
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
     var name by remember { mutableStateOf(initialName ?: "") }
     val isNameLocked = !initialName.isNullOrBlank()
     var phone by remember { mutableStateOf(initialPhone ?: "") }
     var address by remember { mutableStateOf(initialAddress ?: "") }
     var addressDetail by remember { mutableStateOf(initialAddressDetail ?: "") }
+    var birthDate by remember { mutableStateOf(initialBirthDate ?: "") }
+    var gender by remember { mutableStateOf(initialGender ?: "") }
     var verificationCode by remember { mutableStateOf("") }
     var showDeleteDialog by remember { mutableStateOf(false) }
     val isSocialLogin = initialProvider != null
@@ -88,6 +96,10 @@ fun EditProfileScreen(
     // 화면 열릴 때 ViewModel에 저장된 URI로 초기화
     LaunchedEffect(Unit) {
         if (selectedImageUri == null) selectedImageUri = persistedImageUri
+        // 전화번호가 이미 저장되어 있으면 인증 완료 상태로 설정
+        if (!initialPhone.isNullOrBlank()) {
+            viewModel?.setPhoneVerifiedFromProfile()
+        }
     }
 
     // 저장 성공/실패 처리
@@ -277,21 +289,20 @@ fun EditProfileScreen(
                 // 비밀번호 (소셜 로그인 사용자에게는 숨김)
                 if (!isSocialLogin) {
                     FormField(
-                        label = "비밀번호",
-                        required = true,
-                        value = password,
-                        onValueChange = { password = it },
-                        placeholder = "8자 이상 입력해주세요.",
+                        label = "현재 비밀번호",
+                        required = false,
+                        value = currentPassword,
+                        onValueChange = { currentPassword = it },
+                        placeholder = "현재 비밀번호를 입력해주세요.",
                         isPassword = true,
                     )
 
-                    // 비밀번호 확인
                     FormField(
-                        label = "비밀번호 확인",
-                        required = true,
-                        value = passwordConfirm,
-                        onValueChange = { passwordConfirm = it },
-                        placeholder = "비밀번호를 다시 입력해주세요.",
+                        label = "새 비밀번호",
+                        required = false,
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        placeholder = "새 비밀번호를 입력해주세요. (8자 이상)",
                         isPassword = true,
                     )
                 }
@@ -442,6 +453,80 @@ fun EditProfileScreen(
                         placeholder = "상세주소를 입력해주세요.",
                     )
                 }
+
+                // 생년월일
+                Column {
+                    FormLabel(label = "생년월일", required = false)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .border(1.dp, Color(0xFFE9E9E9), RoundedCornerShape(8.dp))
+                            .clickable {
+                                val calendar = Calendar.getInstance()
+                                // 기존 생년월일이 있으면 해당 날짜로 초기화
+                                if (birthDate.isNotBlank()) {
+                                    try {
+                                        val parts = birthDate.split("-")
+                                        calendar.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
+                                    } catch (_: Exception) {}
+                                }
+                                DatePickerDialog(
+                                    context,
+                                    { _, year, month, dayOfMonth ->
+                                        birthDate = "%04d-%02d-%02d".format(year, month + 1, dayOfMonth)
+                                    },
+                                    calendar.get(Calendar.YEAR),
+                                    calendar.get(Calendar.MONTH),
+                                    calendar.get(Calendar.DAY_OF_MONTH),
+                                ).show()
+                            }
+                            .padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text(
+                            text = birthDate.ifBlank { "생년월일을 선택해주세요." },
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 14.sp,
+                            color = if (birthDate.isBlank()) Color(0xFFBFBFBF) else Color(0xFF121212),
+                        )
+                    }
+                }
+
+                // 성별
+                Column {
+                    FormLabel(label = "성별", required = false)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        listOf("male" to "남성", "female" to "여성", "other" to "기타").forEach { (value, label) ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { gender = value },
+                            ) {
+                                RadioButton(
+                                    selected = gender == value,
+                                    onClick = { gender = value },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = Primary,
+                                        unselectedColor = Color(0xFFBFBFBF),
+                                    ),
+                                )
+                                Text(
+                                    text = label,
+                                    fontFamily = Pretendard,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF121212),
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -488,17 +573,20 @@ fun EditProfileScreen(
                             Toast.makeText(context, "닉네임을 입력해주세요.", Toast.LENGTH_SHORT).show()
                             return@clickable
                         }
-                        if (password.isNotBlank() && password != passwordConfirm) {
-                            Toast.makeText(context, "비밀번호가 일치하지 않습니다.", Toast.LENGTH_SHORT).show()
+                        if (newPassword.isNotBlank() && currentPassword.isBlank()) {
+                            Toast.makeText(context, "현재 비밀번호를 입력해주세요.", Toast.LENGTH_SHORT).show()
                             return@clickable
                         }
                         viewModel?.updateProfile(
                             nickname,
-                            password.ifBlank { null },
+                            currentPassword.ifBlank { null },
+                            newPassword.ifBlank { null },
                             if (isPhoneVerified) phone else null,
                             name.ifBlank { null },
                             address.ifBlank { null },
                             addressDetail.ifBlank { null },
+                            birthDate.ifBlank { null },
+                            gender.ifBlank { null },
                         )
                     },
                 contentAlignment = Alignment.Center,

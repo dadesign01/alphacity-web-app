@@ -98,7 +98,7 @@ final class RegisterViewModel: ObservableObject {
 
         Task {
             do {
-                let data = try await authRepository.register(email: email, password: password, nickname: name)
+                let data = try await authRepository.register(email: email, password: password, nickname: name, phone: phone, name: name)
                 isRegistered = true
                 user = data.user
             } catch {

@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, nickname } = await request.json();
+    const { email, password, nickname, phone, name } = await request.json();
 
     if (!email || !password || !nickname) {
       return errorResponse('INVALID_INPUT', '이메일, 비밀번호, 닉네임은 필수입니다');
@@ -17,9 +17,17 @@ export async function POST(request: NextRequest) {
       return errorResponse('DUPLICATE_EMAIL', '이미 등록된 이메일입니다', 409);
     }
 
+    // 전화번호 중복 확인
+    if (phone) {
+      const existingPhone = await prisma.user.findUnique({ where: { phone } });
+      if (existingPhone) {
+        return errorResponse('DUPLICATE_PHONE', '이미 사용 중인 전화번호입니다', 409);
+      }
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, passwordHash, nickname },
+      data: { email, passwordHash, nickname, ...(phone && { phone }), ...(name && { name }) },
     });
 
     const token = await signToken({ userId: user.id, email: user.email });

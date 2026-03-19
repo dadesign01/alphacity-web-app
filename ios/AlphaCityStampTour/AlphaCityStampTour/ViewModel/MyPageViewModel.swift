@@ -84,17 +84,21 @@ final class MyPageViewModel: ObservableObject {
         }
     }
 
+    func setPhoneVerifiedFromProfile() {
+        isPhoneVerified = true
+    }
+
     func resetVerificationState() {
         isCodeSent = false
         isPhoneVerified = false
         verificationError = nil
     }
 
-    func updateProfile(nickname: String, password: String?, phone: String? = nil, name: String? = nil, address: String? = nil, addressDetail: String? = nil) async {
+    func updateProfile(nickname: String, currentPassword: String?, newPassword: String?, phone: String? = nil, name: String? = nil, address: String? = nil, addressDetail: String? = nil, birthDate: String? = nil, gender: String? = nil) async {
         isLoading = true
         saveError = nil
         do {
-            let updated = try await repository.updateProfile(nickname: nickname, password: password, phone: phone, name: name, address: address, addressDetail: addressDetail)
+            let updated = try await repository.updateProfile(nickname: nickname, currentPassword: currentPassword, newPassword: newPassword, phone: phone, name: name, address: address, addressDetail: addressDetail, birthDate: birthDate, gender: gender)
             userProfile = updated
             saveSuccess = true
         } catch {

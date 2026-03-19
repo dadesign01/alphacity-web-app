@@ -1,4 +1,6 @@
 import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { verifyToken } from '@/lib/auth';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { sendSMS, generateCode, saveCode } from '@/lib/sms';
 
@@ -8,6 +10,20 @@ export async function POST(request: NextRequest) {
 
     if (!phone) {
       return errorResponse('INVALID_INPUT', '휴대폰 번호를 입력하세요');
+    }
+
+    // 이미 다른 사용자가 사용 중인 번호인지 확인
+    const existingUser = await prisma.user.findUnique({ where: { phone } });
+    if (existingUser) {
+      // 본인 번호 재인증은 허용
+      let currentUserId: number | null = null;
+      const token = request.headers.get('authorization')?.replace('Bearer ', '');
+      if (token) {
+        try { currentUserId = (await verifyToken(token)).userId as number; } catch {}
+      }
+      if (existingUser.id !== currentUserId) {
+        return errorResponse('DUPLICATE_PHONE', '이미 사용 중인 전화번호입니다', 409);
+      }
     }
 
     const code = generateCode();

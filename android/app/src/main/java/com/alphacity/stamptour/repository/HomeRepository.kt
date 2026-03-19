@@ -97,9 +97,9 @@ class HomeRepository @Inject constructor(
         }
     }
 
-    suspend fun updateProfile(nickname: String, password: String?, phone: String? = null, name: String? = null, address: String? = null, addressDetail: String? = null): Result<UserProfile> {
+    suspend fun updateProfile(nickname: String, currentPassword: String?, newPassword: String?, phone: String? = null, name: String? = null, address: String? = null, addressDetail: String? = null, birthDate: String? = null, gender: String? = null): Result<UserProfile> {
         return try {
-            val request = UpdateProfileRequest(nickname = nickname, name = name, password = password?.ifBlank { null }, phone = phone, address = address, addressDetail = addressDetail)
+            val request = UpdateProfileRequest(nickname = nickname, name = name, currentPassword = currentPassword?.ifBlank { null }, newPassword = newPassword?.ifBlank { null }, phone = phone, address = address, addressDetail = addressDetail, birthDate = birthDate, gender = gender)
             val response = apiService.updateProfile(request)
             if (response.success && response.data != null) {
                 Result.success(response.data)

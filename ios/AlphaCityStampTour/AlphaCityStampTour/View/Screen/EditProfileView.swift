@@ -16,17 +16,23 @@ struct EditProfileView: View {
     var initialAddress: String? = nil
     var initialAddressDetail: String? = nil
     var initialProvider: String? = nil
+    var initialBirthDate: String? = nil
+    var initialGender: String? = nil
     @ObservedObject var viewModel: MyPageViewModel
 
     @State private var nickname = ""
     @State private var email = ""
-    @State private var password = ""
-    @State private var passwordConfirm = ""
+    @State private var currentPassword = ""
+    @State private var newPassword = ""
     @State private var name = ""
     @State private var phone = ""
     @State private var verificationCode = ""
     @State private var address = ""
     @State private var addressDetail = ""
+    @State private var birthDate = ""
+    @State private var birthDateValue = Date()
+    @State private var showDatePicker = false
+    @State private var gender = ""
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var selectedImage: UIImage? = nil
     @State private var showDeleteAlert = false
@@ -135,19 +141,18 @@ struct EditProfileView: View {
                         // 비밀번호 (소셜 로그인 사용자에게는 숨김)
                         if !isSocialLogin {
                             ProfileFormField(
-                                label: "비밀번호",
-                                required: true,
-                                text: $password,
-                                placeholder: "8자 이상 입력해주세요.",
+                                label: "현재 비밀번호",
+                                required: false,
+                                text: $currentPassword,
+                                placeholder: "현재 비밀번호를 입력해주세요.",
                                 isSecure: true
                             )
 
-                            // 비밀번호 확인
                             ProfileFormField(
-                                label: "비밀번호 확인",
-                                required: true,
-                                text: $passwordConfirm,
-                                placeholder: "비밀번호를 다시 입력해주세요.",
+                                label: "새 비밀번호",
+                                required: false,
+                                text: $newPassword,
+                                placeholder: "새 비밀번호를 입력해주세요. (8자 이상)",
                                 isSecure: true
                             )
                         }
@@ -270,6 +275,81 @@ struct EditProfileView: View {
                                 placeholder: "상세주소를 입력해주세요."
                             )
                         }
+
+                        // 생년월일
+                        VStack(alignment: .leading, spacing: 6) {
+                            ProfileFieldLabel(label: "생년월일", required: false)
+                            Button {
+                                showDatePicker = true
+                            } label: {
+                                HStack {
+                                    Text(birthDate.isEmpty ? "생년월일을 선택해주세요." : birthDate)
+                                        .font(AppFont.regular(14))
+                                        .foregroundColor(birthDate.isEmpty ? Color(hex: "BFBFBF") : Color(hex: "121212"))
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 14)
+                                .frame(height: 48)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color(hex: "E9E9E9"), lineWidth: 1)
+                                )
+                            }
+                        }
+                        .sheet(isPresented: $showDatePicker) {
+                            VStack(spacing: 16) {
+                                Text("생년월일 선택")
+                                    .font(AppFont.semibold(18))
+                                    .padding(.top, 20)
+                                DatePicker(
+                                    "",
+                                    selection: $birthDateValue,
+                                    displayedComponents: .date
+                                )
+                                .datePickerStyle(.wheel)
+                                .labelsHidden()
+                                .environment(\.locale, Locale(identifier: "ko_KR"))
+
+                                Button {
+                                    let formatter = DateFormatter()
+                                    formatter.dateFormat = "yyyy-MM-dd"
+                                    birthDate = formatter.string(from: birthDateValue)
+                                    showDatePicker = false
+                                } label: {
+                                    Text("확인")
+                                        .font(AppFont.semibold(16))
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 48)
+                                        .background(AppColor.primary)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 20)
+                            }
+                            .presentationDetents([.height(340)])
+                        }
+
+                        // 성별
+                        VStack(alignment: .leading, spacing: 6) {
+                            ProfileFieldLabel(label: "성별", required: false)
+                            HStack(spacing: 16) {
+                                ForEach([("male", "남성"), ("female", "여성"), ("other", "기타")], id: \.0) { value, label in
+                                    Button {
+                                        gender = value
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: gender == value ? "largecircle.fill.circle" : "circle")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(gender == value ? AppColor.primary : Color(hex: "BFBFBF"))
+                                            Text(label)
+                                                .font(AppFont.medium(14))
+                                                .foregroundColor(Color(hex: "121212"))
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     .padding(.horizontal, 20)
 
@@ -298,18 +378,21 @@ struct EditProfileView: View {
                             showToast = "닉네임을 입력해주세요."
                             return
                         }
-                        if !isSocialLogin && !password.isEmpty && password != passwordConfirm {
-                            showToast = "비밀번호가 일치하지 않습니다."
+                        if !isSocialLogin && !newPassword.isEmpty && currentPassword.isEmpty {
+                            showToast = "현재 비밀번호를 입력해주세요."
                             return
                         }
                         Task {
                             await viewModel.updateProfile(
                                 nickname: nickname,
-                                password: (!isSocialLogin && !password.isEmpty) ? password : nil,
+                                currentPassword: (!isSocialLogin && !currentPassword.isEmpty) ? currentPassword : nil,
+                                newPassword: (!isSocialLogin && !newPassword.isEmpty) ? newPassword : nil,
                                 phone: viewModel.isPhoneVerified ? phone : nil,
                                 name: name.trimmingCharacters(in: .whitespaces).isEmpty ? nil : name,
                                 address: address.trimmingCharacters(in: .whitespaces).isEmpty ? nil : address,
-                                addressDetail: addressDetail.trimmingCharacters(in: .whitespaces).isEmpty ? nil : addressDetail
+                                addressDetail: addressDetail.trimmingCharacters(in: .whitespaces).isEmpty ? nil : addressDetail,
+                                birthDate: birthDate.isEmpty ? nil : birthDate,
+                                gender: gender.isEmpty ? nil : gender
                             )
                         }
                     } label: {
@@ -376,6 +459,20 @@ struct EditProfileView: View {
             phone = initialPhone ?? ""
             address = initialAddress ?? ""
             addressDetail = initialAddressDetail ?? ""
+            birthDate = initialBirthDate ?? ""
+            gender = initialGender ?? ""
+            // 생년월일 문자열로 DatePicker 초기값 설정
+            if let bd = initialBirthDate, !bd.isEmpty {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd"
+                if let date = formatter.date(from: bd) {
+                    birthDateValue = date
+                }
+            }
+            // 전화번호가 이미 저장되어 있으면 인증 완료 상태로 설정
+            if let p = initialPhone, !p.isEmpty {
+                viewModel.setPhoneVerifiedFromProfile()
+            }
         }
         .alert("회원탈퇴", isPresented: $showDeleteAlert) {
             Button("취소", role: .cancel) {}
@@ -489,5 +586,5 @@ private struct ProfileTextFieldView: View {
 }
 
 #Preview {
-    EditProfileView(onBackTapped: {}, onLogout: {}, initialNickname: "테스트유저", initialEmail: "test@example.com", initialName: nil, viewModel: MyPageViewModel())
+    EditProfileView(onBackTapped: {}, onLogout: {}, initialNickname: "테스트유저", initialEmail: "test@example.com", initialName: nil, initialBirthDate: nil, initialGender: nil, viewModel: MyPageViewModel())
 }

@@ -16,6 +16,7 @@ import com.alphacity.stamptour.network.dto.MissionCompletionResult
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.CouponItem
+import com.alphacity.stamptour.network.dto.MyCouponItem
 import com.alphacity.stamptour.network.dto.StampItem
 import com.alphacity.stamptour.network.dto.StoreData
 import com.alphacity.stamptour.network.dto.StoreRegisterRequest
@@ -113,6 +114,9 @@ interface ApiService {
     // 쿠폰
     @GET("coupons")
     suspend fun getCoupons(): ApiResponse<List<CouponItem>>
+
+    @GET("coupons")
+    suspend fun getMyCoupons(@Query("my") my: Boolean = true): ApiResponse<List<MyCouponItem>>
 
     @POST("coupons/{id}/redeem")
     suspend fun redeemCoupon(@Path("id") couponId: Int): ApiResponse<UserCouponItem>

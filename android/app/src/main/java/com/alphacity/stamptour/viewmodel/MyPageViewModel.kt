@@ -110,17 +110,21 @@ class MyPageViewModel @Inject constructor(
         }
     }
 
+    fun setPhoneVerifiedFromProfile() {
+        _isPhoneVerified.value = true
+    }
+
     fun resetVerificationState() {
         _isCodeSent.value = false
         _isPhoneVerified.value = false
         _verificationError.value = null
     }
 
-    fun updateProfile(nickname: String, password: String?, phone: String? = null, name: String? = null, address: String? = null, addressDetail: String? = null) {
+    fun updateProfile(nickname: String, currentPassword: String?, newPassword: String?, phone: String? = null, name: String? = null, address: String? = null, addressDetail: String? = null, birthDate: String? = null, gender: String? = null) {
         _isLoading.value = true
         _saveError.value = null
         viewModelScope.launch {
-            homeRepository.updateProfile(nickname, password, phone, name, address, addressDetail)
+            homeRepository.updateProfile(nickname, currentPassword, newPassword, phone, name, address, addressDetail, birthDate, gender)
                 .onSuccess { updated ->
                     _userProfile.value = updated
                     _saveSuccess.value = true

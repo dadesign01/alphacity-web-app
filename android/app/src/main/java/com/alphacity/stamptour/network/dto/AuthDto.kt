@@ -15,6 +15,8 @@ data class RegisterRequest(
     val email: String,
     val password: String,
     val nickname: String,
+    val phone: String? = null,
+    val name: String? = null,
 )
 
 @Serializable

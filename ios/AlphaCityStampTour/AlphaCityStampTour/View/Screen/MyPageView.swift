@@ -8,6 +8,7 @@ import SwiftUI
 struct MyPageView: View {
     @StateObject private var viewModel = MyPageViewModel()
     @State private var showActivityHistory = false
+    @State private var showProfileInfo = false
     @State private var showEditProfile = false
     @State private var showSettings = false
     @State private var showStoreRegister = false
@@ -32,9 +33,19 @@ struct MyPageView: View {
     var body: some View {
         if showActivityHistory {
             ActivityHistoryView(onBackTapped: { showActivityHistory = false })
+        } else if showProfileInfo {
+            ProfileInfoView(
+                onBackTapped: { showProfileInfo = false },
+                onEditTapped: { showEditProfile = true },
+                userProfile: viewModel.userProfile
+            )
         } else if showEditProfile {
             EditProfileView(
-                onBackTapped: { showEditProfile = false },
+                onBackTapped: {
+                    showEditProfile = false
+                    // 수정 후 프로필 정보 새로고침
+                    Task { await viewModel.fetchProfile() }
+                },
                 onLogout: onLogout,
                 initialNickname: viewModel.userProfile?.nickname ?? "",
                 initialEmail: viewModel.userProfile?.email ?? "",
@@ -43,6 +54,8 @@ struct MyPageView: View {
                 initialAddress: viewModel.userProfile?.address,
                 initialAddressDetail: viewModel.userProfile?.addressDetail,
                 initialProvider: viewModel.userProfile?.provider,
+                initialBirthDate: viewModel.userProfile?.birthDate,
+                initialGender: viewModel.userProfile?.gender,
                 viewModel: viewModel
             )
         } else if showSettings {
@@ -153,7 +166,7 @@ struct MyPageView: View {
                     menuDivider
                     MenuItemRow(icon: "IconSettings", title: "설정") { showSettings = true }
                     menuDivider
-                    MenuItemRow(icon: "IconEditProfile", title: "개인정보 수정") { showEditProfile = true }
+                    MenuItemRow(icon: "IconEditProfile", title: "개인정보") { showProfileInfo = true }
                     menuDivider
                     MenuItemRow(icon: "IconStoreRegister", title: "상점 등록") { showStoreRegister = true }
 
@@ -219,6 +232,121 @@ struct MyPageView: View {
         Divider()
             .background(Color(hex: "EDEDED"))
             .padding(.horizontal, 20)
+    }
+}
+
+struct ProfileInfoView: View {
+    var onBackTapped: () -> Void
+    var onEditTapped: () -> Void
+    var userProfile: UserProfileData?
+
+    private var genderText: String {
+        switch userProfile?.gender {
+        case "male": return "남성"
+        case "female": return "여성"
+        case "other": return "기타"
+        default: return "-"
+        }
+    }
+
+    private var addressText: String {
+        let addr = userProfile?.address ?? ""
+        let detail = userProfile?.addressDetail ?? ""
+        var result = ""
+        if !addr.isEmpty { result += addr }
+        if !detail.isEmpty {
+            if !result.isEmpty { result += " " }
+            result += detail
+        }
+        return result.isEmpty ? "-" : result
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // === Header ===
+            HStack(spacing: 24) {
+                Button(action: onBackTapped) {
+                    Image("IconBackArrow")
+                        .renderingMode(.original)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 13, height: 26)
+                }
+                Text("개인정보")
+                    .font(AppFont.semibold(18))
+                    .foregroundColor(Color(hex: "121212"))
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .frame(height: 50)
+
+            Divider()
+                .background(Color(hex: "E2E2E2"))
+
+            // === Scrollable Content ===
+            ScrollView {
+                VStack(spacing: 0) {
+                    Spacer().frame(height: 24)
+
+                    VStack(spacing: 20) {
+                        ProfileInfoRow(label: "이름", value: userProfile?.name ?? "-")
+                        ProfileInfoRow(label: "닉네임", value: userProfile?.nickname ?? "-")
+                        ProfileInfoRow(label: "이메일", value: userProfile?.email ?? "-")
+                        ProfileInfoRow(label: "휴대폰", value: userProfile?.phone ?? "-")
+                        ProfileInfoRow(label: "주소", value: addressText)
+                        ProfileInfoRow(label: "생년월일", value: userProfile?.birthDate ?? "-")
+                        ProfileInfoRow(label: "성별", value: genderText)
+                    }
+                    .padding(.horizontal, 20)
+
+                    Spacer().frame(height: 32)
+
+                    // === 수정 Button ===
+                    Button(action: onEditTapped) {
+                        Text("수정")
+                            .font(AppFont.semibold(16))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(
+                                LinearGradient(
+                                    colors: [
+                                        Color(hex: "6092FF"),
+                                        Color(hex: "2563EB"),
+                                        Color(hex: "1551D3"),
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .padding(.horizontal, 20)
+
+                    Spacer().frame(height: 32)
+                }
+            }
+        }
+        .background(Color.white)
+    }
+}
+
+private struct ProfileInfoRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(AppFont.medium(14))
+                .foregroundColor(Color(hex: "8F8F8F"))
+            Text(value)
+                .font(AppFont.regular(16))
+                .foregroundColor(Color(hex: "121212"))
+            Spacer().frame(height: 6)
+            Divider()
+                .background(Color(hex: "EDEDED"))
+        }
     }
 }
 

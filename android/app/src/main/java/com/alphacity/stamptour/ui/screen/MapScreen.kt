@@ -167,6 +167,7 @@ fun MapScreen(
                 focusLat = focusLat,
                 focusLng = focusLng,
                 onFocusConsumed = onFocusConsumed,
+                viewModel = viewModel,
             )
 
             Row(
@@ -252,6 +253,7 @@ private fun KakaoMapContent(
     focusLat: Double? = null,
     focusLng: Double? = null,
     onFocusConsumed: () -> Unit = {},
+    viewModel: MapViewModel? = null,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -373,8 +375,19 @@ private fun KakaoMapContent(
                     object : KakaoMapReadyCallback() {
                         override fun onMapReady(map: KakaoMap) {
                             mapState.kakaoMap = map
-                            val center = LatLng.from(35.842, 128.690)
-                            map.moveCamera(CameraUpdateFactory.newCenterPosition(center, 15))
+
+                            // 저장된 카메라 위치가 있으면 복원, 없으면 기본 위치
+                            if (viewModel?.hasSavedCameraPosition == true) {
+                                val savedLat = viewModel.savedCameraLat!!
+                                val savedLng = viewModel.savedCameraLng!!
+                                val savedZoom = viewModel.savedCameraZoom!!
+                                val center = LatLng.from(savedLat, savedLng)
+                                mapState.zoomLevel = savedZoom
+                                map.moveCamera(CameraUpdateFactory.newCenterPosition(center, savedZoom))
+                            } else {
+                                val center = LatLng.from(35.842, 128.690)
+                                map.moveCamera(CameraUpdateFactory.newCenterPosition(center, 15))
+                            }
 
                             // 맵 준비됐을 때 이미 programs가 있으면 바로 마커 추가
                             if (programsRef.isNotEmpty()) {
@@ -432,11 +445,29 @@ private fun KakaoMapContent(
                             }
 
                             // 줌 체커 - programsRef 사용 (stale 클로저 방지)
+                            // + 카메라 위치를 ViewModel에 저장 (네비게이션 복귀 시 복원용)
                             val handler = Handler(Looper.getMainLooper())
                             val zoomChecker = object : Runnable {
                                 override fun run() {
                                     try {
                                         val newZoom = map.zoomLevel
+                                        // 카메라 중심 좌표를 ViewModel에 저장 (화면 중심점 → 위경도 변환)
+                                        try {
+                                            val viewWidth = mapView.width
+                                            val viewHeight = mapView.height
+                                            if (viewWidth > 0 && viewHeight > 0) {
+                                                val centerX = viewWidth / 2
+                                                val centerY = viewHeight / 2
+                                                val centerLatLng = map.fromScreenPoint(centerX, centerY)
+                                                if (centerLatLng != null) {
+                                                    viewModel?.saveCameraPosition(
+                                                        centerLatLng.latitude,
+                                                        centerLatLng.longitude,
+                                                        newZoom,
+                                                    )
+                                                }
+                                            }
+                                        } catch (_: Exception) {}
                                         if (newZoom != mapState.zoomLevel) {
                                             mapState.zoomLevel = newZoom
                                             currentClusters.clear()
