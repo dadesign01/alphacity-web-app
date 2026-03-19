@@ -70,15 +70,6 @@ fun MyPageScreen(
         return
     }
 
-    if (showProfileInfo) {
-        ProfileInfoScreen(
-            onBackClick = { showProfileInfo = false },
-            onEditClick = { showEditProfile = true },
-            userProfile = userProfile,
-        )
-        return
-    }
-
     if (showEditProfile) {
         EditProfileScreen(
             onBackClick = {
@@ -97,6 +88,15 @@ fun MyPageScreen(
             initialBirthDate = userProfile?.birthDate,
             initialGender = userProfile?.gender,
             viewModel = viewModel,
+        )
+        return
+    }
+
+    if (showProfileInfo) {
+        ProfileInfoScreen(
+            onBackClick = { showProfileInfo = false },
+            onEditClick = { showEditProfile = true },
+            userProfile = userProfile,
         )
         return
     }

@@ -472,15 +472,18 @@ fun EditProfileScreen(
                                         calendar.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
                                     } catch (_: Exception) {}
                                 }
-                                DatePickerDialog(
+                                val dialog = DatePickerDialog(
                                     context,
+                                    android.R.style.Theme_Holo_Light_Dialog_MinWidth,
                                     { _, year, month, dayOfMonth ->
                                         birthDate = "%04d-%02d-%02d".format(year, month + 1, dayOfMonth)
                                     },
                                     calendar.get(Calendar.YEAR),
                                     calendar.get(Calendar.MONTH),
                                     calendar.get(Calendar.DAY_OF_MONTH),
-                                ).show()
+                                )
+                                dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                                dialog.show()
                             }
                             .padding(horizontal = 14.dp),
                         contentAlignment = Alignment.CenterStart,

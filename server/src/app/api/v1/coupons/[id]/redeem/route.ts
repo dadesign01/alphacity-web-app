@@ -25,26 +25,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // 쿠폰 코드 생성
     const code = `FEST-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-    // 트랜잭션으로 쿠폰 발급 + 스탬프 차감을 원자적으로 처리
-    const userCoupon = await prisma.$transaction(async (tx) => {
-      // 1. 쿠폰 발급
-      const created = await tx.userCoupon.create({
-        data: { userId, couponId, code, status: 'issued' },
-      });
-
-      // 2. 스탬프 차감 (오래된 것부터 삭제)
-      const stampsToDelete = await tx.userStamp.findMany({
-        where: { userId },
-        orderBy: { collectedAt: 'asc' },
-        take: coupon.requiredStamps,
-        select: { id: true },
-      });
-
-      await tx.userStamp.deleteMany({
-        where: { id: { in: stampsToDelete.map(s => s.id) } },
-      });
-
-      return created;
+    // 쿠폰 발급 (스탬프는 유지 - 삭제하지 않음)
+    const userCoupon = await prisma.userCoupon.create({
+      data: { userId, couponId, code, status: 'issued' },
     });
 
     return successResponse(userCoupon, '쿠폰이 발급되었습니다');
