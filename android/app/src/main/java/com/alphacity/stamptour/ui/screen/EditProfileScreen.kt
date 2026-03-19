@@ -288,23 +288,61 @@ fun EditProfileScreen(
 
                 // 비밀번호 (소셜 로그인 사용자에게는 숨김)
                 if (!isSocialLogin) {
-                    FormField(
-                        label = "현재 비밀번호",
-                        required = false,
-                        value = currentPassword,
-                        onValueChange = { currentPassword = it },
-                        placeholder = "현재 비밀번호를 입력해주세요.",
-                        isPassword = true,
-                    )
+                    val isPasswordVerified by (viewModel?.isPasswordVerified ?: MutableStateFlow(false)).collectAsState()
 
-                    FormField(
-                        label = "새 비밀번호",
-                        required = false,
-                        value = newPassword,
-                        onValueChange = { newPassword = it },
-                        placeholder = "새 비밀번호를 입력해주세요. (8자 이상)",
-                        isPassword = true,
-                    )
+                    Column {
+                        FormLabel(label = "현재 비밀번호", required = false)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                ProfileTextField(
+                                    value = currentPassword,
+                                    onValueChange = {
+                                        currentPassword = it
+                                        if (isPasswordVerified) viewModel?.resetPasswordVerification()
+                                    },
+                                    placeholder = "현재 비밀번호를 입력해주세요.",
+                                    isPassword = true,
+                                    enabled = !isPasswordVerified,
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .height(48.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (isPasswordVerified) Color(0xFF22C55E)
+                                        else if (currentPassword.isNotBlank()) Primary
+                                        else Primary.copy(alpha = 0.4f)
+                                    )
+                                    .clickable(enabled = currentPassword.isNotBlank() && !isPasswordVerified) {
+                                        viewModel?.verifyPassword(currentPassword)
+                                    }
+                                    .padding(horizontal = 16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = if (isPasswordVerified) "확인됨" else "확인",
+                                    fontFamily = Pretendard,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp,
+                                    color = Color.White,
+                                )
+                            }
+                        }
+                    }
+
+                    Column {
+                        FormLabel(label = "새 비밀번호", required = false)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        ProfileTextField(
+                            value = newPassword,
+                            onValueChange = { newPassword = it },
+                            placeholder = if (isPasswordVerified) "새 비밀번호를 입력해주세요. (8자 이상)" else "현재 비밀번호 확인 후 입력 가능",
+                            isPassword = true,
+                            enabled = isPasswordVerified,
+                        )
+                    }
                 }
 
                 // 이름

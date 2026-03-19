@@ -58,6 +58,9 @@ interface ApiService {
     @POST("auth/verify-code")
     suspend fun verifyCode(@Body request: VerifyCodeRequest): ApiResponse<Unit>
 
+    @POST("users/verify-password")
+    suspend fun verifyPassword(@Body request: Map<String, String>): ApiResponse<Map<String, Boolean>>
+
     // 배너
     @GET("banners")
     suspend fun getBanners(): ApiResponse<List<BannerItem>>

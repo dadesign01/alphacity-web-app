@@ -114,6 +114,29 @@ class MyPageViewModel @Inject constructor(
         _isPhoneVerified.value = true
     }
 
+    // 비밀번호 확인
+    private val _isPasswordVerified = MutableStateFlow(false)
+    val isPasswordVerified: StateFlow<Boolean> = _isPasswordVerified
+
+    fun verifyPassword(password: String) {
+        viewModelScope.launch {
+            try {
+                val response = authRepository.verifyPassword(password)
+                response.onSuccess {
+                    _isPasswordVerified.value = true
+                }.onFailure { e ->
+                    _verificationError.value = e.message ?: "비밀번호가 일치하지 않습니다"
+                }
+            } catch (e: Exception) {
+                _verificationError.value = e.message ?: "오류가 발생했습니다"
+            }
+        }
+    }
+
+    fun resetPasswordVerification() {
+        _isPasswordVerified.value = false
+    }
+
     fun resetVerificationState() {
         _isCodeSent.value = false
         _isPhoneVerified.value = false

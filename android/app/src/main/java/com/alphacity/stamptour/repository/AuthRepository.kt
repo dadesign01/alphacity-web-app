@@ -115,6 +115,19 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun verifyPassword(password: String): Result<Unit> {
+        return try {
+            val response = apiService.verifyPassword(mapOf("password" to password))
+            if (response.success) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception(response.error?.message ?: "비밀번호가 일치하지 않습니다"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     fun logout() {
         val accessToken = tokenManager.accessToken
         if (accessToken != null) {
