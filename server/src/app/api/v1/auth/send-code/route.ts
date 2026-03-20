@@ -12,8 +12,13 @@ export async function POST(request: NextRequest) {
       return errorResponse('INVALID_INPUT', '휴대폰 번호를 입력하세요');
     }
 
+    // 전화번호 정규화 (하이픈 제거)
+    const normalizedPhone = phone.replace(/-/g, '');
+
     // 이미 다른 사용자가 사용 중인 번호인지 확인
-    const existingUser = await prisma.user.findUnique({ where: { phone } });
+    const existingUser = await prisma.user.findFirst({
+      where: { OR: [{ phone: normalizedPhone }, { phone }] },
+    });
     if (existingUser) {
       // 본인 번호 재인증은 허용
       let currentUserId: number | null = null;
