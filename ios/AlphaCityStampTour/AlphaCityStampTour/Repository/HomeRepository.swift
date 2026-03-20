@@ -113,4 +113,8 @@ final class HomeRepository {
     func fetchActivityHistory() async throws -> [ActivityItemDTO] {
         return try await client.request(path: "users/activity", authenticated: true)
     }
+
+    func fetchTerms(type: String) async throws -> [TermData] {
+        return try await client.request(path: "terms?type=\(type)")
+    }
 }

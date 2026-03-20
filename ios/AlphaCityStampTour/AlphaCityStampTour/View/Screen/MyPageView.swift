@@ -14,6 +14,8 @@ struct MyPageView: View {
     @State private var showStoreRegister = false
     @State private var showMyCoupons = false
     @State private var showStampExchange = false
+    @State private var showPrivacyPolicy = false
+    @State private var showServiceTerms = false
     @StateObject private var stampViewModel = StampViewModel()
     var onLogout: () -> Void
 
@@ -31,7 +33,17 @@ struct MyPageView: View {
     }
 
     var body: some View {
-        if showActivityHistory {
+        if showPrivacyPolicy {
+            PolicyDetailView(
+                policyType: .privacy,
+                onBackTapped: { showPrivacyPolicy = false }
+            )
+        } else if showServiceTerms {
+            PolicyDetailView(
+                policyType: .terms,
+                onBackTapped: { showServiceTerms = false }
+            )
+        } else if showActivityHistory {
             ActivityHistoryView(onBackTapped: { showActivityHistory = false })
         } else if showProfileInfo {
             ProfileInfoView(
@@ -169,6 +181,10 @@ struct MyPageView: View {
                     MenuItemRow(icon: "IconEditProfile", title: "개인정보") { showProfileInfo = true }
                     menuDivider
                     MenuItemRow(icon: "IconStoreRegister", title: "상점 등록") { showStoreRegister = true }
+                    menuDivider
+                    MenuItemRow(icon: "IconSettings", title: "개인정보처리방침") { showPrivacyPolicy = true }
+                    menuDivider
+                    MenuItemRow(icon: "IconSettings", title: "이용약관") { showServiceTerms = true }
 
                     // Gray section (logout ~ version)
                     VStack(spacing: 0) {

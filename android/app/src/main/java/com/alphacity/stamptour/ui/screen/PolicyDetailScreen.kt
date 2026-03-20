@@ -7,9 +7,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,14 +20,31 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.alphacity.stamptour.R
 import com.alphacity.stamptour.ui.theme.Pretendard
+import com.alphacity.stamptour.viewmodel.TermsViewModel
 
 @Composable
 fun PolicyDetailScreen(
     policyType: PolicyType,
     onBackClick: () -> Unit,
+    viewModel: TermsViewModel = hiltViewModel(),
 ) {
+    val apiType = when (policyType) {
+        PolicyType.TERMS -> "service"
+        PolicyType.PRIVACY -> "privacy"
+        PolicyType.LOCATION -> "location"
+    }
+
+    val title by viewModel.title.collectAsState()
+    val content by viewModel.content.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    LaunchedEffect(apiType) {
+        viewModel.fetchTerms(apiType)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -61,56 +79,91 @@ fun PolicyDetailScreen(
         Divider(color = Color(0xFFE2E2E2), thickness = 1.dp)
 
         // === Content ===
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            Spacer(modifier = Modifier.height(20.dp))
-
-            val sections = getPolicySections(policyType)
-            sections.forEach { section ->
-                PolicySection(section)
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Effective date notice
+        if (isLoading) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .clip(RoundedCornerShape(11.dp))
-                    .background(Color(0xFFF8F8F8))
-                    .padding(vertical = 10.dp),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "본 약관은 2026년 2월 2일부터 시행됩니다.",
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 10.sp,
-                    color = Color(0xFF8F8F8F),
-                )
+                CircularProgressIndicator()
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Footer
-            Box(
+        } else {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFF9F9F9))
-                    .padding(vertical = 40.dp),
-                contentAlignment = Alignment.Center,
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
             ) {
-                Text(
-                    text = "\u00A9 2026 Alpha Stamp. All rights reserved.",
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 10.sp,
-                    color = Color(0xFF8F8F8F),
-                )
+                Spacer(modifier = Modifier.height(20.dp))
+
+                if (content.isNotBlank()) {
+                    // API content
+                    if (title.isNotBlank()) {
+                        Text(
+                            text = title,
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = Color(0xFF121212),
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                    Text(
+                        text = content,
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 10.sp,
+                        lineHeight = 14.sp,
+                        letterSpacing = (-0.2).sp,
+                        color = Color(0xFF595959),
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                    )
+                } else {
+                    // Fallback to hardcoded content
+                    val sections = getPolicySections(policyType)
+                    sections.forEach { section ->
+                        PolicySection(section)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Effective date notice
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(Color(0xFFF8F8F8))
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "본 약관은 2026년 2월 2일부터 시행됩니다.",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 10.sp,
+                        color = Color(0xFF8F8F8F),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Footer
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFF9F9F9))
+                        .padding(vertical = 40.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "\u00A9 2026 Alpha Stamp. All rights reserved.",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 10.sp,
+                        color = Color(0xFF8F8F8F),
+                    )
+                }
             }
         }
     }

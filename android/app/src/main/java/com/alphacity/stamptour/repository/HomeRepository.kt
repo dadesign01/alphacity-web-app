@@ -9,6 +9,7 @@ import com.alphacity.stamptour.network.dto.MissionCompletionResult
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StampItem
+import com.alphacity.stamptour.network.dto.TermItem
 import com.alphacity.stamptour.network.dto.UpdateProfileRequest
 import com.alphacity.stamptour.network.dto.UserProfile
 import javax.inject.Inject
@@ -179,6 +180,19 @@ class HomeRepository @Inject constructor(
             val response = apiService.completeMission(missionId, body)
             if (response.success && response.data != null) Result.success(response.data)
             else Result.failure(Exception(response.error?.message ?: "미션 완료 실패"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getTerms(type: String): Result<List<TermItem>> {
+        return try {
+            val response = apiService.getTerms(type)
+            if (response.success && response.data != null) {
+                Result.success(response.data)
+            } else {
+                Result.failure(Exception(response.error?.message ?: "약관 로드 실패"))
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }

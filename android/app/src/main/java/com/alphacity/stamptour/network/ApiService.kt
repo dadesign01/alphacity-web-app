@@ -1,6 +1,7 @@
 package com.alphacity.stamptour.network
 
 import com.alphacity.stamptour.network.dto.ActivityItemDto
+import com.alphacity.stamptour.network.dto.TermItem
 import com.alphacity.stamptour.network.dto.ApiResponse
 import com.alphacity.stamptour.network.dto.AuthData
 import com.alphacity.stamptour.network.dto.LoginRequest
@@ -134,4 +135,8 @@ interface ApiService {
     // 활동 이력
     @GET("users/activity")
     suspend fun getActivityHistory(): ApiResponse<List<ActivityItemDto>>
+
+    // 약관
+    @GET("terms")
+    suspend fun getTerms(@Query("type") type: String): ApiResponse<List<TermItem>>
 }

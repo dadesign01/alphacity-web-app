@@ -43,6 +43,8 @@ fun MyPageScreen(
     var showStoreRegister by remember { mutableStateOf(false) }
     var showMyCoupons by remember { mutableStateOf(false) }
     var showStampExchange by remember { mutableStateOf(false) }
+    var showPrivacyPolicy by remember { mutableStateOf(false) }
+    var showServiceTerms by remember { mutableStateOf(false) }
 
     val userProfile by viewModel.userProfile.collectAsState()
     val profileImageUri by viewModel.profileImageUri.collectAsState()
@@ -52,7 +54,7 @@ fun MyPageScreen(
     }
 
     // 서브화면 뒤로가기 처리 (MainScreen BackHandler가 가로채지 못하게)
-    val hasSubScreen = showActivityHistory || showProfileInfo || showEditProfile || showSettings || showStoreRegister || showMyCoupons || showStampExchange
+    val hasSubScreen = showActivityHistory || showProfileInfo || showEditProfile || showSettings || showStoreRegister || showMyCoupons || showStampExchange || showPrivacyPolicy || showServiceTerms
     BackHandler(enabled = hasSubScreen) {
         when {
             showEditProfile -> showEditProfile = false
@@ -62,7 +64,25 @@ fun MyPageScreen(
             showStoreRegister -> showStoreRegister = false
             showMyCoupons -> showMyCoupons = false
             showStampExchange -> showStampExchange = false
+            showPrivacyPolicy -> showPrivacyPolicy = false
+            showServiceTerms -> showServiceTerms = false
         }
+    }
+
+    if (showPrivacyPolicy) {
+        PolicyDetailScreen(
+            policyType = PolicyType.PRIVACY,
+            onBackClick = { showPrivacyPolicy = false },
+        )
+        return
+    }
+
+    if (showServiceTerms) {
+        PolicyDetailScreen(
+            policyType = PolicyType.TERMS,
+            onBackClick = { showServiceTerms = false },
+        )
+        return
     }
 
     if (showActivityHistory) {
@@ -296,6 +316,20 @@ fun MyPageScreen(
                 iconRes = R.drawable.icon_store_register,
                 title = "상점 등록",
                 onClick = { showStoreRegister = true },
+            )
+            MenuDivider()
+
+            MenuItemRow(
+                iconRes = R.drawable.icon_settings,
+                title = "개인정보처리방침",
+                onClick = { showPrivacyPolicy = true },
+            )
+            MenuDivider()
+
+            MenuItemRow(
+                iconRes = R.drawable.icon_settings,
+                title = "이용약관",
+                onClick = { showServiceTerms = true },
             )
 
             // === Gray Section (로그아웃 ~ 앱 버전) ===

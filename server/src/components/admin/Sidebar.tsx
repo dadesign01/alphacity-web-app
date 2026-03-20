@@ -17,6 +17,7 @@ import {
   Bell,
   Settings as SettingsIcon,
   Link2,
+  FileText,
 } from 'lucide-react';
 
 const menuItems = [
@@ -34,6 +35,7 @@ const menuItems = [
   { path: '/admin/users', label: '사용자 관리', icon: Users },
   { path: '/admin/notifications', label: '알림 관리', icon: Bell },
   { path: '/admin/settings', label: '설정', icon: SettingsIcon },
+  { path: '/admin/terms', label: '약관 관리', icon: FileText },
 ];
 
 export default function Sidebar() {

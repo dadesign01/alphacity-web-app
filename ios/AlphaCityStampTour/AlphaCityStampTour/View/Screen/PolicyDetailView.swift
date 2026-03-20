@@ -8,6 +8,15 @@ import SwiftUI
 struct PolicyDetailView: View {
     let policyType: PolicyType
     var onBackTapped: () -> Void
+    @StateObject private var viewModel = TermsViewModel()
+
+    private var apiType: String {
+        switch policyType {
+        case .terms: return "service"
+        case .privacy: return "privacy"
+        case .location: return "location"
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,53 +41,82 @@ struct PolicyDetailView: View {
                 .background(Color(hex: "E2E2E2"))
 
             // === Content ===
-            ScrollView {
-                VStack(spacing: 0) {
-                    Spacer().frame(height: 20)
+            if viewModel.isLoading {
+                Spacer()
+                ProgressView()
+                Spacer()
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        Spacer().frame(height: 20)
 
-                    ForEach(sections, id: \.title) { section in
-                        VStack(alignment: .leading, spacing: 7) {
-                            Text(section.title)
-                                .font(AppFont.medium(12))
-                                .foregroundColor(Color(hex: "121212"))
-                            Text(section.content)
+                        if !viewModel.content.isEmpty {
+                            // API content
+                            if !viewModel.title.isEmpty {
+                                Text(viewModel.title)
+                                    .font(AppFont.semibold(14))
+                                    .foregroundColor(Color(hex: "121212"))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 20)
+                                Spacer().frame(height: 12)
+                            }
+                            Text(viewModel.content)
                                 .font(AppFont.regular(10))
                                 .foregroundColor(Color(hex: "595959"))
                                 .lineSpacing(2)
                                 .tracking(-0.2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 20)
+                        } else {
+                            // Fallback to hardcoded content
+                            ForEach(sections, id: \.title) { section in
+                                VStack(alignment: .leading, spacing: 7) {
+                                    Text(section.title)
+                                        .font(AppFont.medium(12))
+                                        .foregroundColor(Color(hex: "121212"))
+                                    Text(section.content)
+                                        .font(AppFont.regular(10))
+                                        .foregroundColor(Color(hex: "595959"))
+                                        .lineSpacing(2)
+                                        .tracking(-0.2)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 12)
+                            }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 12)
+
+                        Spacer().frame(height: 20)
+
+                        // Effective date notice
+                        Text("본 약관은 2026년 2월 2일부터 시행됩니다.")
+                            .font(AppFont.regular(10))
+                            .foregroundColor(Color(hex: "8F8F8F"))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 11)
+                                    .fill(Color(hex: "F8F8F8"))
+                            )
+                            .padding(.horizontal, 20)
+
+                        Spacer().frame(height: 20)
+
+                        // Footer
+                        Text("\u{00A9} 2026 Alpha Stamp. All rights reserved.")
+                            .font(AppFont.regular(10))
+                            .foregroundColor(Color(hex: "8F8F8F"))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                            .background(Color(hex: "F9F9F9"))
                     }
-
-                    Spacer().frame(height: 20)
-
-                    // Effective date notice
-                    Text("본 약관은 2026년 2월 2일부터 시행됩니다.")
-                        .font(AppFont.regular(10))
-                        .foregroundColor(Color(hex: "8F8F8F"))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 11)
-                                .fill(Color(hex: "F8F8F8"))
-                        )
-                        .padding(.horizontal, 20)
-
-                    Spacer().frame(height: 20)
-
-                    // Footer
-                    Text("© 2026 Alpha Stamp. All rights reserved.")
-                        .font(AppFont.regular(10))
-                        .foregroundColor(Color(hex: "8F8F8F"))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 40)
-                        .background(Color(hex: "F9F9F9"))
                 }
             }
         }
         .background(Color.white)
+        .task {
+            await viewModel.fetchTerms(type: apiType)
+        }
     }
 
     private var sections: [(title: String, content: String)] {
