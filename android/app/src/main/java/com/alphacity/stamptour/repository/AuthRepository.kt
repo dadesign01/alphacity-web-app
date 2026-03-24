@@ -115,9 +115,22 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun verifyCodeByEmail(email: String, code: String): Result<Unit> {
+        return try {
+            val response = apiService.verifyCode(VerifyCodeRequest(email = email, code = code))
+            if (response.success) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception(response.error?.message ?: "인증번호가 올바르지 않습니다"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun verifyCode(phone: String, code: String): Result<Unit> {
         return try {
-            val response = apiService.verifyCode(VerifyCodeRequest(phone, code))
+            val response = apiService.verifyCode(VerifyCodeRequest(phone = phone, code = code))
             if (response.success) {
                 Result.success(Unit)
             } else {

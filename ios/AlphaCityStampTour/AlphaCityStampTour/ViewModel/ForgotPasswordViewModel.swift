@@ -55,7 +55,23 @@ final class ForgotPasswordViewModel: ObservableObject {
             error = "6자리 인증코드를 입력하세요"
             return
         }
-        step = .newPassword
+
+        isLoading = true
+        error = nil
+
+        Task {
+            do {
+                let _: EmptyData? = try await client.request(
+                    path: "auth/verify-code",
+                    method: "POST",
+                    body: ["email": savedEmail, "code": code]
+                )
+                step = .newPassword
+            } catch {
+                self.error = "인증코드가 올바르지 않습니다"
+            }
+            isLoading = false
+        }
     }
 
     func resetPassword(code: String, newPassword: String, confirmPassword: String) {

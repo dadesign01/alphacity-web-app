@@ -70,8 +70,23 @@ class ForgotPasswordViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(error = "6자리 인증코드를 입력하세요")
             return
         }
-        // 코드 검증은 비밀번호 변경 시 서버에서 수행
-        _uiState.value = _uiState.value.copy(step = ForgotPasswordStep.NEW_PASSWORD)
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            authRepository.verifyCodeByEmail(savedEmail, code)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        step = ForgotPasswordStep.NEW_PASSWORD,
+                    )
+                }
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = e.message ?: "인증코드가 올바르지 않습니다",
+                    )
+                }
+        }
     }
 
     fun resetPassword(code: String, newPassword: String, confirmPassword: String) {

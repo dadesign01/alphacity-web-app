@@ -43,7 +43,8 @@ data class SendCodeRequest(
 
 @Serializable
 data class VerifyCodeRequest(
-    val phone: String,
+    val phone: String? = null,
+    val email: String? = null,
     val code: String,
 )
 
