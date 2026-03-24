@@ -44,7 +44,7 @@ final class ForgotPasswordViewModel: ObservableObject {
                 )
                 step = .verifyCode
             } catch {
-                self.error = "인증코드 발송에 실패했습니다"
+                self.error = error.localizedDescription
             }
             isLoading = false
         }
@@ -68,7 +68,7 @@ final class ForgotPasswordViewModel: ObservableObject {
                 )
                 step = .newPassword
             } catch {
-                self.error = "인증코드가 올바르지 않습니다"
+                self.error = error.localizedDescription
             }
             isLoading = false
         }
@@ -96,7 +96,7 @@ final class ForgotPasswordViewModel: ObservableObject {
                 )
                 isSuccess = true
             } catch {
-                self.error = "비밀번호 변경에 실패했습니다"
+                self.error = error.localizedDescription
             }
             isLoading = false
         }

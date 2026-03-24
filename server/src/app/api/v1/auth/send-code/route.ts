@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { sendSMS } from '@/lib/sms';
 
 // 간단 인메모리 코드 저장 (프로덕션에서는 Redis 사용 권장)
 const verificationCodes = new Map<string, { code: string; expiresAt: number }>();
@@ -28,8 +29,11 @@ export async function POST(request: NextRequest) {
     const code = String(Math.floor(100000 + Math.random() * 900000));
     verificationCodes.set(email, { code, expiresAt: Date.now() + 5 * 60 * 1000 }); // 5분 유효
 
-    // TODO: 실제 SMS 발송 연동 시 여기에 구현
-    console.log(`[인증코드] ${phone}: ${code}`);
+    // NCP SENS SMS 발송
+    const sent = await sendSMS(phone, `[알파스탬프] 인증번호: ${code}`);
+    if (!sent) {
+      return errorResponse('SMS_FAILED', 'SMS 발송에 실패했습니다. 잠시 후 다시 시도해주세요.', 500);
+    }
 
     return successResponse({ codeSent: true }, '인증코드가 발송되었습니다');
   } catch {

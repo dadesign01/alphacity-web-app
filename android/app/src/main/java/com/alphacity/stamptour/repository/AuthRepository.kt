@@ -84,6 +84,16 @@ class AuthRepository @Inject constructor(
             } else {
                 Result.failure(Exception(response.error?.message ?: "인증코드 발송에 실패했습니다"))
             }
+        } catch (e: retrofit2.HttpException) {
+            val errorMsg = try {
+                val errorBody = e.response()?.errorBody()?.string()
+                val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                val parsed = json.decodeFromString<com.alphacity.stamptour.network.dto.ApiResponse<kotlinx.serialization.json.JsonElement>>(errorBody ?: "")
+                parsed.error?.message ?: "인증코드 발송에 실패했습니다"
+            } catch (_: Exception) {
+                "인증코드 발송에 실패했습니다"
+            }
+            Result.failure(Exception(errorMsg))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -123,6 +133,16 @@ class AuthRepository @Inject constructor(
             } else {
                 Result.failure(Exception(response.error?.message ?: "인증번호가 올바르지 않습니다"))
             }
+        } catch (e: retrofit2.HttpException) {
+            val errorMsg = try {
+                val errorBody = e.response()?.errorBody()?.string()
+                val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                val parsed = json.decodeFromString<com.alphacity.stamptour.network.dto.ApiResponse<kotlinx.serialization.json.JsonElement>>(errorBody ?: "")
+                parsed.error?.message ?: "인증번호가 올바르지 않습니다"
+            } catch (_: Exception) {
+                "인증번호가 올바르지 않습니다"
+            }
+            Result.failure(Exception(errorMsg))
         } catch (e: Exception) {
             Result.failure(e)
         }
