@@ -1,5 +1,7 @@
 package com.alphacity.stamptour.ui.screen
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,9 +21,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -395,6 +399,12 @@ fun MyPageScreen(
                     )
                 }
             }
+
+            // === Company Info Footer ===
+            CompanyInfoFooter(
+                onTermsClick = { showServiceTerms = true },
+                onPrivacyClick = { showPrivacyPolicy = true },
+            )
         }
     }
 }
@@ -587,4 +597,163 @@ private fun MenuDivider() {
         color = Color(0xFFEDEDED),
         thickness = 1.dp,
     )
+}
+
+@Composable
+private fun CompanyInfoFooter(
+    onTermsClick: () -> Unit,
+    onPrivacyClick: () -> Unit,
+) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFF5F5F5)),
+    ) {
+        // Top separator
+        Divider(
+            color = Color(0xFFE2E2E2),
+            thickness = 1.dp,
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 24.dp),
+        ) {
+            // Company name
+            Text(
+                text = "(주)디플로",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                color = Color(0xFF666666),
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Address
+            Text(
+                text = "주소 : 대구광역시 수성구 알파시티 1로 42길 11, 1024호 태왕알파시티수성(대흥동)",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Normal,
+                fontSize = 11.sp,
+                color = Color(0xFF8F8F8F),
+                lineHeight = 16.sp,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "이메일 : contact@di-flo.com",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Normal,
+                fontSize = 11.sp,
+                color = Color(0xFF8F8F8F),
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "고객문의 : 070-4798-9299",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Normal,
+                fontSize = 11.sp,
+                color = Color(0xFF8F8F8F),
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "대표자 : 하다인",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Normal,
+                fontSize = 11.sp,
+                color = Color(0xFF8F8F8F),
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "사업자등록번호 : 892-86-03341",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Normal,
+                fontSize = 11.sp,
+                color = Color(0xFF8F8F8F),
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Disclaimer
+            Text(
+                text = "본 서비스는 위치 기반 스탬프 투어 플랫폼으로, 참여 상점 및 기관이 제공하는 이벤트 및 정보에 대한 책임은 해당 제공자에게 있습니다.",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Normal,
+                fontSize = 11.sp,
+                color = Color(0xFF8F8F8F),
+                lineHeight = 16.sp,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Links row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "이용약관",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.sp,
+                    color = Color(0xFF6B7280),
+                    modifier = Modifier.clickable(onClick = onTermsClick),
+                )
+                Text(
+                    text = " | ",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 11.sp,
+                    color = Color(0xFFA0A0A0),
+                )
+                Text(
+                    text = "개인정보처리방침",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.sp,
+                    color = Color(0xFF6B7280),
+                    modifier = Modifier.clickable(onClick = onPrivacyClick),
+                )
+                Text(
+                    text = " | ",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 11.sp,
+                    color = Color(0xFFA0A0A0),
+                )
+                Text(
+                    text = "문의하기",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.sp,
+                    color = Color(0xFF6B7280),
+                    modifier = Modifier.clickable {
+                        val intent = Intent(Intent.ACTION_SENDTO).apply {
+                            data = Uri.parse("mailto:contact@di-flo.com")
+                        }
+                        context.startActivity(intent)
+                    },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Copyright
+            Text(
+                text = "\u00A9 (주)디플로",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Normal,
+                fontSize = 10.sp,
+                color = Color(0xFFAFBFCC),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
 }

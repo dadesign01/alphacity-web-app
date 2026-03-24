@@ -48,6 +48,9 @@ class StampViewModel @Inject constructor(
     private val _coupons = MutableStateFlow<List<CouponItem>>(emptyList())
     val coupons: StateFlow<List<CouponItem>> = _coupons
 
+    private val _redeemedCouponIds = MutableStateFlow<Set<Int>>(emptySet())
+    val redeemedCouponIds: StateFlow<Set<Int>> = _redeemedCouponIds
+
     private val _isRedeeming = MutableStateFlow(false)
     val isRedeeming: StateFlow<Boolean> = _isRedeeming
 
@@ -103,7 +106,10 @@ class StampViewModel @Inject constructor(
 
             // 쿠폰 목록 로드
             stampRepository.getCoupons()
-                .onSuccess { _coupons.value = it }
+                .onSuccess {
+                    _coupons.value = it.coupons
+                    _redeemedCouponIds.value = it.redeemedCouponIds.toSet()
+                }
                 .onFailure { Log.e("StampViewModel", "쿠폰 로드 실패", it) }
 
             _isLoading.value = false

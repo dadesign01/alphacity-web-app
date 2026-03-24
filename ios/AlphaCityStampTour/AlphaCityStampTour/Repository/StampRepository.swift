@@ -27,12 +27,16 @@ final class StampRepository {
         return try await client.request(path: "missions")
     }
 
-    func fetchCoupons() async throws -> [CouponData] {
+    func fetchCoupons() async throws -> CouponListResponse {
         return try await client.request(path: "coupons")
     }
 
     func redeemCoupon(couponId: Int) async throws -> UserCouponData {
         return try await client.request(path: "coupons/\(couponId)/redeem", method: "POST", authenticated: true)
+    }
+
+    func useCoupon(userCouponId: Int) async throws -> UserCouponData {
+        return try await client.request(path: "coupons/use", method: "POST", body: ["userCouponId": userCouponId], authenticated: true)
     }
 
     func fetchMyCoupons() async throws -> [MyCouponData] {

@@ -13,7 +13,7 @@ struct StampExchangeView: View {
     @State private var showConfirmCoupon: CouponData? = nil
 
     private var exchangeableCouponCount: Int {
-        viewModel.coupons.filter { viewModel.userStampCount >= $0.requiredStamps }.count
+        viewModel.coupons.filter { viewModel.userStampCount >= $0.requiredStamps && !viewModel.redeemedCouponIds.contains($0.id) }.count
     }
 
     var body: some View {
@@ -155,10 +155,12 @@ struct StampExchangeView: View {
                         } else {
                             VStack(spacing: 0) {
                                 ForEach(viewModel.coupons) { coupon in
+                                    let isRedeemed = viewModel.redeemedCouponIds.contains(coupon.id)
                                     ExchangeCouponCardView(
                                         coupon: coupon,
                                         userStamps: viewModel.userStampCount,
-                                        onExchangeTapped: { showConfirmCoupon = coupon }
+                                        isRedeemed: isRedeemed,
+                                        onExchangeTapped: { if !isRedeemed { showConfirmCoupon = coupon } }
                                     )
 
                                     if coupon.id != viewModel.coupons.last?.id {
@@ -511,10 +513,11 @@ private func formatValidUntil(_ raw: String) -> String {
 private struct ExchangeCouponCardView: View {
     let coupon: CouponData
     let userStamps: Int
+    var isRedeemed: Bool = false
     var onExchangeTapped: () -> Void
 
     private var canExchange: Bool {
-        userStamps >= coupon.requiredStamps
+        !isRedeemed && userStamps >= coupon.requiredStamps
     }
 
     private var validUntilText: String {
@@ -591,7 +594,7 @@ private struct ExchangeCouponCardView: View {
             .padding(.vertical, 16)
 
             Button(action: { if canExchange { onExchangeTapped() } }) {
-                Text(canExchange ? "교환하기" : "스탬프가 부족해요")
+                Text(isRedeemed ? "이미 교환됨" : canExchange ? "교환하기" : "스탬프가 부족해요")
                     .font(AppFont.semibold(16))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)

@@ -49,7 +49,25 @@ export async function GET(request: NextRequest) {
       where: { validUntil: { gte: new Date() } },
       orderBy: { requiredStamps: 'asc' },
     });
-    return successResponse(coupons);
+
+    // 로그인 사용자면 이미 교환한 쿠폰 ID 목록도 반환
+    let redeemedCouponIds: number[] = [];
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    if (token) {
+      try {
+        const payload = await verifyToken(token);
+        const userId = payload.userId as number;
+        const userCoupons = await prisma.userCoupon.findMany({
+          where: { userId },
+          select: { couponId: true },
+        });
+        redeemedCouponIds = userCoupons.map((uc) => uc.couponId);
+      } catch {
+        // 토큰 검증 실패 시 무시 (비로그인 상태)
+      }
+    }
+
+    return successResponse({ coupons, redeemedCouponIds });
   } catch {
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }

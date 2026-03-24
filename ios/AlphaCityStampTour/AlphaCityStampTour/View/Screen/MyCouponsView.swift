@@ -138,14 +138,24 @@ struct MyCouponsView: View {
                     coupon: coupon,
                     onDismiss: { selectedCoupon = nil },
                     onUseCoupon: {
+                        viewModel.useCoupon(userCouponId: coupon.id)
                         selectedCoupon = nil
-                        // TODO: 쿠폰 사용 API 호출
                     }
                 )
             }
         }
         .onAppear {
             viewModel.fetchMyCoupons()
+        }
+        .alert("알림", isPresented: $viewModel.useSuccess) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text("쿠폰이 사용되었습니다.")
+        }
+        .alert("오류", isPresented: Binding(get: { viewModel.useError != nil }, set: { if !$0 { viewModel.useError = nil } })) {
+            Button("확인", role: .cancel) { viewModel.useError = nil }
+        } message: {
+            Text(viewModel.useError ?? "")
         }
     }
 }

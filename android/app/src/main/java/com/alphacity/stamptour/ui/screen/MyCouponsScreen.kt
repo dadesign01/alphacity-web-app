@@ -52,13 +52,49 @@ fun MyCouponsScreen(
     viewModel: MyCouponsViewModel = hiltViewModel(),
 ) {
     val myCoupons by viewModel.myCoupons.collectAsState()
+    val useSuccess by viewModel.useSuccess.collectAsState()
+    val useError by viewModel.useError.collectAsState()
     var selectedCoupon by remember { mutableStateOf<MyCouponItem?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.fetchMyCoupons()
     }
 
-    val availableCoupons = myCoupons.filter { it.status == "issued" }
+    // 사용 성공 시 알림
+    if (useSuccess) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { viewModel.clearUseSuccess() },
+            title = { Text("알림", fontFamily = com.alphacity.stamptour.ui.theme.Pretendard, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
+            text = { Text("쿠폰이 사용되었습니다.", fontFamily = com.alphacity.stamptour.ui.theme.Pretendard) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { viewModel.clearUseSuccess() }) {
+                    Text("확인", fontFamily = com.alphacity.stamptour.ui.theme.Pretendard, color = Primary)
+                }
+            },
+        )
+    }
+
+    // 사용 실패 시 알림
+    useError?.let { error ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { viewModel.clearUseError() },
+            title = { Text("오류", fontFamily = com.alphacity.stamptour.ui.theme.Pretendard, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
+            text = { Text(error, fontFamily = com.alphacity.stamptour.ui.theme.Pretendard) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { viewModel.clearUseError() }) {
+                    Text("확인", fontFamily = com.alphacity.stamptour.ui.theme.Pretendard, color = Primary)
+                }
+            },
+        )
+    }
+
+    // issued 상태 + 유효기간 남은 쿠폰만 표시
+    val availableCoupons = myCoupons.filter { coupon ->
+        coupon.status == "issued" && try {
+            val expiry = coupon.validUntil.substring(0, 10)
+            expiry >= java.time.LocalDate.now().toString()
+        } catch (_: Exception) { true }
+    }
 
     Box(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Column(
@@ -236,8 +272,8 @@ fun MyCouponsScreen(
                 coupon = coupon,
                 onDismiss = { selectedCoupon = null },
                 onUseCoupon = {
+                    viewModel.useCoupon(coupon.id)
                     selectedCoupon = null
-                    // TODO: 쿠폰 사용 API 호출
                 },
             )
         }

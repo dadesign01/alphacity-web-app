@@ -106,7 +106,7 @@ export default function ProgramsPage() {
       const res = await fetch('/api/v1/admin/upload', { method: 'POST', body: formData });
       const json = await res.json();
       if (json.success) {
-        setForm((prev) => ({ ...prev, imageUrl: json.data.url }));
+        setForm((prev) => ({ ...prev, imageUrl: json.data.imageUrl }));
       } else {
         alert(json.error?.message || '업로드 실패');
       }

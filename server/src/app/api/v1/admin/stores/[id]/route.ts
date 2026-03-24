@@ -35,6 +35,7 @@ export async function PUT(
     if (body.missionId !== undefined) updateData.missionId = body.missionId || null;
     if (body.latitude !== undefined) updateData.latitude = body.latitude !== null && body.latitude !== '' ? parseFloat(body.latitude) : null;
     if (body.longitude !== undefined) updateData.longitude = body.longitude !== null && body.longitude !== '' ? parseFloat(body.longitude) : null;
+    if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl || null;
 
     const store = await prisma.store.update({
       where: { id: storeId },

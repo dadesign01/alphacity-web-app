@@ -236,7 +236,7 @@ private fun ProgramListCard(
                     contentDescription = program.name,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(130.dp)
+                        .height(240.dp)
                         .clip(RoundedCornerShape(22.dp)),
                     contentScale = ContentScale.Crop,
                 )
@@ -245,7 +245,7 @@ private fun ProgramListCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(130.dp)
+                        .height(240.dp)
                         .clip(RoundedCornerShape(22.dp))
                         .background(Color(0xFFE8E8E8)),
                     contentAlignment = Alignment.Center,

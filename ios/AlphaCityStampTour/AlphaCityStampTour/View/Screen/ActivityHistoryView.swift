@@ -6,7 +6,7 @@
 import SwiftUI
 
 enum ActivityType: String, CaseIterable {
-    case stamp, mission, event, coupon
+    case stamp, mission, event, coupon, couponUsed, couponExpired
 
     var badgeLabel: String {
         switch self {
@@ -14,6 +14,8 @@ enum ActivityType: String, CaseIterable {
         case .mission: return "미 션"
         case .event: return "행 사"
         case .coupon: return "교  환"
+        case .couponUsed: return "사  용"
+        case .couponExpired: return "미사용"
         }
     }
 
@@ -22,7 +24,7 @@ enum ActivityType: String, CaseIterable {
         case .stamp: return "스탬프"
         case .mission: return "미션"
         case .event: return "행사"
-        case .coupon: return "쿠폰 교환"
+        case .coupon, .couponUsed, .couponExpired: return "쿠폰 교환"
         }
     }
 
@@ -31,12 +33,24 @@ enum ActivityType: String, CaseIterable {
         case .stamp: return "ActivityStamp"
         case .mission: return "ActivityMission"
         case .event: return "ActivityEvent"
-        case .coupon: return "ActivityCoupon"
+        case .coupon, .couponUsed, .couponExpired: return "ActivityCoupon"
         }
     }
 
     var isFilled: Bool {
-        self == .coupon
+        self == .coupon || self == .couponUsed || self == .couponExpired
+    }
+
+    var badgeColor: Color {
+        switch self {
+        case .couponExpired: return Color(hex: "9CA3AF")
+        case .couponUsed: return Color(hex: "16A34A")
+        default: return AppColor.primary
+        }
+    }
+
+    var isCouponRelated: Bool {
+        self == .coupon || self == .couponUsed || self == .couponExpired
     }
 }
 
@@ -73,7 +87,12 @@ private func convertDTO(_ dto: ActivityItemDTO, index: Int) -> ActivityDisplayIt
     case "stamp": activityType = .stamp
     case "mission": activityType = .mission
     case "event": activityType = .event
-    case "coupon": activityType = .coupon
+    case "coupon":
+        switch dto.subType {
+        case "used": activityType = .couponUsed
+        case "expired": activityType = .couponExpired
+        default: activityType = .coupon
+        }
     default: activityType = .stamp
     }
     return ActivityDisplayItem(
@@ -98,6 +117,9 @@ struct ActivityHistoryView: View {
 
     private var filteredActivities: [ActivityDisplayItem] {
         if let filter = selectedFilter {
+            if filter.isCouponRelated {
+                return allActivities.filter { $0.type.isCouponRelated }
+            }
             return allActivities.filter { $0.type == filter }
         }
         return allActivities
@@ -127,7 +149,7 @@ struct ActivityHistoryView: View {
 
             // === Filter Tabs ===
             HStack(spacing: 8) {
-                ForEach(ActivityType.allCases, id: \.self) { filter in
+                ForEach([ActivityType.stamp, .mission, .event, .coupon], id: \.self) { filter in
                     let isSelected = selectedFilter == filter
                     Button {
                         selectedFilter = isSelected ? nil : filter
@@ -208,7 +230,7 @@ private struct ActivityItemRow: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 3)
                         .background(
-                            Capsule().fill(AppColor.primary)
+                            Capsule().fill(activity.type.badgeColor)
                         )
                 } else {
                     Text(activity.type.badgeLabel)

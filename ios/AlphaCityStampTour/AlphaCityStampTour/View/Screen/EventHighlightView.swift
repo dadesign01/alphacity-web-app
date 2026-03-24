@@ -223,7 +223,7 @@ private struct RaffleEventCard: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 130)
+            .frame(height: 240)
             .clipShape(RoundedRectangle(cornerRadius: 22))
 
             // 상태 배지 + 제목
@@ -312,7 +312,7 @@ private struct RaffleEventCard: View {
                 .foregroundColor(Color(hex: "B5B5B5"))
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 130)
+        .frame(height: 240)
     }
 }
 

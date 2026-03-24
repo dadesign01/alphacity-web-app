@@ -37,6 +37,8 @@ enum class ActivityType(val label: String) {
     MISSION("미 션"),
     EVENT("행 사"),
     COUPON("교  환"),
+    COUPON_USED("사  용"),
+    COUPON_EXPIRED("미사용"),
 }
 
 data class ActivityItem(
@@ -58,7 +60,11 @@ private fun ActivityItemDto.toActivityItem(): ActivityItem {
         "stamp" -> ActivityType.STAMP
         "mission" -> ActivityType.MISSION
         "event" -> ActivityType.EVENT
-        "coupon" -> ActivityType.COUPON
+        "coupon" -> when (subType) {
+            "used" -> ActivityType.COUPON_USED
+            "expired" -> ActivityType.COUPON_EXPIRED
+            else -> ActivityType.COUPON
+        }
         else -> ActivityType.STAMP
     }
     val formattedDate = try {
@@ -103,7 +109,7 @@ fun ActivityHistoryScreen(
                     ActivityFilter.STAMP -> it.type == ActivityType.STAMP
                     ActivityFilter.MISSION -> it.type == ActivityType.MISSION
                     ActivityFilter.EVENT -> it.type == ActivityType.EVENT
-                    ActivityFilter.COUPON -> it.type == ActivityType.COUPON
+                    ActivityFilter.COUPON -> it.type == ActivityType.COUPON || it.type == ActivityType.COUPON_USED || it.type == ActivityType.COUPON_EXPIRED
                     null -> true
                 }
             }
@@ -223,7 +229,7 @@ private fun ActivityItemRow(activity: ActivityItem) {
         ActivityType.STAMP -> R.drawable.activity_stamp
         ActivityType.MISSION -> R.drawable.activity_mission
         ActivityType.EVENT -> R.drawable.activity_event
-        ActivityType.COUPON -> R.drawable.activity_coupon
+        ActivityType.COUPON, ActivityType.COUPON_USED, ActivityType.COUPON_EXPIRED -> R.drawable.activity_coupon
     }
 
     Row(
@@ -253,12 +259,17 @@ private fun ActivityItemRow(activity: ActivityItem) {
         // Content
         Column(modifier = Modifier.weight(1f)) {
             // Badge
-            if (activity.type == ActivityType.COUPON) {
+            if (activity.type == ActivityType.COUPON || activity.type == ActivityType.COUPON_USED || activity.type == ActivityType.COUPON_EXPIRED) {
                 // Filled badge
+                val badgeColor = when (activity.type) {
+                    ActivityType.COUPON_EXPIRED -> Color(0xFF9CA3AF)
+                    ActivityType.COUPON_USED -> Color(0xFF16A34A)
+                    else -> Primary
+                }
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(100.dp))
-                        .background(Primary)
+                        .background(badgeColor)
                         .padding(horizontal = 10.dp, vertical = 3.dp),
                 ) {
                     Text(

@@ -18,6 +18,7 @@ async function getUserId(request: NextRequest): Promise<number | null> {
 
 interface ActivityEntry {
   type: 'stamp' | 'mission' | 'event' | 'coupon';
+  subType?: 'redeemed' | 'used' | 'expired';
   title: string;
   date: string;
   validUntil?: string | null;
@@ -85,18 +86,43 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 쿠폰 교환 기록
+    // 쿠폰 기록 (교환/사용/미사용 구분)
+    const now = new Date();
     for (const uc of userCoupons) {
       const validDate = uc.coupon.validUntil;
       const formatted = validDate
         ? `${validDate.getFullYear()}년 ${String(validDate.getMonth() + 1).padStart(2, '0')}월 ${String(validDate.getDate()).padStart(2, '0')}일까지 사용 가능`
         : null;
-      activities.push({
-        type: 'coupon',
-        title: `${uc.coupon.name} 쿠폰 교환`,
-        date: uc.createdAt.toISOString(),
-        validUntil: formatted,
-      });
+      const isExpired = validDate && validDate < now;
+
+      if (uc.status === 'used') {
+        // 사용된 쿠폰
+        activities.push({
+          type: 'coupon',
+          subType: 'used',
+          title: `${uc.coupon.name} 쿠폰 사용`,
+          date: (uc.usedAt ?? uc.createdAt).toISOString(),
+          validUntil: formatted,
+        });
+      } else if (uc.status === 'issued' && isExpired) {
+        // 미사용 만료 쿠폰
+        activities.push({
+          type: 'coupon',
+          subType: 'expired',
+          title: `${uc.coupon.name} 쿠폰 미사용 만료`,
+          date: validDate!.toISOString(),
+          validUntil: formatted,
+        });
+      } else {
+        // 교환(발급) 기록
+        activities.push({
+          type: 'coupon',
+          subType: 'redeemed',
+          title: `${uc.coupon.name} 쿠폰 교환`,
+          date: uc.createdAt.toISOString(),
+          validUntil: formatted,
+        });
+      }
     }
 
     // 최신순 정렬

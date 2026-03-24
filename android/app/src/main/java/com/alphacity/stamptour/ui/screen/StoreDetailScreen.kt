@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.alphacity.stamptour.BuildConfig
 import com.alphacity.stamptour.network.dto.StoreData
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
@@ -97,8 +98,9 @@ fun StoreDetailScreen(
         ) {
             // Store image
             if (store.imageUrl != null) {
+                val fullImageUrl = if (store.imageUrl!!.startsWith("http")) store.imageUrl else BuildConfig.SERVER_URL + store.imageUrl
                 AsyncImage(
-                    model = store.imageUrl,
+                    model = fullImageUrl,
                     contentDescription = store.name,
                     modifier = Modifier
                         .fillMaxWidth()

@@ -22,6 +22,28 @@ class MyCouponsViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    private val _useSuccess = MutableStateFlow(false)
+    val useSuccess: StateFlow<Boolean> = _useSuccess
+
+    private val _useError = MutableStateFlow<String?>(null)
+    val useError: StateFlow<String?> = _useError
+
+    fun useCoupon(userCouponId: Int) {
+        viewModelScope.launch {
+            stampRepository.useCoupon(userCouponId)
+                .onSuccess {
+                    _useSuccess.value = true
+                    fetchMyCoupons()
+                }
+                .onFailure {
+                    _useError.value = it.message ?: "쿠폰 사용에 실패했습니다"
+                }
+        }
+    }
+
+    fun clearUseSuccess() { _useSuccess.value = false }
+    fun clearUseError() { _useError.value = null }
+
     fun fetchMyCoupons() {
         if (_isLoading.value) return
         _isLoading.value = true

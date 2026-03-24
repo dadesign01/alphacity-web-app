@@ -150,6 +150,12 @@ data class MissionPlace(
 // === 쿠폰 ===
 
 @Serializable
+data class CouponListResponse(
+    val coupons: List<CouponItem>,
+    val redeemedCouponIds: List<Int> = emptyList(),
+)
+
+@Serializable
 data class CouponItem(
     val id: Int,
     val name: String,
@@ -227,6 +233,7 @@ data class UpdateProfileRequest(
 @Serializable
 data class ActivityItemDto(
     val type: String,
+    val subType: String? = null,
     val title: String,
     val date: String,
     val validUntil: String? = null,

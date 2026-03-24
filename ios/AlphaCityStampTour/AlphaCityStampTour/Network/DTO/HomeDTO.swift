@@ -144,6 +144,11 @@ struct UserStampData: Decodable, Identifiable {
 
 // MARK: - 쿠폰
 
+struct CouponListResponse: Decodable {
+    let coupons: [CouponData]
+    let redeemedCouponIds: [Int]
+}
+
 struct CouponData: Decodable, Identifiable {
     let id: Int
     let name: String
@@ -185,6 +190,7 @@ struct MyCouponData: Decodable, Identifiable {
 
 struct ActivityItemDTO: Decodable {
     let type: String
+    let subType: String?
     let title: String
     let date: String
     let validUntil: String?

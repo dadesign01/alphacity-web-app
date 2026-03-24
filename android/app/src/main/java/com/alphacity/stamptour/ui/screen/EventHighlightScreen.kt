@@ -267,7 +267,7 @@ private fun RaffleEventCard(event: EventItem) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(130.dp)
+                .height(240.dp)
                 .clip(RoundedCornerShape(22.dp)),
         ) {
             val imageUrl = event.imageUrl

@@ -168,7 +168,7 @@ private struct ProgramListCardView: View {
                                 .resizable()
                                 .scaledToFill()
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 130)
+                                .frame(height: 240)
                                 .clipped()
                         default:
                             placeholderImage
@@ -275,7 +275,7 @@ private struct ProgramListCardView: View {
                 .foregroundColor(Color(hex: "B5B5B5"))
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 130)
+        .frame(height: 240)
     }
 
     private var statusBadge: (text: String, bgColor: Color, textColor: Color) {

@@ -52,6 +52,7 @@ fun StampExchangeScreen(
     val isRedeeming by viewModel.isRedeeming.collectAsState()
     val redeemSuccess by viewModel.redeemSuccess.collectAsState()
     val redeemError by viewModel.redeemError.collectAsState()
+    val redeemedCouponIds by viewModel.redeemedCouponIds.collectAsState()
 
     var showConfirmDialog by remember { mutableStateOf<CouponItem?>(null) }
 
@@ -92,7 +93,7 @@ fun StampExchangeScreen(
         )
     }
 
-    val exchangeableCouponCount = coupons.count { userStampCount >= it.requiredStamps }
+    val exchangeableCouponCount = coupons.count { userStampCount >= it.requiredStamps && !redeemedCouponIds.contains(it.id) }
 
     Column(
         modifier = Modifier
@@ -297,10 +298,12 @@ fun StampExchangeScreen(
             } else {
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                     coupons.forEachIndexed { index, coupon ->
+                        val isRedeemed = redeemedCouponIds.contains(coupon.id)
                         ExchangeCouponCard(
                             coupon = coupon,
                             userStamps = userStampCount,
-                            onExchangeClick = { showConfirmDialog = coupon },
+                            isRedeemed = isRedeemed,
+                            onExchangeClick = { if (!isRedeemed) showConfirmDialog = coupon },
                         )
                         if (index < coupons.size - 1) {
                             Canvas(
@@ -733,9 +736,10 @@ private fun formatValidUntil(raw: String): String {
 private fun ExchangeCouponCard(
     coupon: CouponItem,
     userStamps: Int,
+    isRedeemed: Boolean = false,
     onExchangeClick: () -> Unit,
 ) {
-    val canExchange = userStamps >= coupon.requiredStamps
+    val canExchange = !isRedeemed && userStamps >= coupon.requiredStamps
     val validUntilText = formatValidUntil(coupon.validUntil) + "까지"
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -845,7 +849,7 @@ private fun ExchangeCouponCard(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = if (canExchange) "교환하기" else "스탬프가 부족해요",
+                text = if (isRedeemed) "이미 교환됨" else if (canExchange) "교환하기" else "스탬프가 부족해요",
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 16.sp,

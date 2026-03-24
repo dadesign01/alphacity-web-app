@@ -22,10 +22,10 @@ export async function POST(request: NextRequest) {
 
     const updated = await prisma.userCoupon.update({
       where: { id: userCouponId },
-      data: { status: 'pending', storeId, requestedAt: new Date() },
+      data: { status: 'used', storeId, requestedAt: new Date(), usedAt: new Date() },
     });
 
-    return successResponse(updated, '쿠폰 사용을 요청했습니다. 관리자 승인을 기다려주세요.');
+    return successResponse(updated, '쿠폰이 사용되었습니다.');
   } catch {
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }

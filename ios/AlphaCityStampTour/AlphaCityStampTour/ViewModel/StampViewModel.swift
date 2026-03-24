@@ -21,6 +21,7 @@ final class StampViewModel: ObservableObject {
     @Published var userStamps: [UserStampData] = []
     @Published var missions: [MissionData] = []
     @Published var coupons: [CouponData] = []
+    @Published var redeemedCouponIds: Set<Int> = []
     @Published var isRedeeming = false
     @Published var redeemSuccess: RedeemSuccess? = nil
     @Published var redeemError: String? = nil
@@ -83,7 +84,9 @@ final class StampViewModel: ObservableObject {
 
             // 쿠폰 목록 로드
             do {
-                coupons = try await repository.fetchCoupons()
+                let couponResponse = try await repository.fetchCoupons()
+                coupons = couponResponse.coupons
+                redeemedCouponIds = Set(couponResponse.redeemedCouponIds)
             } catch {
                 print("[StampVM] 쿠폰 로드 실패: \(error)")
             }

@@ -46,8 +46,8 @@ fun QuizMissionScreen(
 ) {
     val context = LocalContext.current
 
-    // 이전 미션 상태 초기화 (같은 ViewModel 인스턴스가 재사용되므로 필수)
-    LaunchedEffect(mission.id) {
+    // 최초 진입 시 1회만 상태 초기화
+    LaunchedEffect(Unit) {
         viewModel.reset()
     }
 

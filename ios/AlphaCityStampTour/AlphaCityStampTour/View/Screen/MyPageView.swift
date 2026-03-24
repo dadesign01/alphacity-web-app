@@ -223,6 +223,12 @@ struct MyPageView: View {
                             .padding(.vertical, 20)
                     }
                     .background(Color(hex: "F8F8F8"))
+
+                    // === Company Info Footer ===
+                    CompanyInfoFooter(
+                        onTermsTapped: { showServiceTerms = true },
+                        onPrivacyTapped: { showPrivacyPolicy = true }
+                    )
                 }
                 .background(Color.white)
                 .clipShape(
@@ -390,6 +396,106 @@ private struct MenuItemRow: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
         }
+    }
+}
+
+private struct CompanyInfoFooter: View {
+    var onTermsTapped: () -> Void
+    var onPrivacyTapped: () -> Void
+
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Top separator
+            Divider()
+                .background(Color(hex: "E2E2E2"))
+
+            VStack(alignment: .leading, spacing: 0) {
+                // Company name
+                Text("(주)디플로")
+                    .font(AppFont.semibold(13))
+                    .foregroundColor(Color(hex: "666666"))
+
+                Spacer().frame(height: 12)
+
+                // Address
+                Text("주소 : 대구광역시 수성구 알파시티 1로 42길 11, 1024호 태왕알파시티수성(대흥동)")
+                    .font(AppFont.regular(11))
+                    .foregroundColor(Color(hex: "8F8F8F"))
+                    .lineSpacing(3)
+                Spacer().frame(height: 2)
+                Text("이메일 : contact@di-flo.com")
+                    .font(AppFont.regular(11))
+                    .foregroundColor(Color(hex: "8F8F8F"))
+                Spacer().frame(height: 2)
+                Text("고객문의 : 070-4798-9299")
+                    .font(AppFont.regular(11))
+                    .foregroundColor(Color(hex: "8F8F8F"))
+
+                Spacer().frame(height: 12)
+
+                Text("대표자 : 하다인")
+                    .font(AppFont.regular(11))
+                    .foregroundColor(Color(hex: "8F8F8F"))
+                Spacer().frame(height: 2)
+                Text("사업자등록번호 : 892-86-03341")
+                    .font(AppFont.regular(11))
+                    .foregroundColor(Color(hex: "8F8F8F"))
+
+                Spacer().frame(height: 12)
+
+                // Disclaimer
+                Text("본 서비스는 위치 기반 스탬프 투어 플랫폼으로, 참여 상점 및 기관이 제공하는 이벤트 및 정보에 대한 책임은 해당 제공자에게 있습니다.")
+                    .font(AppFont.regular(11))
+                    .foregroundColor(Color(hex: "8F8F8F"))
+                    .lineSpacing(3)
+
+                Spacer().frame(height: 16)
+
+                // Links row
+                HStack(spacing: 0) {
+                    Spacer()
+                    Button(action: onTermsTapped) {
+                        Text("이용약관")
+                            .font(AppFont.medium(11))
+                            .foregroundColor(Color(hex: "6B7280"))
+                    }
+                    Text(" | ")
+                        .font(AppFont.regular(11))
+                        .foregroundColor(Color(hex: "A0A0A0"))
+                    Button(action: onPrivacyTapped) {
+                        Text("개인정보처리방침")
+                            .font(AppFont.medium(11))
+                            .foregroundColor(Color(hex: "6B7280"))
+                    }
+                    Text(" | ")
+                        .font(AppFont.regular(11))
+                        .foregroundColor(Color(hex: "A0A0A0"))
+                    Button {
+                        if let url = URL(string: "mailto:contact@di-flo.com") {
+                            openURL(url)
+                        }
+                    } label: {
+                        Text("문의하기")
+                            .font(AppFont.medium(11))
+                            .foregroundColor(Color(hex: "6B7280"))
+                    }
+                    Spacer()
+                }
+
+                Spacer().frame(height: 16)
+
+                // Copyright
+                Text("\u{00A9} (주)디플로")
+                    .font(AppFont.regular(10))
+                    .foregroundColor(Color(hex: "AFBFCC"))
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 24)
+        }
+        .background(Color(hex: "F5F5F5"))
     }
 }
 

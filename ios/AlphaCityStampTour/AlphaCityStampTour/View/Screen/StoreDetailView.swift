@@ -51,7 +51,7 @@ struct StoreDetailView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     // Store image
-                    if let imageUrl = store.imageUrl, let url = URL(string: imageUrl) {
+                    if let imageUrl = store.imageUrl, !imageUrl.isEmpty, let url = URL(string: imageUrl.hasPrefix("http") ? imageUrl : "\(APIClient.serverURL)\(imageUrl)") {
                         AsyncImage(url: url) { image in
                             image
                                 .resizable()

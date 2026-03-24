@@ -1,7 +1,7 @@
 'use client';
 
-import { CheckCircle, X as XIcon, MapPin, Clock, Store, Ticket, Link } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { CheckCircle, X as XIcon, MapPin, Clock, Store, Ticket, Link, Upload } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface StoreCouponItem {
   coupon: { id: number; name: string };
@@ -79,6 +79,9 @@ export default function StoresPage() {
   const [editLatitude, setEditLatitude] = useState<string>('');
   const [editLongitude, setEditLongitude] = useState<string>('');
   const [saving, setSaving] = useState(false);
+  const [editImageUrl, setEditImageUrl] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
+  const storeFileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = () => {
     fetch('/api/v1/admin/stores').then((r) => r.json()).then((d) => {
@@ -107,6 +110,7 @@ export default function StoresPage() {
     setEditCouponIds(store.storeCoupons?.map(sc => sc.coupon.id) ?? []);
     setEditLatitude(store.latitude != null ? String(store.latitude) : '');
     setEditLongitude(store.longitude != null ? String(store.longitude) : '');
+    setEditImageUrl(store.imageUrl || '');
   };
 
   const handleAction = async (id: number, status: 'approved' | 'rejected') => {
@@ -134,7 +138,7 @@ export default function StoresPage() {
       const res = await fetch(`/api/v1/admin/stores/${selected.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ programId: editProgramId, missionId: editMissionId, couponIds: editCouponIds, latitude: editLatitude || null, longitude: editLongitude || null }),
+        body: JSON.stringify({ programId: editProgramId, missionId: editMissionId, couponIds: editCouponIds, latitude: editLatitude || null, longitude: editLongitude || null, imageUrl: editImageUrl || null }),
       });
       const data = await res.json();
       if (data.success) {
@@ -271,11 +275,40 @@ export default function StoresPage() {
               </div>
             </div>
             <div className="p-6 pt-4 space-y-4">
-              {selected.imageUrl && (
-                <div>
-                  <img src={selected.imageUrl} alt={selected.name} className="w-full h-40 object-cover rounded-lg" />
-                </div>
-              )}
+              {/* 이미지 업로드 */}
+              <div>
+                <p className="text-xs text-gray-500 mb-2">상점 이미지</p>
+                {editImageUrl ? (
+                  <div className="relative">
+                    <img src={editImageUrl} alt={selected.name} className="w-full h-40 object-cover rounded-lg" />
+                    <button onClick={() => { setEditImageUrl(''); if (storeFileInputRef.current) storeFileInputRef.current.value = ''; }}
+                      className="absolute top-2 right-2 p-1 bg-black/50 rounded-full text-white hover:bg-black/70">
+                      <XIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 transition-colors">
+                    <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                    <p className="text-sm text-gray-600">이미지 업로드</p>
+                    <p className="text-xs text-gray-500">PNG, JPG (최대 5MB)</p>
+                    <input ref={storeFileInputRef} type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setUploading(true);
+                      try {
+                        const fd = new FormData();
+                        fd.append('file', file);
+                        const res = await fetch('/api/v1/admin/upload', { method: 'POST', body: fd });
+                        const json = await res.json();
+                        if (json.success) setEditImageUrl(json.data.imageUrl);
+                        else alert(json.error?.message || '업로드 실패');
+                      } catch { alert('업로드 중 오류가 발생했습니다'); }
+                      setUploading(false);
+                    }} />
+                  </label>
+                )}
+                {uploading && <p className="text-sm text-gray-500 mt-1">업로드 중...</p>}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">상점명</p>
@@ -413,7 +446,7 @@ export default function StoresPage() {
                 disabled={saving}
                 className="w-full py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {saving ? '저장 중...' : '좌표/미션/쿠폰 저장'}
+                {saving ? '저장 중...' : '이미지/좌표/미션/쿠폰 저장'}
               </button>
             </div>
             <div className="sticky bottom-0 bg-white flex justify-end gap-2 p-6 pt-4 border-t border-gray-200">
