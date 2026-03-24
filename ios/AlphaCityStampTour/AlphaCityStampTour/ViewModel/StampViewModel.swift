@@ -26,6 +26,7 @@ final class StampViewModel: ObservableObject {
     @Published var redeemSuccess: RedeemSuccess? = nil
     @Published var redeemError: String? = nil
     @Published var isLoading = false
+    @Published var availableStamps: Int = 0
 
     private let repository = StampRepository.shared
 
@@ -87,6 +88,7 @@ final class StampViewModel: ObservableObject {
                 let couponResponse = try await repository.fetchCoupons()
                 coupons = couponResponse.coupons
                 redeemedCouponIds = Set(couponResponse.redeemedCouponIds)
+                availableStamps = couponResponse.availableStamps ?? 0
             } catch {
                 print("[StampVM] 쿠폰 로드 실패: \(error)")
             }

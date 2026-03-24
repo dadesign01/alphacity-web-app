@@ -413,7 +413,7 @@ private fun LoginTextField(
         ),
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp),
+            .height(54.dp),
     )
 }
 

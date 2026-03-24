@@ -50,24 +50,30 @@ export async function GET(request: NextRequest) {
       orderBy: { requiredStamps: 'asc' },
     });
 
-    // 로그인 사용자면 이미 교환한 쿠폰 ID 목록도 반환
+    // 로그인 사용자면 이미 교환한 쿠폰 ID 목록 + 교환 가능 스탬프 수 반환
     let redeemedCouponIds: number[] = [];
+    let availableStamps = 0;
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
     if (token) {
       try {
         const payload = await verifyToken(token);
         const userId = payload.userId as number;
-        const userCoupons = await prisma.userCoupon.findMany({
-          where: { userId },
-          select: { couponId: true },
-        });
+        const [userCoupons, totalStamps] = await Promise.all([
+          prisma.userCoupon.findMany({
+            where: { userId },
+            include: { coupon: { select: { requiredStamps: true } } },
+          }),
+          prisma.userStamp.count({ where: { userId } }),
+        ]);
         redeemedCouponIds = userCoupons.map((uc) => uc.couponId);
+        const usedStamps = userCoupons.reduce((sum, uc) => sum + uc.coupon.requiredStamps, 0);
+        availableStamps = totalStamps - usedStamps;
       } catch {
         // 토큰 검증 실패 시 무시 (비로그인 상태)
       }
     }
 
-    return successResponse({ coupons, redeemedCouponIds });
+    return successResponse({ coupons, redeemedCouponIds, availableStamps });
   } catch {
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }

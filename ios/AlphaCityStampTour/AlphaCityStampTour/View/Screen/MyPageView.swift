@@ -491,6 +491,8 @@ private struct CompanyInfoFooter: View {
                     .font(AppFont.regular(10))
                     .foregroundColor(Color(hex: "AFBFCC"))
                     .frame(maxWidth: .infinity, alignment: .center)
+
+                Spacer().frame(height: 80)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 24)

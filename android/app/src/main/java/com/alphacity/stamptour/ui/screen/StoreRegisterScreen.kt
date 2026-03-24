@@ -913,7 +913,7 @@ private suspend fun uploadImage(context: android.content.Context, uri: Uri): Str
             inputStream.close()
 
             val boundary = "----${UUID.randomUUID()}"
-            val url = URL("${BuildConfig.API_BASE_URL.removeSuffix("/api/v1")}/api/v1/admin/upload")
+            val url = URL("${BuildConfig.API_BASE_URL.removeSuffix("/api/v1")}/api/v1/upload")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")

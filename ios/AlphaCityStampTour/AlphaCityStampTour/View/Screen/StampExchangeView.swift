@@ -13,7 +13,7 @@ struct StampExchangeView: View {
     @State private var showConfirmCoupon: CouponData? = nil
 
     private var exchangeableCouponCount: Int {
-        viewModel.coupons.filter { viewModel.userStampCount >= $0.requiredStamps && !viewModel.redeemedCouponIds.contains($0.id) }.count
+        viewModel.coupons.filter { viewModel.availableStamps >= $0.requiredStamps && !viewModel.redeemedCouponIds.contains($0.id) }.count
     }
 
     var body: some View {
@@ -92,10 +92,10 @@ struct StampExchangeView: View {
                                 }
 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("보유 스탬프")
+                                    Text("교환 가능 스탬프")
                                         .font(AppFont.medium(13))
                                         .foregroundColor(Color(hex: "3D608D"))
-                                    Text("\(viewModel.userStampCount)개")
+                                    Text("\(viewModel.availableStamps)개")
                                         .font(AppFont.bold(28))
                                         .foregroundColor(AppColor.primary)
                                         .tracking(-0.56)
@@ -158,7 +158,7 @@ struct StampExchangeView: View {
                                     let isRedeemed = viewModel.redeemedCouponIds.contains(coupon.id)
                                     ExchangeCouponCardView(
                                         coupon: coupon,
-                                        userStamps: viewModel.userStampCount,
+                                        userStamps: viewModel.availableStamps,
                                         isRedeemed: isRedeemed,
                                         onExchangeTapped: { if !isRedeemed { showConfirmCoupon = coupon } }
                                     )

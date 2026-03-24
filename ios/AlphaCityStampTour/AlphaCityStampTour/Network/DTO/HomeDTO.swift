@@ -147,6 +147,7 @@ struct UserStampData: Decodable, Identifiable {
 struct CouponListResponse: Decodable {
     let coupons: [CouponData]
     let redeemedCouponIds: [Int]
+    let availableStamps: Int?
 }
 
 struct CouponData: Decodable, Identifiable {

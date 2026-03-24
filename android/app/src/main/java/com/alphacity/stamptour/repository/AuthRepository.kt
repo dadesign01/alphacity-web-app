@@ -76,9 +76,22 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun resetPassword(email: String, newPassword: String): Result<Unit> {
+    suspend fun sendVerificationCode(email: String, phone: String): Result<Unit> {
         return try {
-            val response = apiService.resetPassword(ResetPasswordRequest(email, newPassword))
+            val response = apiService.sendVerificationCode(mapOf("email" to email, "phone" to phone))
+            if (response.success) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception(response.error?.message ?: "인증코드 발송에 실패했습니다"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun resetPassword(email: String, code: String, newPassword: String): Result<Unit> {
+        return try {
+            val response = apiService.resetPassword(mapOf("email" to email, "code" to code, "newPassword" to newPassword))
             if (response.success) {
                 Result.success(Unit)
             } else {

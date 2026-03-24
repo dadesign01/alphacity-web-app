@@ -52,7 +52,10 @@ interface ApiService {
     suspend fun refreshToken(@Body request: RefreshRequest): ApiResponse<TokenData>
 
     @POST("auth/reset-password")
-    suspend fun resetPassword(@Body request: ResetPasswordRequest): ApiResponse<Unit>
+    suspend fun resetPassword(@Body request: Map<String, String>): ApiResponse<Unit>
+
+    @POST("auth/send-code")
+    suspend fun sendVerificationCode(@Body request: Map<String, String>): ApiResponse<Unit>
 
     @POST("auth/send-code")
     suspend fun sendCode(@Body request: SendCodeRequest): ApiResponse<Unit>

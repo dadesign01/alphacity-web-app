@@ -288,7 +288,6 @@ fun MyPageScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
                 .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 33.dp))
                 .background(Color.White),
         ) {
@@ -340,7 +339,6 @@ fun MyPageScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
                     .background(Color(0xFFF8F8F8)),
             ) {
                 Divider(
@@ -381,7 +379,7 @@ fun MyPageScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 // App Version
                 Box(
@@ -754,6 +752,8 @@ private fun CompanyInfoFooter(
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
             )
+
+            Spacer(modifier = Modifier.height(80.dp))
         }
     }
 }

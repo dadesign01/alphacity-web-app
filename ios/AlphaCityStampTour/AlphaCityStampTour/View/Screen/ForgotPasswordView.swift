@@ -8,6 +8,8 @@ import SwiftUI
 struct ForgotPasswordView: View {
     @StateObject private var viewModel = ForgotPasswordViewModel()
     @State private var email = ""
+    @State private var phone = ""
+    @State private var code = ""
     @State private var newPassword = ""
     @State private var confirmPassword = ""
 
@@ -23,15 +25,11 @@ struct ForgotPasswordView: View {
                             .font(.system(size: 18, weight: .medium))
                             .foregroundStyle(Color(hex: "121212"))
                     }
-
                     Spacer()
-
                     Text("비밀번호 찾기")
                         .font(AppFont.semibold(18))
                         .foregroundStyle(Color(hex: "121212"))
-
                     Spacer()
-
                     Image(systemName: "chevron.left")
                         .font(.system(size: 18, weight: .medium))
                         .opacity(0)
@@ -40,90 +38,42 @@ struct ForgotPasswordView: View {
 
                 Spacer().frame(height: 48)
 
-                // 안내 텍스트
-                Text("가입 시 사용한 이메일을 입력하고\n새로운 비밀번호를 설정하세요.")
-                    .font(AppFont.regular(14))
-                    .foregroundStyle(Color(hex: "8F8F8F"))
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
+                // 단계 표시
+                let stepText: String = {
+                    switch viewModel.step {
+                    case .inputInfo: return "1/3 단계"
+                    case .verifyCode: return "2/3 단계"
+                    case .newPassword: return "3/3 단계"
+                    }
+                }()
+                Text(stepText)
+                    .font(AppFont.medium(13))
+                    .foregroundStyle(AppColor.primary)
 
-                Spacer().frame(height: 40)
+                Spacer().frame(height: 8)
 
-                // 이메일
-                fieldLabel("이메일")
-                ForgotPasswordTextField(
-                    text: $email,
-                    placeholder: "example@email.com",
-                    iconName: "envelope.fill",
-                    keyboardType: .emailAddress
-                )
+                switch viewModel.step {
+                case .inputInfo:
+                    inputInfoStep
 
-                Spacer().frame(height: 20)
+                case .verifyCode:
+                    verifyCodeStep
 
-                // 새 비밀번호
-                fieldLabel("새 비밀번호")
-                ForgotPasswordTextField(
-                    text: $newPassword,
-                    placeholder: "8자 이상 입력해주세요.",
-                    iconName: "lock.fill",
-                    isSecure: true
-                )
-
-                Spacer().frame(height: 20)
-
-                // 새 비밀번호 확인
-                fieldLabel("새 비밀번호 확인")
-                ForgotPasswordTextField(
-                    text: $confirmPassword,
-                    placeholder: "비밀번호를 다시 입력해주세요.",
-                    iconName: "lock.fill",
-                    isSecure: true
-                )
-
-                Spacer().frame(height: 40)
-
-                // 비밀번호 변경 버튼
-                Button(action: {
-                    viewModel.resetPassword(
-                        email: email,
-                        newPassword: newPassword,
-                        confirmPassword: confirmPassword
-                    )
-                }) {
-                    Text("비밀번호 변경")
-                        .font(AppFont.semibold(16))
-                        .foregroundStyle(Color(hex: "F8F8F8"))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(isFormValid ? AppColor.primary : AppColor.primary.opacity(0.5))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                case .newPassword:
+                    newPasswordStep
                 }
-                .disabled(!isFormValid)
 
                 Spacer()
-
-                // 하단 저작권
-                Text("© 2026 Alpha Stamp. All rights reserved.")
-                    .font(AppFont.regular(10))
-                    .foregroundStyle(Color(hex: "8F8F8F"))
-                    .padding(.bottom, 40)
             }
             .padding(.horizontal, 20)
             .background(Color.white)
 
-            // 로딩 오버레이
             if viewModel.isLoading {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                ProgressView()
-                    .tint(.white)
-                    .scaleEffect(1.5)
+                Color.black.opacity(0.3).ignoresSafeArea()
+                ProgressView().tint(.white).scaleEffect(1.5)
             }
         }
         .navigationBarHidden(true)
-        .onChange(of: viewModel.isSuccess) { _, isSuccess in
-            if isSuccess { onBackTapped() }
-        }
         .alert(viewModel.error ?? "", isPresented: Binding(
             get: { viewModel.error != nil },
             set: { if !$0 { viewModel.clearError() } }
@@ -135,9 +85,132 @@ struct ForgotPasswordView: View {
         }
     }
 
-    private var isFormValid: Bool {
-        !email.isEmpty && newPassword.count >= 8 && newPassword == confirmPassword
+    // MARK: - Step 1: 이메일 + 전화번호
+
+    private var inputInfoStep: some View {
+        VStack(spacing: 0) {
+            Text("가입 시 사용한 이메일과\n전화번호를 입력해주세요.")
+                .font(AppFont.regular(14))
+                .foregroundStyle(Color(hex: "8F8F8F"))
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+
+            Spacer().frame(height: 40)
+
+            fieldLabel("이메일")
+            StyledField(text: $email, placeholder: "example@email.com", keyboardType: .emailAddress)
+
+            Spacer().frame(height: 20)
+
+            fieldLabel("전화번호")
+            StyledField(text: $phone, placeholder: "010-0000-0000", keyboardType: .phonePad)
+
+            Spacer().frame(height: 40)
+
+            Button(action: { viewModel.sendCode(email: email, phone: phone) }) {
+                Group {
+                    if viewModel.isLoading {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text("인증번호 발송")
+                            .font(AppFont.semibold(16))
+                    }
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background((!email.isEmpty && !phone.isEmpty) ? AppColor.primary : Color(hex: "D0D5DD"))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            .disabled(email.isEmpty || phone.isEmpty || viewModel.isLoading)
+        }
     }
+
+    // MARK: - Step 2: 인증코드
+
+    private var verifyCodeStep: some View {
+        VStack(spacing: 0) {
+            Text("전화번호로 발송된\n6자리 인증코드를 입력해주세요.")
+                .font(AppFont.regular(14))
+                .foregroundStyle(Color(hex: "8F8F8F"))
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+
+            Spacer().frame(height: 40)
+
+            fieldLabel("인증코드")
+            StyledField(text: $code, placeholder: "6자리 숫자 입력", keyboardType: .numberPad)
+
+            Spacer().frame(height: 12)
+
+            HStack {
+                Spacer()
+                Button("인증코드를 받지 못하셨나요?") {
+                    viewModel.sendCode(email: email, phone: phone)
+                }
+                .font(AppFont.medium(13))
+                .foregroundStyle(AppColor.primary)
+            }
+
+            Spacer().frame(height: 40)
+
+            Button(action: { viewModel.verifyCode(code) }) {
+                Text("확인")
+                    .font(AppFont.semibold(16))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(code.count == 6 ? AppColor.primary : Color(hex: "D0D5DD"))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            .disabled(code.count != 6)
+        }
+    }
+
+    // MARK: - Step 3: 새 비밀번호
+
+    private var newPasswordStep: some View {
+        VStack(spacing: 0) {
+            Text("새로운 비밀번호를 설정해주세요.")
+                .font(AppFont.regular(14))
+                .foregroundStyle(Color(hex: "8F8F8F"))
+                .multilineTextAlignment(.center)
+
+            Spacer().frame(height: 40)
+
+            fieldLabel("새 비밀번호")
+            StyledField(text: $newPassword, placeholder: "8자 이상 입력해주세요", isSecure: true)
+
+            Spacer().frame(height: 20)
+
+            fieldLabel("새 비밀번호 확인")
+            StyledField(text: $confirmPassword, placeholder: "비밀번호를 다시 입력해주세요", isSecure: true)
+
+            Spacer().frame(height: 40)
+
+            let valid = newPassword.count >= 8 && newPassword == confirmPassword
+            Button(action: {
+                viewModel.resetPassword(code: code, newPassword: newPassword, confirmPassword: confirmPassword)
+            }) {
+                Group {
+                    if viewModel.isLoading {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text("비밀번호 변경")
+                            .font(AppFont.semibold(16))
+                    }
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(valid ? AppColor.primary : Color(hex: "D0D5DD"))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            .disabled(!valid || viewModel.isLoading)
+        }
+    }
+
+    // MARK: - Helpers
 
     private func fieldLabel(_ text: String) -> some View {
         HStack {
@@ -150,22 +223,16 @@ struct ForgotPasswordView: View {
     }
 }
 
-// MARK: - TextField
+// MARK: - Styled TextField
 
-private struct ForgotPasswordTextField: View {
+private struct StyledField: View {
     @Binding var text: String
     let placeholder: String
-    let iconName: String
     var isSecure: Bool = false
     var keyboardType: UIKeyboardType = .default
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: iconName)
-                .font(.system(size: 14))
-                .foregroundStyle(Color(hex: "C7C7C7"))
-                .frame(width: 17, height: 17)
-
+        Group {
             if isSecure {
                 SecureField(placeholder, text: $text)
                     .font(AppFont.medium(14))
@@ -178,13 +245,9 @@ private struct ForgotPasswordTextField: View {
             }
         }
         .padding(.horizontal, 16)
-        .frame(height: 48)
-        .background(Color.white)
+        .frame(height: 54)
+        .background(Color(hex: "F5F5F5"))
         .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(hex: "E9E9E9"), lineWidth: 1)
-        )
     }
 }
 

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
+import com.alphacity.stamptour.viewmodel.ForgotPasswordStep
 import com.alphacity.stamptour.viewmodel.ForgotPasswordViewModel
 
 @Composable
@@ -53,10 +55,10 @@ fun ForgotPasswordScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-
-    val isFormValid = email.isNotBlank() && newPassword.length >= 8 && newPassword == confirmPassword
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
@@ -72,7 +74,7 @@ fun ForgotPasswordScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -83,9 +85,7 @@ fun ForgotPasswordScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // 헤더
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-            ) {
+            Box(modifier = Modifier.fillMaxWidth()) {
                 Icon(
                     painter = painterResource(android.R.drawable.ic_menu_revert),
                     contentDescription = "뒤로가기",
@@ -109,135 +109,196 @@ fun ForgotPasswordScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // 안내 텍스트
-            Text(
-                text = "가입 시 사용한 이메일을 입력하고\n새로운 비밀번호를 설정하세요.",
-                style = androidx.compose.ui.text.TextStyle(
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 14.sp,
-                ),
-                color = Color(0xFF8F8F8F),
-                textAlign = TextAlign.Center,
-                lineHeight = 22.sp,
-            )
-
-            Spacer(modifier = Modifier.height(40.dp))
-
-            // 이메일
-            ForgotPasswordFieldLabel("이메일")
-            ForgotPasswordTextField(
-                value = email,
-                onValueChange = { email = it },
-                placeholder = "example@email.com",
-                leadingIcon = android.R.drawable.ic_dialog_email,
-                keyboardType = KeyboardType.Email,
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 새 비밀번호
-            ForgotPasswordFieldLabel("새 비밀번호")
-            ForgotPasswordTextField(
-                value = newPassword,
-                onValueChange = { newPassword = it },
-                placeholder = "8자 이상 입력해주세요.",
-                leadingIcon = android.R.drawable.ic_lock_idle_lock,
-                isPassword = true,
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 새 비밀번호 확인
-            ForgotPasswordFieldLabel("새 비밀번호 확인")
-            ForgotPasswordTextField(
-                value = confirmPassword,
-                onValueChange = { confirmPassword = it },
-                placeholder = "비밀번호를 다시 입력해주세요.",
-                leadingIcon = android.R.drawable.ic_lock_idle_lock,
-                isPassword = true,
-            )
-
-            Spacer(modifier = Modifier.height(40.dp))
-
-            // 비밀번호 변경 버튼
-            Button(
-                onClick = { viewModel.resetPassword(email, newPassword, confirmPassword) },
-                enabled = isFormValid && !uiState.isLoading,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Primary,
-                    disabledContainerColor = Primary.copy(alpha = 0.5f),
-                ),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-            ) {
-                Text(
-                    text = "비밀번호 변경",
-                    style = androidx.compose.ui.text.TextStyle(
-                        fontFamily = Pretendard,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp,
-                    ),
-                    color = Color(0xFFF8F8F8),
-                )
+            // 단계별 표시
+            val stepText = when (uiState.step) {
+                ForgotPasswordStep.INPUT_INFO -> "1/3 단계"
+                ForgotPasswordStep.VERIFY_CODE -> "2/3 단계"
+                ForgotPasswordStep.NEW_PASSWORD -> "3/3 단계"
             }
-
-            Spacer(modifier = Modifier.weight(1f))
-
             Text(
-                text = "© 2026 Alpha Stamp. All rights reserved.",
-                style = androidx.compose.ui.text.TextStyle(
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 10.sp,
-                ),
-                color = Color(0xFF8F8F8F),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 40.dp),
+                text = stepText,
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Medium,
+                fontSize = 13.sp,
+                color = Primary,
             )
-        }
 
-        // 로딩 오버레이
-        if (uiState.isLoading) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.3f)),
-            ) {
-                CircularProgressIndicator(color = Primary)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            when (uiState.step) {
+                ForgotPasswordStep.INPUT_INFO -> {
+                    Text(
+                        text = "가입 시 사용한 이메일과\n전화번호를 입력해주세요.",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 14.sp,
+                        color = Color(0xFF8F8F8F),
+                        textAlign = TextAlign.Center,
+                        lineHeight = 22.sp,
+                    )
+
+                    Spacer(modifier = Modifier.height(40.dp))
+
+                    FieldLabel("이메일")
+                    StyledTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        placeholder = "example@email.com",
+                        keyboardType = KeyboardType.Email,
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    FieldLabel("전화번호")
+                    StyledTextField(
+                        value = phone,
+                        onValueChange = { phone = it },
+                        placeholder = "010-0000-0000",
+                        keyboardType = KeyboardType.Phone,
+                    )
+
+                    Spacer(modifier = Modifier.height(40.dp))
+
+                    Button(
+                        onClick = { viewModel.sendCode(email, phone) },
+                        enabled = email.isNotBlank() && phone.isNotBlank() && !uiState.isLoading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Primary,
+                            disabledContainerColor = Color(0xFFD0D5DD),
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                    ) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("인증번호 발송", fontFamily = Pretendard, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Color.White)
+                        }
+                    }
+                }
+
+                ForgotPasswordStep.VERIFY_CODE -> {
+                    Text(
+                        text = "전화번호로 발송된\n6자리 인증코드를 입력해주세요.",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 14.sp,
+                        color = Color(0xFF8F8F8F),
+                        textAlign = TextAlign.Center,
+                        lineHeight = 22.sp,
+                    )
+
+                    Spacer(modifier = Modifier.height(40.dp))
+
+                    FieldLabel("인증코드")
+                    StyledTextField(
+                        value = code,
+                        onValueChange = { if (it.length <= 6) code = it },
+                        placeholder = "6자리 숫자 입력",
+                        keyboardType = KeyboardType.Number,
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "인증코드를 받지 못하셨나요?",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 13.sp,
+                        color = Primary,
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .clickable { viewModel.sendCode(email, phone) },
+                    )
+
+                    Spacer(modifier = Modifier.height(40.dp))
+
+                    Button(
+                        onClick = { viewModel.verifyCode(code) },
+                        enabled = code.length == 6 && !uiState.isLoading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Primary,
+                            disabledContainerColor = Color(0xFFD0D5DD),
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                    ) {
+                        Text("확인", fontFamily = Pretendard, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Color.White)
+                    }
+                }
+
+                ForgotPasswordStep.NEW_PASSWORD -> {
+                    Text(
+                        text = "새로운 비밀번호를 설정해주세요.",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 14.sp,
+                        color = Color(0xFF8F8F8F),
+                        textAlign = TextAlign.Center,
+                    )
+
+                    Spacer(modifier = Modifier.height(40.dp))
+
+                    FieldLabel("새 비밀번호")
+                    StyledTextField(
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        placeholder = "8자 이상 입력해주세요",
+                        isPassword = true,
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    FieldLabel("새 비밀번호 확인")
+                    StyledTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        placeholder = "비밀번호를 다시 입력해주세요",
+                        isPassword = true,
+                    )
+
+                    Spacer(modifier = Modifier.height(40.dp))
+
+                    Button(
+                        onClick = { viewModel.resetPassword(code, newPassword, confirmPassword) },
+                        enabled = newPassword.length >= 8 && newPassword == confirmPassword && !uiState.isLoading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Primary,
+                            disabledContainerColor = Color(0xFFD0D5DD),
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                    ) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("비밀번호 변경", fontFamily = Pretendard, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Color.White)
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ForgotPasswordFieldLabel(text: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp),
-    ) {
+private fun FieldLabel(text: String) {
+    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         Text(
             text = text,
-            style = androidx.compose.ui.text.TextStyle(
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
-            ),
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp,
             color = Color(0xFF121212),
         )
     }
 }
 
 @Composable
-private fun ForgotPasswordTextField(
+private fun StyledTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
-    leadingIcon: Int,
     isPassword: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
 ) {
@@ -245,37 +306,19 @@ private fun ForgotPasswordTextField(
         value = value,
         onValueChange = onValueChange,
         placeholder = {
-            Text(
-                text = placeholder,
-                style = androidx.compose.ui.text.TextStyle(
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp,
-                ),
-                color = Color(0xFFBFBFBF),
-            )
-        },
-        leadingIcon = {
-            Icon(
-                painter = painterResource(leadingIcon),
-                contentDescription = null,
-                modifier = Modifier.size(17.dp),
-                tint = Color(0xFFC7C7C7),
-            )
+            Text(placeholder, fontFamily = Pretendard, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color(0xFFBFBFBF))
         },
         visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         singleLine = true,
         shape = RoundedCornerShape(8.dp),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White,
+            focusedContainerColor = Color(0xFFF5F5F5),
+            unfocusedContainerColor = Color(0xFFF5F5F5),
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
             cursorColor = Primary,
         ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp),
+        modifier = Modifier.fillMaxWidth().height(54.dp),
     )
 }

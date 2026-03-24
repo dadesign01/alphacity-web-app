@@ -24,10 +24,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return errorResponse('ALREADY_REDEEMED', '이미 발급받은 쿠폰입니다', 400);
     }
 
-    // 필요 스탬프 수 확인
-    const stampCount = await prisma.userStamp.count({ where: { userId } });
-    if (stampCount < coupon.requiredStamps) {
-      return errorResponse('INSUFFICIENT_STAMPS', `스탬프 ${coupon.requiredStamps}개가 필요합니다 (현재: ${stampCount}개)`);
+    // 교환 가능 스탬프 수 확인 (총 수집 - 이미 교환에 사용한 스탬프)
+    const totalStamps = await prisma.userStamp.count({ where: { userId } });
+    const usedCoupons = await prisma.userCoupon.findMany({
+      where: { userId },
+      include: { coupon: { select: { requiredStamps: true } } },
+    });
+    const usedStamps = usedCoupons.reduce((sum, uc) => sum + uc.coupon.requiredStamps, 0);
+    const availableStamps = totalStamps - usedStamps;
+    if (availableStamps < coupon.requiredStamps) {
+      return errorResponse('INSUFFICIENT_STAMPS', `스탬프 ${coupon.requiredStamps}개가 필요합니다 (교환 가능: ${availableStamps}개)`);
     }
 
     // 쿠폰 코드 생성

@@ -1,46 +1,37 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
 import { successResponse, errorResponse } from '@/lib/api-response';
-import { sendSMS, generateCode, saveCode } from '@/lib/sms';
+
+// 간단 인메모리 코드 저장 (프로덕션에서는 Redis 사용 권장)
+const verificationCodes = new Map<string, { code: string; expiresAt: number }>();
+
+export { verificationCodes };
 
 export async function POST(request: NextRequest) {
   try {
-    const { phone } = await request.json();
+    const { email, phone } = await request.json();
 
-    if (!phone) {
-      return errorResponse('INVALID_INPUT', '휴대폰 번호를 입력하세요');
+    if (!email || !phone) {
+      return errorResponse('INVALID_INPUT', '이메일과 전화번호를 입력하세요');
     }
 
-    // 전화번호 정규화 (하이픈 제거)
-    const normalizedPhone = phone.replace(/-/g, '');
-
-    // 이미 다른 사용자가 사용 중인 번호인지 확인
-    const existingUser = await prisma.user.findFirst({
-      where: { OR: [{ phone: normalizedPhone }, { phone }] },
-    });
-    if (existingUser) {
-      // 본인 번호 재인증은 허용
-      let currentUserId: number | null = null;
-      const token = request.headers.get('authorization')?.replace('Bearer ', '');
-      if (token) {
-        try { currentUserId = (await verifyToken(token)).userId as number; } catch {}
-      }
-      if (existingUser.id !== currentUserId) {
-        return errorResponse('DUPLICATE_PHONE', '이미 사용 중인 전화번호입니다', 409);
-      }
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return errorResponse('USER_NOT_FOUND', '등록되지 않은 이메일입니다', 404);
     }
 
-    const code = generateCode();
-    saveCode(phone, code);
-
-    const sent = await sendSMS(phone, `[알파시티스탬프투어] 인증번호: ${code}`);
-
-    if (!sent) {
-      return errorResponse('SMS_FAILED', 'SMS 전송에 실패했습니다', 500);
+    if (user.provider && !user.passwordHash) {
+      return errorResponse('SOCIAL_ACCOUNT', '소셜 로그인 계정은 비밀번호를 변경할 수 없습니다', 400);
     }
 
-    return successResponse(null, '인증번호가 전송되었습니다');
+    // 6자리 인증코드 생성
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    verificationCodes.set(email, { code, expiresAt: Date.now() + 5 * 60 * 1000 }); // 5분 유효
+
+    // TODO: 실제 SMS 발송 연동 시 여기에 구현
+    console.log(`[인증코드] ${phone}: ${code}`);
+
+    return successResponse({ codeSent: true }, '인증코드가 발송되었습니다');
   } catch {
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }

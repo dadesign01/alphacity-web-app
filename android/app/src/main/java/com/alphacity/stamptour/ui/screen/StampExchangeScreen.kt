@@ -49,6 +49,7 @@ fun StampExchangeScreen(
 ) {
     val coupons by viewModel.coupons.collectAsState()
     val userStampCount by viewModel.userStampCount.collectAsState()
+    val availableStamps by viewModel.availableStamps.collectAsState()
     val isRedeeming by viewModel.isRedeeming.collectAsState()
     val redeemSuccess by viewModel.redeemSuccess.collectAsState()
     val redeemError by viewModel.redeemError.collectAsState()
@@ -93,7 +94,7 @@ fun StampExchangeScreen(
         )
     }
 
-    val exchangeableCouponCount = coupons.count { userStampCount >= it.requiredStamps && !redeemedCouponIds.contains(it.id) }
+    val exchangeableCouponCount = coupons.count { availableStamps >= it.requiredStamps && !redeemedCouponIds.contains(it.id) }
 
     Column(
         modifier = Modifier
@@ -203,14 +204,14 @@ fun StampExchangeScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "보유 스탬프",
+                            text = "교환 가능 스탬프",
                             fontFamily = Pretendard,
                             fontWeight = FontWeight.Medium,
                             fontSize = 13.sp,
                             color = Color(0xFF3D608D),
                         )
                         Text(
-                            text = "${userStampCount}개",
+                            text = "${availableStamps}개",
                             fontFamily = Pretendard,
                             fontWeight = FontWeight.Bold,
                             fontSize = 28.sp,
@@ -301,7 +302,7 @@ fun StampExchangeScreen(
                         val isRedeemed = redeemedCouponIds.contains(coupon.id)
                         ExchangeCouponCard(
                             coupon = coupon,
-                            userStamps = userStampCount,
+                            userStamps = availableStamps,
                             isRedeemed = isRedeemed,
                             onExchangeClick = { if (!isRedeemed) showConfirmDialog = coupon },
                         )

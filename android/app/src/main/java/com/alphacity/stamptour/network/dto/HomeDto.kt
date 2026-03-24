@@ -153,6 +153,7 @@ data class MissionPlace(
 data class CouponListResponse(
     val coupons: List<CouponItem>,
     val redeemedCouponIds: List<Int> = emptyList(),
+    val availableStamps: Int = 0,
 )
 
 @Serializable

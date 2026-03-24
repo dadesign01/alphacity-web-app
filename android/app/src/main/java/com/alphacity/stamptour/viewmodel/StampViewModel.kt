@@ -60,6 +60,9 @@ class StampViewModel @Inject constructor(
     private val _redeemError = MutableStateFlow<String?>(null)
     val redeemError: StateFlow<String?> = _redeemError
 
+    private val _availableStamps = MutableStateFlow(0)
+    val availableStamps: StateFlow<Int> = _availableStamps
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -109,6 +112,7 @@ class StampViewModel @Inject constructor(
                 .onSuccess {
                     _coupons.value = it.coupons
                     _redeemedCouponIds.value = it.redeemedCouponIds.toSet()
+                    _availableStamps.value = it.availableStamps
                 }
                 .onFailure { Log.e("StampViewModel", "쿠폰 로드 실패", it) }
 
