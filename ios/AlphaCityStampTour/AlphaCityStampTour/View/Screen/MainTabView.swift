@@ -34,6 +34,7 @@ struct MainTabView: View {
     @State private var showStampExchange = false
     @StateObject private var stampViewModel = StampViewModel()
     @State private var selectedProgram: ProgramData? = nil
+    @State private var selectedFestival: FestivalData? = nil
     @State private var selectedStore: StoreData? = nil
     @State private var showGuestDialog = false
     @State private var mapFocusLat: Double? = nil
@@ -64,6 +65,19 @@ struct MainTabView: View {
                 },
                 onNavigateToMap: { lat, lng in
                     selectedProgram = nil
+                    mapFocusLat = lat
+                    mapFocusLng = lng
+                    selectedTab = .map
+                }
+            )
+        } else if let festival = selectedFestival {
+            FestivalDetailView(
+                festival: festival,
+                onBackTapped: { selectedFestival = nil },
+                onSeeAllPrograms: { showProgramList = true },
+                onProgramTapped: { p in selectedProgram = p },
+                onNavigateToMap: { lat, lng in
+                    selectedFestival = nil
                     mapFocusLat = lat
                     mapFocusLng = lng
                     selectedTab = .map
@@ -113,6 +127,7 @@ struct MainTabView: View {
                         onNavigateToStamp: { selectedTab = .stamp },
                         onNavigateToCoupons: { showMyCoupons = true },
                         onProgramClick: { program in selectedProgram = program },
+                        onFestivalClick: { festival in selectedFestival = festival },
                         onGuestRestricted: { showGuestDialog = true },
                         isGuest: isGuest
                     )

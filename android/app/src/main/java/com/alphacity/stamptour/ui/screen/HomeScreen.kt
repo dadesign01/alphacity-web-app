@@ -30,6 +30,7 @@ import com.alphacity.stamptour.BuildConfig
 import com.alphacity.stamptour.R
 import com.alphacity.stamptour.network.dto.BannerItem
 import com.alphacity.stamptour.network.dto.EventItem
+import com.alphacity.stamptour.network.dto.FestivalItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
@@ -49,12 +50,13 @@ fun HomeScreen(
     onNavigateToStamp: () -> Unit = {},
     onNavigateToCoupons: () -> Unit = {},
     onProgramClick: (ProgramItem) -> Unit = {},
+    onFestivalClick: (FestivalItem) -> Unit = {},
     onGuestRestricted: () -> Unit = {},
     isGuest: Boolean = false,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val banners by viewModel.banners.collectAsState()
-    val programs by viewModel.programs.collectAsState()
+    val festivals by viewModel.festivals.collectAsState()
     val events by viewModel.events.collectAsState()
     val userStampCount by viewModel.userStampCount.collectAsState()
     val totalStampCount by viewModel.totalStampCount.collectAsState()
@@ -79,11 +81,11 @@ fun HomeScreen(
             // Banner Carousel
             BannerCarousel(banners = banners)
 
-            // 오늘의 프로그램
-            ProgramSection(
-                programs = programs,
+            // 진행중인 축제
+            FestivalSection(
+                festivals = festivals,
                 onSeeAllClick = onNavigateToProgramList,
-                onProgramClick = onProgramClick,
+                onFestivalClick = onFestivalClick,
             )
 
             // 알파시티 이벤트
@@ -257,20 +259,11 @@ private fun BannerCarousel(banners: List<BannerItem> = emptyList()) {
     }
 }
 
-// MARK: - 오늘의 프로그램
+// MARK: - 진행중인 축제
 
 @Composable
-private fun ProgramSection(programs: List<ProgramItem> = emptyList(), onSeeAllClick: () -> Unit = {}, onProgramClick: (ProgramItem) -> Unit = {}) {
-    val fallbackPrograms = remember {
-        listOf(
-            Triple(R.drawable.program_img_1, "알파시티 카페", "#카페"),
-            Triple(R.drawable.program_img_2, "스마트 비스트로", "#레스토랑"),
-            Triple(R.drawable.event_img_1, "미래 모빌리티 전시", "#전시체험"),
-        )
-    }
-
+private fun FestivalSection(festivals: List<FestivalItem> = emptyList(), onSeeAllClick: () -> Unit = {}, onFestivalClick: (FestivalItem) -> Unit = {}) {
     Column(modifier = Modifier.padding(top = 20.dp)) {
-        // Section header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -278,7 +271,7 @@ private fun ProgramSection(programs: List<ProgramItem> = emptyList(), onSeeAllCl
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "오늘의 프로그램",
+                text = "진행중인\n전국의 축제·공연·전시",
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 18.sp,
@@ -297,30 +290,104 @@ private fun ProgramSection(programs: List<ProgramItem> = emptyList(), onSeeAllCl
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Horizontal scroll
         Row(
             modifier = Modifier
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (programs.isEmpty()) {
-                fallbackPrograms.forEach { (imageRes, name, tag) ->
-                    ProgramCard(imageRes = imageRes, name = name, tag = tag)
-                }
+            if (festivals.isEmpty()) {
+                FestivalCardFallback(imageRes = R.drawable.program_img_1, name = "수성알파시티 알파위크", tag = "#진행중")
+                FestivalCardFallback(imageRes = R.drawable.program_img_2, name = "2026 대구 치맥페스티벌", tag = "#예정")
             } else {
-                programs.forEach { program ->
-                    val tag = if (program.status == "in_progress") "#진행중" else "#예정"
-                    ProgramCard(
-                        imageRes = R.drawable.program_img_1,
-                        imageUrl = program.imageUrl,
-                        name = program.name,
+                festivals.forEach { festival ->
+                    val tag = when (festival.status) {
+                        "in_progress" -> "#진행중"
+                        "scheduled" -> "#예정"
+                        else -> "#종료"
+                    }
+                    FestivalCard(
+                        imageUrl = festival.bannerUrl ?: festival.imageUrl,
+                        name = festival.name,
                         tag = tag,
-                        onClick = { onProgramClick(program) },
+                        address = festival.address,
+                        onClick = { onFestivalClick(festival) },
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FestivalCard(imageUrl: String?, name: String, tag: String, address: String?, onClick: () -> Unit = {}) {
+    Column(modifier = Modifier.width(260.dp).clickable { onClick() }) {
+        if (!imageUrl.isNullOrEmpty()) {
+            val fullUrl = if (imageUrl.startsWith("http")) imageUrl else BuildConfig.SERVER_URL + imageUrl
+            AsyncImage(
+                model = fullUrl,
+                contentDescription = name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Image(
+                painter = painterResource(id = R.drawable.program_img_1),
+                contentDescription = name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = name,
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 15.sp,
+            color = Color(0xFF121212),
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            TagChip(text = tag, textColor = Color(0xFFE85151), borderColor = Color(0xFFE85151))
+            if (!address.isNullOrEmpty()) {
+                Text(
+                    text = address,
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 11.sp,
+                    color = Color(0xFF8F8F8F),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FestivalCardFallback(imageRes: Int, name: String, tag: String) {
+    Column(modifier = Modifier.width(260.dp)) {
+        Image(
+            painter = painterResource(id = imageRes),
+            contentDescription = name,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+                .clip(RoundedCornerShape(12.dp)),
+            contentScale = ContentScale.Crop,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = name, fontFamily = Pretendard, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = Color(0xFF121212))
+        Spacer(modifier = Modifier.height(4.dp))
+        TagChip(text = tag, textColor = Color(0xFFE85151), borderColor = Color(0xFFE85151))
     }
 }
 
@@ -424,7 +491,7 @@ private fun EventSection(events: List<EventItem> = emptyList(), onSeeAllTapped: 
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "알파시티 이벤트",
+                text = "이벤트",
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 18.sp,

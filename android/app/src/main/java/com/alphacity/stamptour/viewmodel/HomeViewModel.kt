@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.alphacity.stamptour.network.dto.BannerItem
 import com.alphacity.stamptour.network.dto.EventItem
+import com.alphacity.stamptour.network.dto.FestivalItem
 import com.alphacity.stamptour.network.dto.ProgramItem
+import com.alphacity.stamptour.repository.FestivalSelectionRepository
 import com.alphacity.stamptour.repository.HomeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -20,10 +22,18 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
+    private val festivalSelection: FestivalSelectionRepository,
 ) : ViewModel() {
 
     private val _banners = MutableStateFlow<List<BannerItem>>(emptyList())
     val banners: StateFlow<List<BannerItem>> = _banners
+
+    private val _festivals = MutableStateFlow<List<FestivalItem>>(emptyList())
+    val festivals: StateFlow<List<FestivalItem>> = _festivals
+
+    val selectedFestivalId: StateFlow<Int?> = festivalSelection.selectedFestivalId
+
+    fun selectFestival(id: Int?) = festivalSelection.select(id)
 
     private val _programs = MutableStateFlow<List<ProgramItem>>(emptyList())
     val programs: StateFlow<List<ProgramItem>> = _programs
@@ -47,6 +57,8 @@ class HomeViewModel @Inject constructor(
         if (_isLoading.value) return
         _isLoading.value = true
 
+        val festivalId = festivalSelection.selectedFestivalId.value
+
         viewModelScope.launch {
             val bannersDeferred = async {
                 homeRepository.getBanners()
@@ -54,8 +66,14 @@ class HomeViewModel @Inject constructor(
                     .onFailure { Log.e("HomeViewModel", "배너 로드 실패", it) }
             }
 
+            val festivalsDeferred = async {
+                homeRepository.getFestivals()
+                    .onSuccess { _festivals.value = it }
+                    .onFailure { Log.e("HomeViewModel", "축제 로드 실패", it) }
+            }
+
             val programsDeferred = async {
-                homeRepository.getPrograms()
+                homeRepository.getPrograms(festivalId = festivalId)
                     .onSuccess { programs ->
                         _programs.value = filterTodayPrograms(programs)
                     }
@@ -63,18 +81,19 @@ class HomeViewModel @Inject constructor(
             }
 
             val eventsDeferred = async {
-                homeRepository.getEvents()
+                homeRepository.getEvents(festivalId = festivalId)
                     .onSuccess { _events.value = it }
                     .onFailure { Log.e("HomeViewModel", "이벤트 로드 실패", it) }
             }
 
             val stampsDeferred = async {
-                homeRepository.getStamps()
+                homeRepository.getStamps(festivalId = festivalId)
                     .onSuccess { _totalStampCount.value = maxOf(it.size, 1) }
                     .onFailure { Log.e("HomeViewModel", "스탬프 로드 실패", it) }
             }
 
             bannersDeferred.await()
+            festivalsDeferred.await()
             programsDeferred.await()
             eventsDeferred.await()
             stampsDeferred.await()

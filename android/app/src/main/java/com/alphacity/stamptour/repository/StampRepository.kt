@@ -18,9 +18,9 @@ class StampRepository @Inject constructor(
     private val apiService: ApiService,
     private val tokenManager: TokenManager,
 ) {
-    suspend fun getStamps(): Result<List<StampItem>> {
+    suspend fun getStamps(festivalId: Int? = null): Result<List<StampItem>> {
         return try {
-            val response = apiService.getStamps()
+            val response = apiService.getStamps(festivalId)
             if (response.success && response.data != null) {
                 Result.success(response.data)
             } else {
@@ -31,9 +31,9 @@ class StampRepository @Inject constructor(
         }
     }
 
-    suspend fun getUserStamps(): Result<List<UserStampItem>> {
+    suspend fun getUserStamps(festivalId: Int? = null): Result<List<UserStampItem>> {
         return try {
-            val response = apiService.getUserStamps()
+            val response = apiService.getUserStamps(festivalId)
             if (response.success && response.data != null) {
                 Result.success(response.data)
             } else {
@@ -57,9 +57,9 @@ class StampRepository @Inject constructor(
         }
     }
 
-    suspend fun getMissions(): Result<List<MissionItem>> {
+    suspend fun getMissions(festivalId: Int? = null): Result<List<MissionItem>> {
         return try {
-            val response = apiService.getMissions()
+            val response = apiService.getMissions(festivalId)
             if (response.success && response.data != null) {
                 Result.success(response.data)
             } else {
@@ -70,9 +70,9 @@ class StampRepository @Inject constructor(
         }
     }
 
-    suspend fun getCoupons(): Result<CouponListResponse> {
+    suspend fun getCoupons(festivalId: Int? = null): Result<CouponListResponse> {
         return try {
-            val response = apiService.getCoupons()
+            val response = apiService.getCoupons(festivalId)
             if (response.success && response.data != null) {
                 Result.success(response.data)
             } else {
@@ -109,9 +109,9 @@ class StampRepository @Inject constructor(
         }
     }
 
-    suspend fun getMyCoupons(): Result<List<MyCouponItem>> {
+    suspend fun getMyCoupons(festivalId: Int? = null): Result<List<MyCouponItem>> {
         return try {
-            val response = apiService.getMyCoupons()
+            val response = apiService.getMyCoupons(festivalId = festivalId)
             if (response.success && response.data != null) {
                 Result.success(response.data)
             } else {

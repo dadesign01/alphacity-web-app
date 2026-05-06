@@ -12,6 +12,7 @@ struct HomeView: View {
     var onNavigateToStamp: (() -> Void)?
     var onNavigateToCoupons: (() -> Void)?
     var onProgramClick: ((ProgramData) -> Void)?
+    var onFestivalClick: ((FestivalData) -> Void)?
     var onGuestRestricted: (() -> Void)?
     var isGuest: Bool = false
 
@@ -34,11 +35,11 @@ struct HomeView: View {
                         }
                     }
 
-                    // 오늘의 프로그램
-                    ProgramSectionView(
-                        programs: viewModel.programs,
+                    // 진행중인 축제
+                    FestivalSectionView(
+                        festivals: viewModel.festivals,
                         onSeeAllTapped: { onNavigateToProgramList?() },
-                        onProgramTapped: { program in onProgramClick?(program) }
+                        onFestivalTapped: { festival in onFestivalClick?(festival) }
                     )
 
                     // 알파시티 이벤트
@@ -185,23 +186,17 @@ private struct BannerCarouselView: View {
     }
 }
 
-// MARK: - 오늘의 프로그램
+// MARK: - 진행중인 축제
 
-private struct ProgramSectionView: View {
-    let programs: [ProgramData]
+private struct FestivalSectionView: View {
+    let festivals: [FestivalData]
     var onSeeAllTapped: (() -> Void)?
-    var onProgramTapped: ((ProgramData) -> Void)?
-
-    private static let fallbackPrograms: [(image: String, name: String, tag: String)] = [
-        ("ProgramImg1", "알파시티 카페", "#카페"),
-        ("ProgramImg2", "스마트 비스트로", "#레스토랑"),
-        ("EventImg1", "미래 모빌리티 전시", "#전시체험"),
-    ]
+    var onFestivalTapped: ((FestivalData) -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("오늘의 프로그램")
+            HStack(alignment: .top) {
+                Text("진행중인\n전국의 축제·공연·전시")
                     .font(AppFont.semibold(18))
                     .foregroundColor(Color(hex: "121212"))
                 Spacer()
@@ -215,24 +210,26 @@ private struct ProgramSectionView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    if programs.isEmpty {
-                        ForEach(Self.fallbackPrograms.indices, id: \.self) { index in
-                            let item = Self.fallbackPrograms[index]
-                            ProgramCardView(
-                                image: item.image,
-                                name: item.name,
-                                tag: item.tag
-                            )
-                        }
+                    if festivals.isEmpty {
+                        FestivalCardView(image: "ProgramImg1", imageUrl: nil, name: "수성알파시티 알파위크", tag: "#진행중", address: nil) {}
+                        FestivalCardView(image: "ProgramImg2", imageUrl: nil, name: "2026 대구 치맥페스티벌", tag: "#예정", address: nil) {}
                     } else {
-                        ForEach(programs, id: \.id) { program in
-                            ProgramCardView(
+                        ForEach(festivals, id: \.id) { festival in
+                            let tag: String = {
+                                switch festival.status {
+                                case "in_progress": return "#진행중"
+                                case "scheduled": return "#예정"
+                                default: return "#종료"
+                                }
+                            }()
+                            FestivalCardView(
                                 image: "ProgramImg1",
-                                imageUrl: program.imageUrl,
-                                name: program.name,
-                                tag: "#\(program.status == "in_progress" ? "진행중" : "예정")"
+                                imageUrl: festival.bannerUrl ?? festival.imageUrl,
+                                name: festival.name,
+                                tag: tag,
+                                address: festival.address,
+                                onTap: { onFestivalTapped?(festival) }
                             )
-                            .onTapGesture { onProgramTapped?(program) }
                         }
                     }
                 }
@@ -241,6 +238,55 @@ private struct ProgramSectionView: View {
             }
         }
         .padding(.top, 20)
+    }
+}
+
+private struct FestivalCardView: View {
+    let image: String
+    var imageUrl: String? = nil
+    let name: String
+    let tag: String
+    let address: String?
+    var onTap: () -> Void = {}
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let imageUrl = imageUrl, !imageUrl.isEmpty {
+                let fullURL = imageUrl.hasPrefix("http") ? imageUrl : "\(APIClient.serverURL)\(imageUrl)"
+                AsyncImage(url: URL(string: fullURL)) { phase in
+                    switch phase {
+                    case .success(let img): img.resizable().scaledToFill()
+                    default: Image(image).resizable().scaledToFill()
+                    }
+                }
+                .frame(width: 260, height: 150)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                Image(image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 260, height: 150)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            Text(name)
+                .font(AppFont.semibold(15))
+                .foregroundColor(Color(hex: "121212"))
+                .padding(.top, 8)
+
+            HStack(spacing: 4) {
+                TagChip(text: tag, textColor: "E85151", borderColor: "E85151")
+                if let addr = address, !addr.isEmpty {
+                    Text(addr)
+                        .font(AppFont.regular(11))
+                        .foregroundColor(Color(hex: "8F8F8F"))
+                        .lineLimit(1)
+                }
+            }
+            .padding(.top, 4)
+        }
+        .frame(width: 260)
+        .onTapGesture { onTap() }
     }
 }
 

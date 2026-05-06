@@ -4,6 +4,8 @@ import com.alphacity.stamptour.network.ApiService
 import com.alphacity.stamptour.network.TokenManager
 import com.alphacity.stamptour.network.dto.BannerItem
 import com.alphacity.stamptour.network.dto.EventItem
+import com.alphacity.stamptour.network.dto.FestivalDetail
+import com.alphacity.stamptour.network.dto.FestivalItem
 import com.alphacity.stamptour.network.dto.EventParticipationResult
 import com.alphacity.stamptour.network.dto.MissionCompletionResult
 import com.alphacity.stamptour.network.dto.MissionItem
@@ -33,9 +35,29 @@ class HomeRepository @Inject constructor(
         }
     }
 
-    suspend fun getPrograms(): Result<List<ProgramItem>> {
+    suspend fun getFestivals(): Result<List<FestivalItem>> {
         return try {
-            val response = apiService.getPrograms()
+            val response = apiService.getFestivals()
+            if (response.success && response.data != null) Result.success(response.data)
+            else Result.failure(Exception(response.error?.message ?: "축제 로드 실패"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getFestivalDetail(festivalId: Int): Result<FestivalDetail> {
+        return try {
+            val response = apiService.getFestivalDetail(festivalId)
+            if (response.success && response.data != null) Result.success(response.data)
+            else Result.failure(Exception(response.error?.message ?: "축제 상세 로드 실패"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getPrograms(festivalId: Int? = null, category: String? = null): Result<List<ProgramItem>> {
+        return try {
+            val response = apiService.getPrograms(festivalId, category)
             if (response.success && response.data != null) {
                 Result.success(response.data)
             } else {
@@ -59,9 +81,9 @@ class HomeRepository @Inject constructor(
         }
     }
 
-    suspend fun getEvents(): Result<List<EventItem>> {
+    suspend fun getEvents(festivalId: Int? = null): Result<List<EventItem>> {
         return try {
-            val response = apiService.getEvents()
+            val response = apiService.getEvents(festivalId)
             if (response.success && response.data != null) {
                 Result.success(response.data)
             } else {
@@ -72,9 +94,9 @@ class HomeRepository @Inject constructor(
         }
     }
 
-    suspend fun getStamps(): Result<List<StampItem>> {
+    suspend fun getStamps(festivalId: Int? = null): Result<List<StampItem>> {
         return try {
-            val response = apiService.getStamps()
+            val response = apiService.getStamps(festivalId)
             if (response.success && response.data != null) {
                 Result.success(response.data)
             } else {

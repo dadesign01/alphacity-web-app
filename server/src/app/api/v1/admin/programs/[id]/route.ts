@@ -44,6 +44,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const program = await prisma.program.update({
       where: { id: Number(id) },
       data: {
+        ...(body.festivalId && { festivalId: Number(body.festivalId) }),
         ...(body.name && { name: body.name }),
         ...(body.description !== undefined && { description: body.description }),
         ...(body.category && { category: body.category }),

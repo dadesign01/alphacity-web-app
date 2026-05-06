@@ -4,9 +4,12 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.alphacity.stamptour.network.dto.CouponItem
+import com.alphacity.stamptour.network.dto.FestivalItem
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.StampItem
 import com.alphacity.stamptour.network.dto.UserStampItem
+import com.alphacity.stamptour.repository.FestivalSelectionRepository
+import com.alphacity.stamptour.repository.HomeRepository
 import com.alphacity.stamptour.repository.StampRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -25,7 +28,19 @@ data class RedeemSuccess(
 @HiltViewModel
 class StampViewModel @Inject constructor(
     private val stampRepository: StampRepository,
+    private val homeRepository: HomeRepository,
+    private val festivalSelection: FestivalSelectionRepository,
 ) : ViewModel() {
+
+    private val _festivals = MutableStateFlow<List<FestivalItem>>(emptyList())
+    val festivals: StateFlow<List<FestivalItem>> = _festivals
+
+    val selectedFestivalId: StateFlow<Int?> = festivalSelection.selectedFestivalId
+
+    fun selectFestival(id: Int?) {
+        festivalSelection.select(id)
+        fetchStampData()
+    }
 
     private val _stamps = MutableStateFlow<List<StampItem>>(emptyList())
     val stamps: StateFlow<List<StampItem>> = _stamps
@@ -70,9 +85,18 @@ class StampViewModel @Inject constructor(
         if (_isLoading.value) return
         _isLoading.value = true
 
+        val festivalId = festivalSelection.selectedFestivalId.value
+
         viewModelScope.launch {
+            // 축제 목록 (드롭다운용)
+            if (_festivals.value.isEmpty()) {
+                homeRepository.getFestivals()
+                    .onSuccess { _festivals.value = it }
+                    .onFailure { Log.e("StampViewModel", "축제 로드 실패", it) }
+            }
+
             val stampsDeferred = async {
-                stampRepository.getStamps()
+                stampRepository.getStamps(festivalId)
                     .onSuccess {
                         _stamps.value = it
                         _totalStampCount.value = maxOf(it.size, 1)
@@ -81,7 +105,7 @@ class StampViewModel @Inject constructor(
             }
 
             val missionsDeferred = async {
-                stampRepository.getMissions()
+                stampRepository.getMissions(festivalId)
                     .onSuccess { _missions.value = it }
                     .onFailure { Log.e("StampViewModel", "미션 로드 실패", it) }
             }
@@ -90,15 +114,8 @@ class StampViewModel @Inject constructor(
             missionsDeferred.await()
 
             if (stampRepository.isLoggedIn) {
-                // 유저 프로필에서 수집 수 가져오기
-                stampRepository.getUserProfile()
-                    .onSuccess { profile ->
-                        _userStampCount.value = profile.stampCount ?: 0
-                    }
-                    .onFailure { Log.e("StampViewModel", "프로필 로드 실패", it) }
-
-                // 유저가 수집한 스탬프 ID 목록
-                stampRepository.getUserStamps()
+                // 유저가 수집한 스탬프 (축제별 필터링)
+                stampRepository.getUserStamps(festivalId)
                     .onSuccess { userStampsList ->
                         _userStamps.value = userStampsList
                         _collectedStampIds.value = userStampsList.map { it.stampId }.toSet()
@@ -107,8 +124,8 @@ class StampViewModel @Inject constructor(
                     .onFailure { Log.e("StampViewModel", "유저 스탬프 로드 실패", it) }
             }
 
-            // 쿠폰 목록 로드
-            stampRepository.getCoupons()
+            // 쿠폰 목록 로드 (축제별)
+            stampRepository.getCoupons(festivalId)
                 .onSuccess {
                     _coupons.value = it.coupons
                     _redeemedCouponIds.value = it.redeemedCouponIds.toSet()

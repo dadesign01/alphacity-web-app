@@ -15,20 +15,34 @@ final class HomeRepository {
         return try await client.request(path: "banners")
     }
 
-    func fetchPrograms() async throws -> [ProgramData] {
-        return try await client.request(path: "programs")
+    func fetchFestivals() async throws -> [FestivalData] {
+        return try await client.request(path: "festivals")
     }
 
-    func fetchProgramsByCategory(_ category: String) async throws -> [ProgramData] {
-        return try await client.request(path: "programs?category=\(category)")
+    func fetchFestivalDetail(_ id: Int) async throws -> FestivalDetailData {
+        return try await client.request(path: "festivals/\(id)")
     }
 
-    func fetchEvents() async throws -> [EventData] {
-        return try await client.request(path: "events")
+    func fetchPrograms(festivalId: Int? = nil, category: String? = nil) async throws -> [ProgramData] {
+        var query: [String] = []
+        if let festivalId = festivalId { query.append("festivalId=\(festivalId)") }
+        if let category = category { query.append("category=\(category)") }
+        let path = "programs" + (query.isEmpty ? "" : "?" + query.joined(separator: "&"))
+        return try await client.request(path: path)
     }
 
-    func fetchStamps() async throws -> [StampData] {
-        return try await client.request(path: "stamps")
+    func fetchProgramsByCategory(_ category: String, festivalId: Int? = nil) async throws -> [ProgramData] {
+        return try await fetchPrograms(festivalId: festivalId, category: category)
+    }
+
+    func fetchEvents(festivalId: Int? = nil) async throws -> [EventData] {
+        let path = festivalId.map { "events?festivalId=\($0)" } ?? "events"
+        return try await client.request(path: path)
+    }
+
+    func fetchStamps(festivalId: Int? = nil) async throws -> [StampData] {
+        let path = festivalId.map { "stamps?festivalId=\($0)" } ?? "stamps"
+        return try await client.request(path: path)
     }
 
     func fetchUserProfile() async throws -> UserProfileData {

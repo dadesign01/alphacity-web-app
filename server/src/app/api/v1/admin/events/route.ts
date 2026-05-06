@@ -16,17 +16,26 @@ function computeEventStatus(startDate: Date, endDate: Date): EventStatus {
   return 'in_progress';
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = request.nextUrl;
+    const festivalIdRaw = searchParams.get('festivalId');
+    const where: Record<string, unknown> = {};
+    if (festivalIdRaw && festivalIdRaw !== 'all') {
+      const festivalId = Number(festivalIdRaw);
+      if (Number.isInteger(festivalId)) where.festivalId = festivalId;
+    }
+
     const events = await prisma.event.findMany({
+      where,
       include: {
+        festival: { select: { id: true, name: true } },
         program: { select: { name: true } },
         _count: { select: { participants: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
     });
 
-    // 날짜 기반으로 상태 자동 계산
     const eventsWithStatus = events.map(e => ({
       ...e,
       status: computeEventStatus(e.startDate, e.endDate),
@@ -41,15 +50,16 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { programId, name, description, imageUrl, type, startDate, endDate, reward, winnerCount, participantLimit, price, duration, capacity, location } = body;
+    const { festivalId, programId, name, description, imageUrl, type, startDate, endDate, reward, winnerCount, participantLimit, price, duration, capacity, location, sortOrder, isVisible } = body;
 
-    if (!programId || !name || !type || !startDate || !endDate) {
+    if (!festivalId || !programId || !name || !type || !startDate || !endDate) {
       return errorResponse('INVALID_INPUT', '필수 항목을 모두 입력하세요');
     }
 
     const event = await prisma.event.create({
       data: {
-        programId,
+        festivalId: Number(festivalId),
+        programId: Number(programId),
         name,
         description: description || null,
         imageUrl: imageUrl || null,
@@ -64,6 +74,8 @@ export async function POST(request: NextRequest) {
         duration: duration || null,
         capacity: capacity || null,
         location: location || null,
+        sortOrder: sortOrder ?? 0,
+        isVisible: isVisible ?? true,
       },
     });
 

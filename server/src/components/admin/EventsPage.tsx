@@ -5,6 +5,9 @@ import { useEffect, useRef, useState } from 'react';
 
 interface EventItem {
   id: number;
+  festivalId: number;
+  festival?: { id: number; name: string };
+  programId: number;
   name: string;
   description: string | null;
   imageUrl: string | null;
@@ -19,34 +22,44 @@ interface EventItem {
   duration: number | null;
   capacity: number | null;
   location: string | null;
+  sortOrder: number;
+  isVisible: boolean;
   program: { name: string };
   _count: { participants: number };
 }
 
-const TYPE_MAP: Record<string, string> = { raffle: '추첨', first_come: '선착순', experience: '체험' };
+const TYPE_MAP: Record<string, string> = { raffle: '추첨', first_come: '선착순' };
 const STATUS_MAP: Record<string, string> = { scheduled: '예정', in_progress: '진행중', ended: '종료' };
 
-const defaultForm = { programId: 0, name: '', description: '', imageUrl: '', type: 'raffle', startDate: '', endDate: '', reward: '', winnerCount: 0, participantLimit: 100, price: 0, duration: 0, capacity: 0, location: '' };
+const defaultForm = { festivalId: 0, programId: 0, name: '', description: '', imageUrl: '', type: 'raffle', startDate: '', endDate: '', reward: '', winnerCount: 0, participantLimit: 100, price: 0, duration: 0, capacity: 0, location: '', sortOrder: 0, isVisible: true };
 
 export default function EventsPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [programs, setPrograms] = useState<{ id: number; name: string }[]>([]);
+  const [festivals, setFestivals] = useState<{ id: number; name: string }[]>([]);
+  const [festivalFilter, setFestivalFilter] = useState('all');
+  const [programs, setPrograms] = useState<{ id: number; name: string; festivalId: number }[]>([]);
   const [form, setForm] = useState(defaultForm);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchEvents = () => {
-    fetch('/api/v1/admin/events').then((r) => r.json()).then((d) => { if (d.success) setEvents(d.data); });
+    const params = new URLSearchParams();
+    if (festivalFilter !== 'all') params.set('festivalId', festivalFilter);
+    fetch(`/api/v1/admin/events?${params}`).then((r) => r.json()).then((d) => { if (d.success) setEvents(d.data); });
   };
 
   useEffect(() => {
-    fetchEvents();
+    fetch('/api/v1/admin/festivals').then((r) => r.json()).then((d) => {
+      if (d.success) setFestivals(d.data.map((f: { id: number; name: string }) => ({ id: f.id, name: f.name })));
+    });
     fetch('/api/v1/admin/programs').then((r) => r.json()).then((d) => {
-      if (d.success) setPrograms(d.data.map((p: { id: number; name: string }) => ({ id: p.id, name: p.name })));
+      if (d.success) setPrograms(d.data.map((p: { id: number; name: string; festivalId: number }) => ({ id: p.id, name: p.name, festivalId: p.festivalId })));
     });
   }, []);
+
+  useEffect(() => { fetchEvents(); }, [festivalFilter]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -69,8 +82,8 @@ export default function EventsPage() {
   };
 
   const handleSubmit = async () => {
-    if (!editingId && !form.programId) {
-      alert('소속 행사를 선택해주세요');
+    if (!editingId && (!form.festivalId || !form.programId)) {
+      alert('축제와 소속 행사를 선택해주세요');
       return;
     }
     if (!form.name || !form.type || !form.startDate || !form.endDate) {
@@ -101,7 +114,8 @@ export default function EventsPage() {
   const handleEdit = (event: EventItem) => {
     setEditingId(event.id);
     setForm({
-      programId: 0,
+      festivalId: event.festivalId,
+      programId: event.programId,
       name: event.name,
       description: event.description || '',
       imageUrl: event.imageUrl || '',
@@ -115,6 +129,8 @@ export default function EventsPage() {
       duration: event.duration || 0,
       capacity: event.capacity || 0,
       location: event.location || '',
+      sortOrder: event.sortOrder ?? 0,
+      isVisible: event.isVisible ?? true,
     });
     setShowForm(true);
   };
@@ -162,16 +178,24 @@ export default function EventsPage() {
             <button onClick={resetForm} className="p-1 text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
           </div>
           <div className="space-y-4">
-            {!editingId && (
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">소속 행사</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">축제 *</label>
+                <select value={form.festivalId} onChange={(e) => setForm({ ...form, festivalId: Number(e.target.value), programId: 0 })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value={0}>축제를 선택하세요</option>
+                  {festivals.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">소속 행사 *</label>
                 <select value={form.programId} onChange={(e) => setForm({ ...form, programId: Number(e.target.value) })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                   <option value={0}>행사를 선택하세요</option>
-                  {programs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  {programs.filter(p => !form.festivalId || p.festivalId === form.festivalId).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
-            )}
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">이벤트명</label>
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -211,7 +235,6 @@ export default function EventsPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                   <option value="raffle">추첨</option>
                   <option value="first_come">선착순</option>
-                  <option value="experience">체험</option>
                 </select>
               </div>
               {form.type !== 'experience' && (
@@ -274,6 +297,20 @@ export default function EventsPage() {
                   placeholder="보상 내용" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
             )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">노출 순서 (작을수록 먼저)</label>
+                <input type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div className="flex items-end">
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={form.isVisible} onChange={(e) => setForm({ ...form, isVisible: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded" />
+                  앱에 노출
+                </label>
+              </div>
+            </div>
             <div className="flex gap-2">
               <button onClick={handleSubmit}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">{editingId ? '수정' : '등록'}</button>
@@ -283,6 +320,17 @@ export default function EventsPage() {
           </div>
         </div>
       )}
+
+      <div className="mb-6 bg-white rounded-lg border border-gray-200 p-4">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-gray-700">축제 필터</span>
+          <select value={festivalFilter} onChange={(e) => setFestivalFilter(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white">
+            <option value="all">전체</option>
+            {festivals.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+          </select>
+        </div>
+      </div>
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <table className="w-full">

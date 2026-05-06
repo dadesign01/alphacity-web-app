@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.alphacity.stamptour.R
 import com.alphacity.stamptour.network.TokenManager
+import com.alphacity.stamptour.network.dto.FestivalItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StoreData
 import com.alphacity.stamptour.network.dto.toProgramItem
@@ -58,6 +59,7 @@ fun MainScreen(
     var showMyCoupons by remember { mutableStateOf(false) }
     var showStampExchange by remember { mutableStateOf(false) }
     var selectedProgram by remember { mutableStateOf<ProgramItem?>(null) }
+    var selectedFestival by remember { mutableStateOf<FestivalItem?>(null) }
     var selectedStore by remember { mutableStateOf<StoreData?>(null) }
     var showGuestDialog by remember { mutableStateOf(false) }
     var mapFocusLat by remember { mutableStateOf<Double?>(null) }
@@ -72,6 +74,7 @@ fun MainScreen(
         when {
             selectedStore != null -> selectedStore = null
             selectedProgram != null -> selectedProgram = null
+            selectedFestival != null -> selectedFestival = null
             showStampExchange -> showStampExchange = false
             showMyCoupons -> showMyCoupons = false
             showEventHighlight -> showEventHighlight = false
@@ -114,6 +117,24 @@ fun MainScreen(
             onBackClick = { selectedProgram = null },
             onNavigateToMap = { lat, lng ->
                 selectedProgram = null
+                mapFocusLat = lat
+                mapFocusLng = lng
+                selectedTab = BottomTab.MAP
+            },
+        )
+        return
+    }
+
+    selectedFestival?.let { festival ->
+        FestivalDetailScreen(
+            festival = festival,
+            onBackClick = { selectedFestival = null },
+            onSeeAllPrograms = {
+                showProgramList = true
+            },
+            onProgramClick = { program -> selectedProgram = program },
+            onNavigateToMap = { lat, lng ->
+                selectedFestival = null
                 mapFocusLat = lat
                 mapFocusLng = lng
                 selectedTab = BottomTab.MAP
@@ -186,6 +207,7 @@ fun MainScreen(
                     onNavigateToStamp = { selectedTab = BottomTab.STAMP },
                     onNavigateToCoupons = { showMyCoupons = true },
                     onProgramClick = { program -> selectedProgram = program },
+                    onFestivalClick = { festival -> selectedFestival = festival },
                     onGuestRestricted = { showGuestDialog = true },
                     isGuest = isGuest,
                 )

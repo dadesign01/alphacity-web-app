@@ -31,6 +31,7 @@ export async function PUT(
 
     const updateData: Record<string, unknown> = {};
     if (body.status) updateData.status = body.status;
+    if (body.festivalId !== undefined && body.festivalId !== null && body.festivalId !== '') updateData.festivalId = Number(body.festivalId);
     if (body.programId !== undefined) updateData.programId = body.programId || null;
     if (body.missionId !== undefined) updateData.missionId = body.missionId || null;
     if (body.latitude !== undefined) updateData.latitude = body.latitude !== null && body.latitude !== '' ? parseFloat(body.latitude) : null;

@@ -9,6 +9,8 @@ interface StoreCouponItem {
 
 interface StoreItem {
   id: number;
+  festivalId: number;
+  festival?: { id: number; name: string };
   name: string;
   category: string;
   ownerName: string;
@@ -33,6 +35,8 @@ interface StoreItem {
   createdAt: string;
   updatedAt: string;
 }
+
+interface FestivalOption { id: number; name: string }
 
 interface ProgramOption {
   id: number;
@@ -70,9 +74,12 @@ export default function StoresPage() {
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [stats, setStats] = useState<Stats>({ totalCount: 0, pendingCount: 0, approvedCount: 0, rejectedCount: 0 });
   const [selected, setSelected] = useState<StoreItem | null>(null);
+  const [festivals, setFestivals] = useState<FestivalOption[]>([]);
+  const [festivalFilter, setFestivalFilter] = useState('all');
   const [programs, setPrograms] = useState<ProgramOption[]>([]);
   const [missions, setMissions] = useState<MissionOption[]>([]);
   const [coupons, setCoupons] = useState<CouponOption[]>([]);
+  const [editFestivalId, setEditFestivalId] = useState<number | null>(null);
   const [editProgramId, setEditProgramId] = useState<number | null>(null);
   const [editMissionId, setEditMissionId] = useState<number | null>(null);
   const [editCouponIds, setEditCouponIds] = useState<number[]>([]);
@@ -84,12 +91,17 @@ export default function StoresPage() {
   const storeFileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = () => {
-    fetch('/api/v1/admin/stores').then((r) => r.json()).then((d) => {
+    const params = new URLSearchParams();
+    if (festivalFilter !== 'all') params.set('festivalId', festivalFilter);
+    fetch(`/api/v1/admin/stores?${params}`).then((r) => r.json()).then((d) => {
       if (d.success) { setStores(d.data.stores); setStats(d.data.stats); }
     });
   };
 
   const fetchOptions = () => {
+    fetch('/api/v1/admin/festivals').then((r) => r.json()).then((d) => {
+      if (d.success) setFestivals(d.data.map((f: FestivalOption) => ({ id: f.id, name: f.name })));
+    });
     fetch('/api/v1/admin/programs').then((r) => r.json()).then((d) => {
       if (d.success) setPrograms(d.data.map((p: ProgramOption) => ({ id: p.id, name: p.name })));
     });
@@ -101,10 +113,12 @@ export default function StoresPage() {
     });
   };
 
-  useEffect(() => { fetchData(); fetchOptions(); }, []);
+  useEffect(() => { fetchOptions(); }, []);
+  useEffect(() => { fetchData(); }, [festivalFilter]);
 
   const openDetail = (store: StoreItem) => {
     setSelected(store);
+    setEditFestivalId(store.festivalId ?? null);
     setEditProgramId(store.programId ?? null);
     setEditMissionId(store.missionId ?? null);
     setEditCouponIds(store.storeCoupons?.map(sc => sc.coupon.id) ?? []);
@@ -138,7 +152,7 @@ export default function StoresPage() {
       const res = await fetch(`/api/v1/admin/stores/${selected.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ programId: editProgramId, missionId: editMissionId, couponIds: editCouponIds, latitude: editLatitude || null, longitude: editLongitude || null, imageUrl: editImageUrl || null }),
+        body: JSON.stringify({ festivalId: editFestivalId, programId: editProgramId, missionId: editMissionId, couponIds: editCouponIds, latitude: editLatitude || null, longitude: editLongitude || null, imageUrl: editImageUrl || null }),
       });
       const data = await res.json();
       if (data.success) {
@@ -163,9 +177,16 @@ export default function StoresPage() {
 
   return (
     <div className="p-8">
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-gray-900">상점 관리</h2>
-        <p className="text-sm text-gray-500 mt-1">상점 등록 신청을 검토하고 승인/반려합니다</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">상점 관리</h2>
+          <p className="text-sm text-gray-500 mt-1">상점 등록 신청을 검토하고 승인/반려합니다</p>
+        </div>
+        <select value={festivalFilter} onChange={(e) => setFestivalFilter(e.target.value)}
+          className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white">
+          <option value="all">전체 축제</option>
+          {festivals.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+        </select>
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -401,6 +422,19 @@ export default function StoresPage() {
                   </div>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">지도에 상점 위치를 표시하려면 좌표를 입력하세요</p>
+              </div>
+
+              {/* 축제 연결 */}
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1"><Link className="w-4 h-4" /> 축제</p>
+                <select
+                  value={editFestivalId ?? ''}
+                  onChange={(e) => setEditFestivalId(e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">축제 선택</option>
+                  {festivals.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                </select>
               </div>
 
               {/* 미션 연결 */}

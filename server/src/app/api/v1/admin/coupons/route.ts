@@ -2,10 +2,20 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = request.nextUrl;
+    const festivalIdRaw = searchParams.get('festivalId');
+    const where: Record<string, unknown> = {};
+    if (festivalIdRaw && festivalIdRaw !== 'all') {
+      const festivalId = Number(festivalIdRaw);
+      if (Number.isInteger(festivalId)) where.festivalId = festivalId;
+    }
+
     const coupons = await prisma.coupon.findMany({
+      where,
       include: {
+        festival: { select: { id: true, name: true } },
         program: { select: { id: true, name: true } },
         _count: { select: { userCoupons: true } },
       },
@@ -20,14 +30,15 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, requiredStamps, validUntil, imageUrl, programId } = body;
+    const { festivalId, name, description, requiredStamps, validUntil, imageUrl, programId } = body;
 
-    if (!name || !validUntil) {
-      return errorResponse('INVALID_INPUT', '쿠폰명과 유효기간은 필수입니다');
+    if (!festivalId || !name || !validUntil) {
+      return errorResponse('INVALID_INPUT', '축제, 쿠폰명, 유효기간은 필수입니다');
     }
 
     const coupon = await prisma.coupon.create({
       data: {
+        festivalId: Number(festivalId),
         name,
         description,
         requiredStamps: requiredStamps || 0,

@@ -25,9 +25,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.alphacity.stamptour.BuildConfig
 import com.alphacity.stamptour.R
+import com.alphacity.stamptour.network.dto.FestivalItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.viewmodel.ProgramListViewModel
+import androidx.compose.foundation.border
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -40,6 +44,8 @@ fun ProgramListScreen(
 ) {
     val programs by viewModel.programs.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val festivals by viewModel.festivals.collectAsState()
+    val selectedFestivalId by viewModel.selectedFestivalId.collectAsState()
 
     LaunchedEffect(Unit) {
         if (initialCategory != null) {
@@ -67,6 +73,13 @@ fun ProgramListScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
+            // 축제 선택 드롭다운
+            FestivalSelectBar(
+                festivals = festivals,
+                selectedId = selectedFestivalId,
+                onSelect = { id -> viewModel.selectFestival(id) },
+            )
+
             // Category Tabs
             CategoryTabs(
                 selectedCategory = selectedCategory,
@@ -175,6 +188,7 @@ private fun CategoryTabs(
         CategoryItem("food", "맛집", R.drawable.icon_food),
         CategoryItem("exhibition", "전시", R.drawable.icon_exhibition),
         CategoryItem("seminar", "세미나", R.drawable.icon_seminar),
+        CategoryItem("experience", "체험", R.drawable.icon_activity),
     )
 
     Row(
@@ -418,5 +432,62 @@ private fun formatDateRange(startDate: String, endDate: String): String {
         "${start?.let { display.format(it) } ?: startDate} ~ ${end?.let { display.format(it) } ?: endDate}"
     } catch (_: Exception) {
         "${startDate.take(10)} ~ ${endDate.take(10)}"
+    }
+}
+
+@Composable
+private fun FestivalSelectBar(
+    festivals: List<FestivalItem>,
+    selectedId: Int?,
+    onSelect: (Int?) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedName = festivals.find { it.id == selectedId }?.name ?: "전체 축제"
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White, shape = RoundedCornerShape(10.dp))
+                .border(1.dp, Color(0xFFD0D5DD), shape = RoundedCornerShape(10.dp))
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "축제 선택",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Medium,
+                fontSize = 13.sp,
+                color = Color(0xFF8F8F8F),
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = selectedName,
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                color = Color(0xFF121212),
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = if (expanded) "▲" else "▼",
+                color = Color(0xFF8F8F8F),
+                fontSize = 12.sp,
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuItem(text = { Text("전체 축제") }, onClick = { onSelect(null); expanded = false })
+            festivals.forEach { f ->
+                DropdownMenuItem(text = { Text(f.name) }, onClick = { onSelect(f.id); expanded = false })
+            }
+        }
     }
 }

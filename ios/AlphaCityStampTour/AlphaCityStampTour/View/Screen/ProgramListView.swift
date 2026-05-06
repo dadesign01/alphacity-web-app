@@ -116,6 +116,7 @@ private struct CategoryTabsView: View {
         ("food", "맛집", "icon_food"),
         ("exhibition", "전시", "icon_exhibition"),
         ("seminar", "세미나", "icon_seminar"),
+        ("experience", "체험", "icon_activity"),
     ]
 
     var body: some View {

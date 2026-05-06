@@ -19,28 +19,63 @@ model Admin {
   @@map("admins")
 }
 
-model Program {
-  id               Int              @id @default(autoincrement())
-  name             String           @db.VarChar(255)
-  description      String?          @db.Text
-  category         ProgramCategory  @default(exhibition)
-  imageUrl         String?          @map("image_url") @db.VarChar(500)
-  operatingHours   String?          @map("operating_hours") @db.VarChar(100)
-  location         String?          @db.VarChar(500)
-  latitude         Decimal?         @db.Decimal(10, 7)
-  longitude        Decimal?         @db.Decimal(10, 7)
-  speaker          String?          @db.VarChar(255)
-  subcategory      String?          @db.VarChar(50)
-  hasCoupon        Boolean          @default(false) @map("has_coupon")
-  startDate        DateTime         @map("start_date") @db.Date
-  endDate          DateTime         @map("end_date") @db.Date
-  status           ProgramStatus    @default(scheduled)
-  phone            String?          @db.VarChar(20)
-  autoNotification Boolean          @default(true) @map("auto_notification")
-  collectStats     Boolean          @default(true) @map("collect_stats")
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
+model Festival {
+  id          Int            @id @default(autoincrement())
+  name        String         @db.VarChar(255)
+  description String?        @db.Text
+  imageUrl    String?        @map("image_url") @db.VarChar(500)
+  bannerUrl   String?        @map("banner_url") @db.VarChar(500)
+  startDate   DateTime       @map("start_date") @db.Date
+  endDate     DateTime       @map("end_date") @db.Date
+  latitude    Decimal?       @db.Decimal(10, 7)
+  longitude   Decimal?       @db.Decimal(10, 7)
+  address     String?        @db.VarChar(500)
+  sortOrder   Int            @default(0) @map("sort_order")
+  isActive    Boolean        @default(true) @map("is_active")
+  status      FestivalStatus @default(scheduled)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
 
+  programs Program[]
+  events   Event[]
+  missions Mission[]
+  stamps   Stamp[]
+  coupons  Coupon[]
+  stores   Store[]
+
+  @@map("festivals")
+}
+
+enum FestivalStatus {
+  scheduled
+  in_progress
+  ended
+}
+
+model Program {
+  id               Int             @id @default(autoincrement())
+  festivalId       Int             @map("festival_id")
+  name             String          @db.VarChar(255)
+  description      String?         @db.Text
+  category         ProgramCategory @default(exhibition)
+  imageUrl         String?         @map("image_url") @db.VarChar(500)
+  operatingHours   String?         @map("operating_hours") @db.VarChar(100)
+  location         String?         @db.VarChar(500)
+  latitude         Decimal?        @db.Decimal(10, 7)
+  longitude        Decimal?        @db.Decimal(10, 7)
+  speaker          String?         @db.VarChar(255)
+  subcategory      String?         @db.VarChar(50)
+  hasCoupon        Boolean         @default(false) @map("has_coupon")
+  startDate        DateTime        @map("start_date") @db.Date
+  endDate          DateTime        @map("end_date") @db.Date
+  status           ProgramStatus   @default(scheduled)
+  phone            String?         @db.VarChar(20)
+  autoNotification Boolean         @default(true) @map("auto_notification")
+  collectStats     Boolean         @default(true) @map("collect_stats")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  festival      Festival       @relation(fields: [festivalId], references: [id], onDelete: Cascade)
   events        Event[]
   missions      Mission[]
   stamps        Stamp[]
@@ -56,6 +91,7 @@ enum ProgramCategory {
   seminar
   food
   event
+  experience
 }
 
 enum ProgramStatus {
@@ -65,23 +101,23 @@ enum ProgramStatus {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique @db.VarChar(255)
-  passwordHash String?  @map("password_hash") @db.VarChar(255)
-  nickname     String   @db.VarChar(100)
-  name         String?  @db.VarChar(100)
-  phone         String?  @unique @db.VarChar(20)
-  address       String?  @db.VarChar(500)
-  addressDetail String?  @map("address_detail") @db.VarChar(500)
-  profileImage  String?  @map("profile_image") @db.VarChar(500)
-  provider      String?  @db.VarChar(20)
-  socialId     String?  @map("social_id") @db.VarChar(255)
+  id            Int       @id @default(autoincrement())
+  email         String    @unique @db.VarChar(255)
+  passwordHash  String?   @map("password_hash") @db.VarChar(255)
+  nickname      String    @db.VarChar(100)
+  name          String?   @db.VarChar(100)
+  phone         String?   @unique @db.VarChar(20)
+  address       String?   @db.VarChar(500)
+  addressDetail String?   @map("address_detail") @db.VarChar(500)
+  profileImage  String?   @map("profile_image") @db.VarChar(500)
+  provider      String?   @db.VarChar(20)
+  socialId      String?   @map("social_id") @db.VarChar(255)
   birthDate     DateTime? @map("birth_date") @db.Date
   gender        String?   @db.VarChar(10)
-  fcmToken     String?  @map("fcm_token") @db.VarChar(500)
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  fcmToken      String?   @map("fcm_token") @db.VarChar(500)
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   eventParticipants  EventParticipant[]
   missionCompletions MissionCompletion[]
@@ -94,6 +130,7 @@ model User {
 
 model Event {
   id               Int         @id @default(autoincrement())
+  festivalId       Int         @map("festival_id")
   programId        Int         @map("program_id")
   name             String      @db.VarChar(255)
   description      String?     @db.Text
@@ -109,8 +146,11 @@ model Event {
   duration         Int?
   capacity         Int?
   location         String?     @db.VarChar(500)
+  sortOrder        Int         @default(0) @map("sort_order")
+  isVisible        Boolean     @default(true) @map("is_visible")
   createdAt        DateTime    @default(now()) @map("created_at")
 
+  festival     Festival           @relation(fields: [festivalId], references: [id], onDelete: Cascade)
   program      Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
   participants EventParticipant[]
 
@@ -186,6 +226,7 @@ enum PlaceCategory {
 
 model Mission {
   id          Int         @id @default(autoincrement())
+  festivalId  Int         @map("festival_id")
   name        String      @db.VarChar(255)
   type        MissionType
   placeId     Int?        @map("place_id")
@@ -197,6 +238,7 @@ model Mission {
   stayMinutes Int?        @map("stay_minutes")
   createdAt   DateTime    @default(now()) @map("created_at")
 
+  festival    Festival            @relation(fields: [festivalId], references: [id], onDelete: Cascade)
   place       Place?              @relation(fields: [placeId], references: [id], onDelete: SetNull)
   program     Program?            @relation(fields: [programId], references: [id], onDelete: SetNull)
   stamp       Stamp?              @relation(fields: [stampId], references: [id], onDelete: SetNull)
@@ -227,6 +269,7 @@ model MissionCompletion {
 
 model Stamp {
   id              Int            @id @default(autoincrement())
+  festivalId      Int            @map("festival_id")
   name            String         @db.VarChar(255)
   conditionType   StampCondition @map("condition_type")
   conditionDetail String?        @map("condition_detail") @db.Text
@@ -235,6 +278,7 @@ model Stamp {
   placeId         Int?           @map("place_id")
   createdAt       DateTime       @default(now()) @map("created_at")
 
+  festival   Festival    @relation(fields: [festivalId], references: [id], onDelete: Cascade)
   program    Program?    @relation(fields: [programId], references: [id], onDelete: SetNull)
   place      Place?      @relation(fields: [placeId], references: [id], onDelete: SetNull)
   userStamps UserStamp[]
@@ -267,6 +311,7 @@ model UserStamp {
 
 model Coupon {
   id             Int      @id @default(autoincrement())
+  festivalId     Int      @map("festival_id")
   name           String   @db.VarChar(255)
   description    String?  @db.Text
   requiredStamps Int      @default(0) @map("required_stamps")
@@ -275,7 +320,8 @@ model Coupon {
   programId      Int?     @map("program_id")
   createdAt      DateTime @default(now()) @map("created_at")
 
-  program      Program?     @relation(fields: [programId], references: [id], onDelete: SetNull)
+  festival     Festival      @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  program      Program?      @relation(fields: [programId], references: [id], onDelete: SetNull)
   userCoupons  UserCoupon[]
   storeCoupons StoreCoupon[]
 
@@ -309,6 +355,7 @@ enum UserCouponStatus {
 
 model Store {
   id            Int           @id @default(autoincrement())
+  festivalId    Int           @map("festival_id")
   name          String        @db.VarChar(255)
   category      StoreCategory
   ownerName     String        @map("owner_name") @db.VarChar(100)
@@ -331,6 +378,7 @@ model Store {
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
+  festival     Festival      @relation(fields: [festivalId], references: [id], onDelete: Cascade)
   program      Program?      @relation(fields: [programId], references: [id], onDelete: SetNull)
   mission      Mission?      @relation(fields: [missionId], references: [id], onDelete: SetNull)
   userCoupons  UserCoupon[]
@@ -377,14 +425,14 @@ model Banner {
 }
 
 model Notification {
-  id             Int                  @id @default(autoincrement())
-  title          String               @db.VarChar(255)
-  message        String               @db.Text
-  target         NotificationTarget   @default(all)
-  status         NotificationStatus   @default(sent)
-  scheduledAt    DateTime?            @map("scheduled_at")
-  sentAt         DateTime             @default(now()) @map("sent_at")
-  recipientCount Int                  @default(0) @map("recipient_count")
+  id             Int                @id @default(autoincrement())
+  title          String             @db.VarChar(255)
+  message        String             @db.Text
+  target         NotificationTarget @default(all)
+  status         NotificationStatus @default(sent)
+  scheduledAt    DateTime?          @map("scheduled_at")
+  sentAt         DateTime           @default(now()) @map("sent_at")
+  recipientCount Int                @default(0) @map("recipient_count")
 
   @@map("notifications")
 }

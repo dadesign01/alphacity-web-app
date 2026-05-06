@@ -11,8 +11,17 @@ export async function GET(request: NextRequest) {
     const payload = await verifyToken(token);
     const userId = payload.userId as number;
 
+    const { searchParams } = request.nextUrl;
+    const festivalIdRaw = searchParams.get('festivalId');
+    const where: Record<string, unknown> = { userId };
+    if (festivalIdRaw && festivalIdRaw !== 'all') {
+      const festivalId = Number(festivalIdRaw);
+      if (Number.isInteger(festivalId)) where.stamp = { festivalId };
+    }
+
     const userStamps = await prisma.userStamp.findMany({
-      where: { userId },
+      where,
+      include: { stamp: { select: { id: true, name: true, festivalId: true, imageUrl: true, conditionType: true } } },
       orderBy: { collectedAt: 'desc' },
     });
 

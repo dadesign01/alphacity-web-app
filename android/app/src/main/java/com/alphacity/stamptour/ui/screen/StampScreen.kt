@@ -36,6 +36,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.alphacity.stamptour.BuildConfig
 import com.alphacity.stamptour.R
+import com.alphacity.stamptour.network.dto.FestivalItem
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.StampItem
 import com.alphacity.stamptour.network.dto.UserStampItem
@@ -55,6 +56,8 @@ fun StampScreen(
     val collectedStampIds by viewModel.collectedStampIds.collectAsState()
     val missions by viewModel.missions.collectAsState()
     val userStamps by viewModel.userStamps.collectAsState()
+    val festivals by viewModel.festivals.collectAsState()
+    val selectedFestivalId by viewModel.selectedFestivalId.collectAsState()
     var selectedMission by remember { mutableStateOf<MissionItem?>(null) }
 
     // 미션 상세 화면에서 뒤로가기
@@ -155,7 +158,17 @@ fun StampScreen(
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 축제 선택 드롭다운
+            FestivalDropdown(
+                festivals = festivals,
+                selectedId = selectedFestivalId,
+                onSelect = { id -> viewModel.selectFestival(id) },
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Progress Card
             StampProgressCard(
@@ -976,6 +989,67 @@ private fun StampHistoryRow(
                     .background(Color(0xFFFFF7ED))
                     .padding(horizontal = 10.dp, vertical = 4.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun FestivalDropdown(
+    festivals: List<FestivalItem>,
+    selectedId: Int?,
+    onSelect: (Int?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedName = festivals.find { it.id == selectedId }?.name ?: "전체 축제"
+
+    Box(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White, shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                .border(1.dp, Color(0xFFD0D5DD), shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "축제 선택",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Medium,
+                fontSize = 13.sp,
+                color = Color(0xFF8F8F8F),
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = selectedName,
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                color = Color(0xFF121212),
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = if (expanded) "▲" else "▼",
+                color = Color(0xFF8F8F8F),
+                fontSize = 12.sp,
+            )
+        }
+        androidx.compose.material3.DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(0.9f),
+        ) {
+            androidx.compose.material3.DropdownMenuItem(
+                text = { Text("전체 축제") },
+                onClick = { onSelect(null); expanded = false },
+            )
+            festivals.forEach { f ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(f.name) },
+                    onClick = { onSelect(f.id); expanded = false },
+                )
+            }
         }
     }
 }

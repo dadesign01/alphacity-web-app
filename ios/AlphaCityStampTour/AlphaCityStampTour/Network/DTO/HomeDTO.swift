@@ -13,10 +13,59 @@ struct BannerData: Decodable, Identifiable {
     let imageUrl: String
 }
 
+// MARK: - 축제
+
+struct FestivalData: Decodable, Identifiable {
+    let id: Int
+    let name: String
+    let description: String?
+    let imageUrl: String?
+    let bannerUrl: String?
+    let startDate: String
+    let endDate: String
+    let latitude: Double?
+    let longitude: Double?
+    let address: String?
+    let sortOrder: Int
+    let isActive: Bool
+    let status: String
+}
+
+struct FestivalDetailData: Decodable, Identifiable {
+    let id: Int
+    let name: String
+    let description: String?
+    let imageUrl: String?
+    let bannerUrl: String?
+    let startDate: String
+    let endDate: String
+    let latitude: Double?
+    let longitude: Double?
+    let address: String?
+    let sortOrder: Int
+    let isActive: Bool
+    let status: String
+    let programs: [FestivalProgramSummary]
+}
+
+struct FestivalProgramSummary: Decodable, Identifiable {
+    let id: Int
+    let name: String
+    let category: String?
+    let imageUrl: String?
+    let startDate: String
+    let endDate: String
+    let status: String?
+    let location: String?
+    let latitude: Double?
+    let longitude: Double?
+}
+
 // MARK: - 프로그램
 
 struct ProgramData: Decodable, Identifiable {
     let id: Int
+    let festivalId: Int?
     let name: String
     let description: String?
     let category: String?
@@ -57,6 +106,7 @@ struct ProgramStoreData: Decodable, Identifiable {
 
 struct MissionData: Decodable, Identifiable {
     let id: Int
+    let festivalId: Int?
     let name: String
     let type: String
     let placeId: Int?
@@ -128,6 +178,7 @@ struct EventParticipationData: Decodable {
 
 struct StampData: Decodable, Identifiable {
     let id: Int
+    let festivalId: Int?
     let name: String
     let conditionType: String
     let conditionDetail: String?
@@ -140,6 +191,7 @@ struct UserStampData: Decodable, Identifiable {
     let id: Int
     let stampId: Int
     let collectedAt: String?
+    let stamp: StampData?
 }
 
 // MARK: - 쿠폰
@@ -152,6 +204,7 @@ struct CouponListResponse: Decodable {
 
 struct CouponData: Decodable, Identifiable {
     let id: Int
+    let festivalId: Int?
     let name: String
     let description: String?
     let requiredStamps: Int

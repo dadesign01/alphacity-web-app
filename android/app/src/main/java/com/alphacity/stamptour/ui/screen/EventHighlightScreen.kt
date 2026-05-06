@@ -41,7 +41,6 @@ import java.util.Locale
 private enum class EventTab(val title: String) {
     RAFFLE("추첨 이벤트"),
     FIRST_COME("선착순 사은품"),
-    EXPERIENCE("체험"),
 }
 
 // ── Main Screen ──
@@ -126,13 +125,6 @@ fun EventHighlightScreen(
                     )
                     EventTab.FIRST_COME -> FirstComeTabContent(
                         events = firstComeEvents,
-                        onEventClick = { event ->
-                            selectedEventId = event.id
-                            selectedEventType = event.type
-                        },
-                    )
-                    EventTab.EXPERIENCE -> ExperienceTabContent(
-                        events = experienceEvents,
                         onEventClick = { event ->
                             selectedEventId = event.id
                             selectedEventType = event.type

@@ -20,6 +20,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const stamp = await prisma.stamp.update({
       where: { id: Number(id) },
       data: {
+        ...(body.festivalId && { festivalId: Number(body.festivalId) }),
         ...(body.name && { name: body.name }),
         ...(body.conditionType && { conditionType: body.conditionType }),
         ...(body.conditionDetail !== undefined && { conditionDetail: body.conditionDetail }),

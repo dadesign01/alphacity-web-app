@@ -11,11 +11,63 @@ data class BannerItem(
     val imageUrl: String,
 )
 
+// === 축제 ===
+
+@Serializable
+data class FestivalItem(
+    val id: Int,
+    val name: String,
+    val description: String? = null,
+    val imageUrl: String? = null,
+    val bannerUrl: String? = null,
+    val startDate: String,
+    val endDate: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val address: String? = null,
+    val sortOrder: Int = 0,
+    val isActive: Boolean = true,
+    val status: String,
+)
+
+@Serializable
+data class FestivalDetail(
+    val id: Int,
+    val name: String,
+    val description: String? = null,
+    val imageUrl: String? = null,
+    val bannerUrl: String? = null,
+    val startDate: String,
+    val endDate: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val address: String? = null,
+    val sortOrder: Int = 0,
+    val isActive: Boolean = true,
+    val status: String,
+    val programs: List<FestivalProgramSummary> = emptyList(),
+)
+
+@Serializable
+data class FestivalProgramSummary(
+    val id: Int,
+    val name: String,
+    val category: String? = null,
+    val imageUrl: String? = null,
+    val startDate: String,
+    val endDate: String,
+    val status: String? = null,
+    val location: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+)
+
 // === 프로그램 ===
 
 @Serializable
 data class ProgramItem(
     val id: Int,
+    val festivalId: Int? = null,
     val name: String,
     val description: String? = null,
     val category: String? = null,
@@ -98,6 +150,7 @@ data class EventProgram(
 @Serializable
 data class StampItem(
     val id: Int,
+    val festivalId: Int? = null,
     val name: String,
     val conditionType: String,
     val conditionDetail: String? = null,
@@ -111,6 +164,7 @@ data class UserStampItem(
     val id: Int,
     val stampId: Int,
     val collectedAt: String? = null,
+    val stamp: StampItem? = null,
 )
 
 // === 미션 ===
@@ -118,6 +172,7 @@ data class UserStampItem(
 @Serializable
 data class MissionItem(
     val id: Int,
+    val festivalId: Int? = null,
     val name: String,
     val type: String,
     val placeId: Int? = null,
@@ -159,6 +214,7 @@ data class CouponListResponse(
 @Serializable
 data class CouponItem(
     val id: Int,
+    val festivalId: Int? = null,
     val name: String,
     val description: String? = null,
     val requiredStamps: Int,

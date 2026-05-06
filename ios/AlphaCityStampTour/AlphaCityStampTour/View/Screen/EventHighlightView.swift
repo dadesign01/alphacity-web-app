@@ -3,13 +3,12 @@ import SwiftUI
 // MARK: - Tab Enum
 
 private enum EventTab: Int, CaseIterable {
-    case raffle, firstCome, experience
+    case raffle, firstCome
 
     var title: String {
         switch self {
         case .raffle: return "추첨 이벤트"
         case .firstCome: return "선착순 사은품"
-        case .experience: return "체험"
         }
     }
 }
@@ -70,11 +69,6 @@ struct EventHighlightView: View {
                                 })
                             case .firstCome:
                                 FirstComeTabContent(events: viewModel.firstComeEvents, onEventTapped: { event in
-                                    selectedEventId = event.id
-                                    selectedEventType = event.type
-                                })
-                            case .experience:
-                                ExperienceTabContent(events: viewModel.experienceEvents, onEventTapped: { event in
                                     selectedEventId = event.id
                                     selectedEventType = event.type
                                 })

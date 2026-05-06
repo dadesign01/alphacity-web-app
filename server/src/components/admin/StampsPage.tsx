@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 
 interface StampItem {
   id: number;
+  festivalId: number;
+  festival?: { id: number; name: string };
   name: string;
   conditionType: string;
   conditionDetail: string | null;
@@ -15,18 +17,21 @@ interface StampItem {
 }
 
 interface OptionItem { id: number; name: string; }
+interface FestivalOption { id: number; name: string; }
 
 const CONDITION_MAP: Record<string, string> = {
   mission_complete: '미션 완료', event_participate: '이벤트 참여', place_visit: '장소 방문', quiz_correct: '퀴즈 정답',
 };
 
-const EMPTY_FORM = { name: '', conditionType: 'mission_complete', conditionDetail: '', programId: 0, placeId: 0 };
+const EMPTY_FORM = { festivalId: 0, name: '', conditionType: 'mission_complete', conditionDetail: '', programId: 0, placeId: 0 };
 
 export default function StampsPage() {
   const [stamps, setStamps] = useState<StampItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [festivals, setFestivals] = useState<FestivalOption[]>([]);
+  const [festivalFilter, setFestivalFilter] = useState('all');
   const [programs, setPrograms] = useState<OptionItem[]>([]);
   const [places, setPlaces] = useState<OptionItem[]>([]);
   const [imageUrl, setImageUrl] = useState('');
@@ -34,11 +39,15 @@ export default function StampsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchStamps = () => {
-    fetch('/api/v1/admin/stamps').then((r) => r.json()).then((d) => { if (d.success) setStamps(d.data); });
+    const params = new URLSearchParams();
+    if (festivalFilter !== 'all') params.set('festivalId', festivalFilter);
+    fetch(`/api/v1/admin/stamps?${params}`).then((r) => r.json()).then((d) => { if (d.success) setStamps(d.data); });
   };
 
   useEffect(() => {
-    fetchStamps();
+    fetch('/api/v1/admin/festivals').then((r) => r.json()).then((d) => {
+      if (d.success) setFestivals(d.data.map((f: FestivalOption) => ({ id: f.id, name: f.name })));
+    });
     fetch('/api/v1/admin/programs').then((r) => r.json()).then((d) => {
       if (d.success) setPrograms(d.data.map((p: OptionItem) => ({ id: p.id, name: p.name })));
     });
@@ -46,6 +55,8 @@ export default function StampsPage() {
       if (d.success) setPlaces(d.data.map((p: OptionItem) => ({ id: p.id, name: p.name })));
     });
   }, []);
+
+  useEffect(() => { fetchStamps(); }, [festivalFilter]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -69,7 +80,7 @@ export default function StampsPage() {
 
   const openCreateForm = () => {
     setEditingId(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, festivalId: festivals[0]?.id ?? 0 });
     setImageUrl('');
     if (fileInputRef.current) fileInputRef.current.value = '';
     setShowForm(true);
@@ -78,6 +89,7 @@ export default function StampsPage() {
   const openEditForm = (stamp: StampItem) => {
     setEditingId(stamp.id);
     setForm({
+      festivalId: stamp.festivalId,
       name: stamp.name,
       conditionType: stamp.conditionType,
       conditionDetail: stamp.conditionDetail || '',
@@ -89,6 +101,10 @@ export default function StampsPage() {
   };
 
   const handleSubmit = async () => {
+    if (!form.festivalId) {
+      alert('축제를 선택하세요');
+      return;
+    }
     const isEdit = editingId !== null;
     const url = isEdit ? `/api/v1/admin/stamps/${editingId}` : '/api/v1/admin/stamps';
     const method = isEdit ? 'PUT' : 'POST';
@@ -141,11 +157,18 @@ export default function StampsPage() {
           <h2 className="text-2xl font-semibold text-gray-900">스탬프 관리</h2>
           <p className="text-sm text-gray-500 mt-1">스탬프 발급 조건을 설정합니다</p>
         </div>
-        <button onClick={openCreateForm}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          <Plus className="w-4 h-4" />
-          스탬프 추가
-        </button>
+        <div className="flex items-center gap-3">
+          <select value={festivalFilter} onChange={(e) => setFestivalFilter(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white">
+            <option value="all">전체 축제</option>
+            {festivals.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+          </select>
+          <button onClick={openCreateForm}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <Plus className="w-4 h-4" />
+            스탬프 추가
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -159,6 +182,14 @@ export default function StampsPage() {
             </button>
           </div>
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">축제 *</label>
+              <select value={form.festivalId} onChange={(e) => setForm({ ...form, festivalId: Number(e.target.value) })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value={0}>축제를 선택하세요</option>
+                {festivals.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">스탬프명</label>
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}

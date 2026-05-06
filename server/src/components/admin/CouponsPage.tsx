@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 
 interface CouponItem {
   id: number;
+  festivalId: number;
+  festival?: { id: number; name: string };
   name: string;
   requiredStamps: number;
   validUntil: string;
@@ -15,29 +17,38 @@ interface CouponItem {
 }
 
 interface OptionItem { id: number; name: string; }
+interface FestivalOption { id: number; name: string; }
 
-const EMPTY_FORM = { name: '', requiredStamps: 0, validUntil: '', description: '', programId: 0 };
+const EMPTY_FORM = { festivalId: 0, name: '', requiredStamps: 0, validUntil: '', description: '', programId: 0 };
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<CouponItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [festivals, setFestivals] = useState<FestivalOption[]>([]);
+  const [festivalFilter, setFestivalFilter] = useState('all');
   const [programs, setPrograms] = useState<OptionItem[]>([]);
   const [imageUrl, setImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchCoupons = () => {
-    fetch('/api/v1/admin/coupons').then((r) => r.json()).then((d) => { if (d.success) setCoupons(d.data); });
+    const params = new URLSearchParams();
+    if (festivalFilter !== 'all') params.set('festivalId', festivalFilter);
+    fetch(`/api/v1/admin/coupons?${params}`).then((r) => r.json()).then((d) => { if (d.success) setCoupons(d.data); });
   };
 
   useEffect(() => {
-    fetchCoupons();
+    fetch('/api/v1/admin/festivals').then((r) => r.json()).then((d) => {
+      if (d.success) setFestivals(d.data.map((f: FestivalOption) => ({ id: f.id, name: f.name })));
+    });
     fetch('/api/v1/admin/programs').then((r) => r.json()).then((d) => {
       if (d.success) setPrograms(d.data.map((p: OptionItem) => ({ id: p.id, name: p.name })));
     });
   }, []);
+
+  useEffect(() => { fetchCoupons(); }, [festivalFilter]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -61,7 +72,7 @@ export default function CouponsPage() {
 
   const openCreateForm = () => {
     setEditingId(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, festivalId: festivals[0]?.id ?? 0 });
     setImageUrl('');
     if (fileInputRef.current) fileInputRef.current.value = '';
     setShowForm(true);
@@ -70,6 +81,7 @@ export default function CouponsPage() {
   const openEditForm = (coupon: CouponItem) => {
     setEditingId(coupon.id);
     setForm({
+      festivalId: coupon.festivalId,
       name: coupon.name,
       requiredStamps: coupon.requiredStamps,
       validUntil: coupon.validUntil.split('T')[0],
@@ -81,6 +93,10 @@ export default function CouponsPage() {
   };
 
   const handleSubmit = async () => {
+    if (!form.festivalId) {
+      alert('축제를 선택하세요');
+      return;
+    }
     const isEdit = editingId !== null;
     const url = isEdit ? `/api/v1/admin/coupons/${editingId}` : '/api/v1/admin/coupons';
     const method = isEdit ? 'PUT' : 'POST';
@@ -132,11 +148,18 @@ export default function CouponsPage() {
           <h2 className="text-2xl font-semibold text-gray-900">쿠폰 관리</h2>
           <p className="text-sm text-gray-500 mt-1">쿠폰을 등록하고 관리합니다</p>
         </div>
-        <button onClick={openCreateForm}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          <Plus className="w-4 h-4" />
-          쿠폰 등록
-        </button>
+        <div className="flex items-center gap-3">
+          <select value={festivalFilter} onChange={(e) => setFestivalFilter(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white">
+            <option value="all">전체 축제</option>
+            {festivals.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+          </select>
+          <button onClick={openCreateForm}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <Plus className="w-4 h-4" />
+            쿠폰 등록
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -150,6 +173,14 @@ export default function CouponsPage() {
             </button>
           </div>
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">축제 *</label>
+              <select value={form.festivalId} onChange={(e) => setForm({ ...form, festivalId: Number(e.target.value) })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value={0}>축제를 선택하세요</option>
+                {festivals.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">쿠폰명</label>
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}

@@ -117,14 +117,14 @@ fun SplashScreen(
         ) {
             Spacer(modifier = Modifier.height(150.dp))
 
-            // "디지털 혁신거점" 배지
-            SplashBadge(text = "디지털 혁신거점")
+            // "여행+체험+보상" 배지
+            SplashBadge(text = "여행+체험+보상")
 
             Spacer(modifier = Modifier.height(20.dp))
 
             // 메인 타이틀
             Text(
-                text = "수성알파시티\n스탬프 투어",
+                text = "올리와 함께하는\n스탬프투어",
                 style = androidx.compose.ui.text.TextStyle(
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Black,
@@ -140,7 +140,7 @@ fun SplashScreen(
 
             // 서브 타이틀
             Text(
-                text = "뚜비와 함께 알파시티 스탬프 나들이를 떠나요!",
+                text = "올리와 함께 스탬프투어를 떠나요!\n전국 스탬프 탐방 시작!",
                 style = androidx.compose.ui.text.TextStyle(
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Medium,
@@ -163,7 +163,7 @@ fun SplashScreen(
             AsyncImage(
                 model = R.raw.alphacity_splash,
                 imageLoader = gifImageLoader,
-                contentDescription = "뚜비 캐릭터",
+                contentDescription = "올리 캐릭터",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.size(320.dp)
             )

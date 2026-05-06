@@ -11,6 +11,8 @@ import com.alphacity.stamptour.network.dto.ResetPasswordRequest
 import com.alphacity.stamptour.network.dto.SendCodeRequest
 import com.alphacity.stamptour.network.dto.SocialLoginRequest
 import com.alphacity.stamptour.network.dto.BannerItem
+import com.alphacity.stamptour.network.dto.FestivalItem
+import com.alphacity.stamptour.network.dto.FestivalDetail
 import com.alphacity.stamptour.network.dto.EventItem
 import com.alphacity.stamptour.network.dto.EventParticipationResult
 import com.alphacity.stamptour.network.dto.MissionCompletionResult
@@ -70,21 +72,31 @@ interface ApiService {
     @GET("banners")
     suspend fun getBanners(): ApiResponse<List<BannerItem>>
 
+    // 축제
+    @GET("festivals")
+    suspend fun getFestivals(): ApiResponse<List<FestivalItem>>
+
+    @GET("festivals/{id}")
+    suspend fun getFestivalDetail(@Path("id") festivalId: Int): ApiResponse<FestivalDetail>
+
     // 홈 화면 데이터
     @GET("programs")
-    suspend fun getPrograms(): ApiResponse<List<ProgramItem>>
+    suspend fun getPrograms(
+        @Query("festivalId") festivalId: Int? = null,
+        @Query("category") category: String? = null,
+    ): ApiResponse<List<ProgramItem>>
 
     @GET("programs")
     suspend fun getProgramsByCategory(@Query("category") category: String): ApiResponse<List<ProgramItem>>
 
     @GET("events")
-    suspend fun getEvents(): ApiResponse<List<EventItem>>
+    suspend fun getEvents(@Query("festivalId") festivalId: Int? = null): ApiResponse<List<EventItem>>
 
     @GET("stamps")
-    suspend fun getStamps(): ApiResponse<List<StampItem>>
+    suspend fun getStamps(@Query("festivalId") festivalId: Int? = null): ApiResponse<List<StampItem>>
 
     @GET("stamps/my")
-    suspend fun getUserStamps(): ApiResponse<List<UserStampItem>>
+    suspend fun getUserStamps(@Query("festivalId") festivalId: Int? = null): ApiResponse<List<UserStampItem>>
 
     @GET("users/me")
     suspend fun getUserProfile(): ApiResponse<UserProfile>
@@ -113,7 +125,7 @@ interface ApiService {
 
     // 미션 목록
     @GET("missions")
-    suspend fun getMissions(): ApiResponse<List<MissionItem>>
+    suspend fun getMissions(@Query("festivalId") festivalId: Int? = null): ApiResponse<List<MissionItem>>
 
     // 미션 완료
     @POST("missions/{id}/complete")
@@ -121,10 +133,13 @@ interface ApiService {
 
     // 쿠폰
     @GET("coupons")
-    suspend fun getCoupons(): ApiResponse<CouponListResponse>
+    suspend fun getCoupons(@Query("festivalId") festivalId: Int? = null): ApiResponse<CouponListResponse>
 
     @GET("coupons")
-    suspend fun getMyCoupons(@Query("my") my: Boolean = true): ApiResponse<List<MyCouponItem>>
+    suspend fun getMyCoupons(
+        @Query("my") my: Boolean = true,
+        @Query("festivalId") festivalId: Int? = null,
+    ): ApiResponse<List<MyCouponItem>>
 
     @POST("coupons/{id}/redeem")
     suspend fun redeemCoupon(@Path("id") couponId: Int): ApiResponse<UserCouponItem>
@@ -134,7 +149,7 @@ interface ApiService {
 
     // 상점
     @GET("stores")
-    suspend fun getStores(): ApiResponse<List<StoreData>>
+    suspend fun getStores(@Query("festivalId") festivalId: Int? = null): ApiResponse<List<StoreData>>
 
     @POST("stores/register")
     suspend fun registerStore(@Body request: StoreRegisterRequest): ApiResponse<StoreData>

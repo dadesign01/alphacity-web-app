@@ -18,6 +18,7 @@ async function main() {
   await prisma.programPlace.deleteMany();
   await prisma.store.deleteMany();
   await prisma.program.deleteMany();
+  await prisma.festival.deleteMany();
   await prisma.place.deleteMany();
   await prisma.banner.deleteMany();
   console.log('Existing data cleared');
@@ -36,9 +37,63 @@ async function main() {
   });
   console.log('Admin created:', admin.email);
 
+  // ========================================
+  // 축제 (Festival) — 모든 프로그램/이벤트/미션/스탬프/쿠폰/상점은 축제에 묶인다
+  // ========================================
+  const festival = await prisma.festival.create({
+    data: {
+      name: '수성알파시티 알파위크',
+      description: '수성알파시티에서 진행되는 대표 축제. 다양한 전시·세미나·맛집·체험 프로그램을 한자리에서 즐겨보세요.',
+      imageUrl: '/uploads/program_img_1.png',
+      bannerUrl: '/uploads/program_img_1.png',
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-12-31'),
+      latitude: 35.8425,
+      longitude: 128.6905,
+      address: '대구광역시 수성구 알파시티 2로 33',
+      sortOrder: 0,
+      isActive: true,
+      status: 'in_progress',
+    },
+  });
+  const festival2 = await prisma.festival.create({
+    data: {
+      name: '2026 대구 치맥페스티벌',
+      description: '대구의 명물 치킨과 맥주가 어우러지는 여름 대표 축제',
+      imageUrl: '/uploads/program_img_2.png',
+      bannerUrl: '/uploads/program_img_2.png',
+      startDate: new Date('2026-07-19'),
+      endDate: new Date('2026-07-23'),
+      latitude: 35.8714,
+      longitude: 128.6014,
+      address: '대구광역시 두류공원 일대',
+      sortOrder: 1,
+      isActive: true,
+      status: 'scheduled',
+    },
+  });
+  const festival3 = await prisma.festival.create({
+    data: {
+      name: 'DIMF 뮤지컬 페스티벌',
+      description: '대구국제뮤지컬페스티벌 — 국내외 뮤지컬을 한자리에서',
+      imageUrl: '/uploads/program_img_1.png',
+      bannerUrl: '/uploads/program_img_1.png',
+      startDate: new Date('2026-06-23'),
+      endDate: new Date('2026-07-10'),
+      latitude: 35.8693,
+      longitude: 128.5961,
+      address: '대구광역시 중구 일대',
+      sortOrder: 2,
+      isActive: true,
+      status: 'scheduled',
+    },
+  });
+  console.log('Festivals created:', festival.name, festival2.name, festival3.name);
+
   // 프로그램 (전시)
   const program1 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '현대 AI 모빌리티 혁신 전시 2026',
       description: '2026, 새로워진 현대의 AI 기술로\n자율주행부터 스마트 이동 기술까지, 미래 모빌리티를 경험하세요.',
       category: 'exhibition',
@@ -54,6 +109,7 @@ async function main() {
   });
   const program2 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '삼성전자 차세대 인공지능 테크 쇼케이스',
       description: '생성형 AI부터 스마트 디바이스 AI까지, 미래 기술을 직접 만나다.\n삼성의 최신 AI 기술로 구현된 미래 라이프를 경험하세요.',
       category: 'exhibition',
@@ -69,6 +125,7 @@ async function main() {
   });
   const program3 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: 'NAVER 넥스트 제너레이션 : 스마트시티 솔루션',
       description: 'NAVER에서 제시하는 생활·교통·환경을 연결하는\nIoT 기반 스마트시티 솔루션을 한자리에서 체험하세요.',
       category: 'exhibition',
@@ -84,6 +141,7 @@ async function main() {
   });
   const program4 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '현대 AI 모빌리티 테크 리뷰 2025',
       description: '현대자동차가 2025년 한 해 동안 선보인 AI 기반 모빌리티 기술을\n한자리에서 돌아보며 체험을 통해 현대의 기술을 느껴보세요.',
       category: 'exhibition',
@@ -102,6 +160,7 @@ async function main() {
   // 프로그램 (세미나)
   const seminar1 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '다가오는 AI 전환 시대와 대응 전략',
       description: 'AI 시대 가속화에 따른 산업 구조 변화와 대응 전략 인사이트',
       category: 'seminar',
@@ -118,6 +177,7 @@ async function main() {
   });
   const seminar2 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '메타버스 비즈니스 전략',
       description: '메타버스 플랫폼을 활용한 비즈니스 모델을 전략하여 기술력을 증진하라',
       category: 'seminar',
@@ -134,6 +194,7 @@ async function main() {
   });
   const seminar3 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '박민수의 디지털 마케팅 토크 콘서트',
       description: '디지털 플랫폼이 지배하는 지금을 살아가는 당신에게 필요한 마케팅 전략',
       category: 'seminar',
@@ -153,6 +214,7 @@ async function main() {
   // 프로그램 (맛집)
   const food1 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '알파시티 카페거리 맛집 투어',
       description: '알파시티 내 숨겨진 카페와 디저트 맛집을 스탬프와 함께 즐겨보세요.',
       category: 'food',
@@ -168,6 +230,7 @@ async function main() {
   });
   const food2 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '스마트 비스트로 미식 체험',
       description: 'AI가 추천하는 맞춤형 메뉴와 스마트 키친의 미래를 경험하세요.',
       category: 'food',
@@ -183,6 +246,7 @@ async function main() {
   });
   await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '로컬 푸드 페스티벌',
       description: '지역 농산물과 수제 먹거리를 한자리에서 만나는 로컬 푸드 축제',
       category: 'food',
@@ -201,6 +265,7 @@ async function main() {
   // 지오펜스 테스트 프로그램 (광명시 광이로 95 기준: 37.4789, 126.8671)
   const geoTestNear = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '[테스트] 근거리 전시 (200m 이내)',
       description: '지오펜스 테스트용 프로그램입니다.\n광명시 광이로 95 기준 약 78m 거리입니다.\n→ 참여하기 버튼이 활성화되어야 합니다.',
       category: 'exhibition',
@@ -215,6 +280,7 @@ async function main() {
   });
   const geoTestFar = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '[테스트] 원거리 세미나 (300m 초과)',
       description: '지오펜스 테스트용 프로그램입니다.\n광명시 광이로 95 기준 약 378m 거리입니다.\n→ 참여하기 버튼이 비활성화되어야 합니다.',
       category: 'seminar',
@@ -236,6 +302,7 @@ async function main() {
   // ──────────────────────────────────────────────────────────────
   const gwang1 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '광이 어린이공원 포토존',
       description: '트리우스 아파트 바로 옆 광이 어린이공원을 방문하고\n귀여운 포토존에서 인증샷을 남겨보세요!',
       category: 'event',
@@ -250,6 +317,7 @@ async function main() {
   });
   const gwang2 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '트리우스 카페거리',
       description: '트리우스 아파트 상가 1층 카페거리에서 커피 한 잔 즐기며\n여유로운 시간을 보내보세요.',
       category: 'food',
@@ -264,6 +332,7 @@ async function main() {
   });
   const gwang3 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '광이로 문화 광장',
       description: '광이로 95 앞 문화 광장에서 진행되는 다양한 공연과 행사를\n직접 방문해 즐겨보세요!',
       category: 'event',
@@ -278,6 +347,7 @@ async function main() {
   });
   const gwang4 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '광이 마을 작은도서관',
       description: '광이 마을 주민들을 위한 작은 도서관을 방문하고\n지역 문화를 느껴보세요.',
       category: 'exhibition',
@@ -292,6 +362,7 @@ async function main() {
   });
   const gwang5 = await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '광명 스탬프 기념 포토존',
       description: '광명시 스탬프 투어의 특별한 포토존!\n방문 인증 후 아름다운 추억을 사진으로 남겨보세요.',
       category: 'event',
@@ -310,11 +381,13 @@ async function main() {
   await prisma.mission.createMany({
     data: [
       {
+        festivalId: festival.id,
         name: '광이 어린이공원 방문 인증',
         type: 'location_auth',
         programId: gwang1.id,
       },
       {
+        festivalId: festival.id,
         name: '광명시 퀴즈',
         type: 'quiz',
         programId: gwang1.id,
@@ -323,12 +396,14 @@ async function main() {
         options: JSON.stringify(['가평동굴', '광명동굴', '안양동굴', '시흥동굴']),
       },
       {
+        festivalId: festival.id,
         name: '카페에서 여유롭게',
         type: 'stay_time',
         programId: gwang2.id,
         stayMinutes: 5,
       },
       {
+        festivalId: festival.id,
         name: '트리우스 퀴즈',
         type: 'quiz',
         programId: gwang2.id,
@@ -337,11 +412,13 @@ async function main() {
         options: JSON.stringify(['서울특별시', '인천광역시', '경기도', '충청남도']),
       },
       {
+        festivalId: festival.id,
         name: '문화 광장 방문 인증',
         type: 'location_auth',
         programId: gwang3.id,
       },
       {
+        festivalId: festival.id,
         name: '도서관 방문 퀴즈',
         type: 'quiz',
         programId: gwang4.id,
@@ -350,12 +427,14 @@ async function main() {
         options: JSON.stringify(['9월 12일', '10월 9일', '11월 1일', '3월 14일']),
       },
       {
+        festivalId: festival.id,
         name: '도서관 체류 미션',
         type: 'stay_time',
         programId: gwang4.id,
         stayMinutes: 3,
       },
       {
+        festivalId: festival.id,
         name: '포토존 방문 인증',
         type: 'location_auth',
         programId: gwang5.id,
@@ -367,6 +446,7 @@ async function main() {
   // 프로그램 (이벤트)
   await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '알파시티 봄맞이 스탬프 랠리',
       description: '봄을 맞아 알파시티 곳곳을 돌며 스탬프를 모으고 특별 경품을 받아가세요!',
       category: 'event',
@@ -382,6 +462,7 @@ async function main() {
   });
   await prisma.program.create({
     data: {
+      festivalId: festival.id,
       name: '수성알파시티 야간 라이트업 페스티벌',
       description: '알파시티의 밤을 밝히는 미디어아트와 LED 조명 퍼포먼스',
       category: 'event',
@@ -401,6 +482,7 @@ async function main() {
   await prisma.event.createMany({
     data: [
       {
+        festivalId: festival.id,
         programId: program1.id,
         name: '갤럭시탭 증정 추첨 이벤트',
         description: '수성알파시티 스탬프 투어에 참여하신 분들을 대상으로\n최신 갤럭시 탭 S9를 추첨으로 드립니다.',
@@ -413,6 +495,7 @@ async function main() {
         status: 'in_progress',
       },
       {
+        festivalId: festival.id,
         programId: program1.id,
         name: 'VR 헤드셋을 잡아라! - VR 증정 이벤트',
         description: '수성알파시티 스탬프 투어에 참여하신 분들을 대상으로\n최신 VR헤드셋 기기를 추첨으로 드립니다.',
@@ -425,6 +508,7 @@ async function main() {
         status: 'in_progress',
       },
       {
+        festivalId: festival.id,
         programId: program2.id,
         name: '알파시티 상품권 추첨 이벤트',
         description: '알파시티 내 상점 및 카페, 행사 등 활발히 사용 가능한 알파시티 상품권을\n수성알파시티 스탬프 투어에 참여하신 분들 대상 추첨으로 드립니다.',
@@ -437,6 +521,7 @@ async function main() {
         status: 'ended',
       },
       {
+        festivalId: festival.id,
         programId: program1.id,
         name: '수성알파시티 10주년 기념 스페셜 굿즈 이벤트',
         description: '수성알파시티 10주년을 기념해 방문객 여러분께 한정판 에코백을\n선착순으로 증정하는 특별 이벤트입니다.',
@@ -449,6 +534,7 @@ async function main() {
         status: 'in_progress',
       },
       {
+        festivalId: festival.id,
         programId: program2.id,
         name: '뚜비 스티커 세트 선착순 증정 이벤트',
         description: '대구 수성구 마스코트인 귀여운 뚜비 스티커 세트를\n수성알파시티 방문객 여러분께 선착순으로 증정하는 이벤트입니다.',
@@ -461,6 +547,7 @@ async function main() {
         status: 'in_progress',
       },
       {
+        festivalId: festival.id,
         programId: program3.id,
         name: '수성알파시티 에코 텀블러 증정 이벤트',
         description: '수성알파시티에서 곧 다가올 환경의 날을 기념하여 제작된\n에코 텀블러를 방문객 여러분께 선착순으로 증정하는 이벤트입니다.',
@@ -478,6 +565,7 @@ async function main() {
   await prisma.event.createMany({
     data: [
       {
+        festivalId: festival.id,
         programId: program1.id,
         name: '도자기 만들기',
         description: '전통 도예 기법으로 나만의 도자기를\n만들어 보세요.',
@@ -493,6 +581,7 @@ async function main() {
         location: '알파시티 2로 33 공예 체험관',
       },
       {
+        festivalId: festival.id,
         programId: program2.id,
         name: '천연비누 원데이 클래스',
         description: '천연 재료로 만드는 나만의 향기가득\n비누 만들기 원데이 클래스',
@@ -508,6 +597,7 @@ async function main() {
         location: '알파시티 2로 33 DIY 공방',
       },
       {
+        festivalId: festival.id,
         programId: program3.id,
         name: '3D 프린팅 액티비티',
         description: '3D 프린터로 나의 상상을 현실화하는\n나만의 작품을 뽐내보세요.',
@@ -523,6 +613,7 @@ async function main() {
         location: '알파시티 2로 33 3D 프린팅 스튜디오',
       },
       {
+        festivalId: festival.id,
         programId: program1.id,
         name: '수제 브레드 원데이 클래스',
         description: '유명 베이커리 카페 제빵사가 알려주는\n맛있는 빵 레시피! 제빵 체험해보세요.',
@@ -553,9 +644,9 @@ async function main() {
   // 미션
   await prisma.mission.createMany({
     data: [
-      { name: '포토존 인증', type: 'location_auth', placeId: places[3].id },
-      { name: '프로그램 퀴즈', type: 'quiz', question: '프로그램 시작 연도는?', answer: '2025', options: JSON.stringify(['2023', '2024', '2025', '2026']) },
-      { name: '푸드코트 체류', type: 'stay_time', placeId: places[1].id, stayMinutes: 5 },
+      { festivalId: festival.id, name: '포토존 인증', type: 'location_auth', placeId: places[3].id },
+      { festivalId: festival.id, name: '프로그램 퀴즈', type: 'quiz', question: '프로그램 시작 연도는?', answer: '2025', options: JSON.stringify(['2023', '2024', '2025', '2026']) },
+      { festivalId: festival.id, name: '푸드코트 체류', type: 'stay_time', placeId: places[1].id, stayMinutes: 5 },
     ],
   });
   console.log('Missions created');
@@ -564,6 +655,7 @@ async function main() {
   await prisma.mission.createMany({
     data: [
       {
+        festivalId: festival.id,
         name: '[테스트] 광명 퀴즈',
         type: 'quiz',
         programId: geoTestNear.id,
@@ -572,6 +664,7 @@ async function main() {
         options: JSON.stringify(['광명시청', '광명동굴', '이케아', '코스트코']),
       },
       {
+        festivalId: festival.id,
         name: '[테스트] 세미나 체류 미션',
         type: 'stay_time',
         programId: geoTestFar.id,
@@ -583,13 +676,13 @@ async function main() {
 
   // 스탬프 (개별 생성 - 미션 연결을 위해 ID 필요)
   const stamp1 = await prisma.stamp.create({
-    data: { name: '첫 방문 스탬프', conditionType: 'place_visit', conditionDetail: '프로그램 첫 방문', imageUrl: '/uploads/stamp_1.png' },
+    data: { festivalId: festival.id, name: '첫 방문 스탬프', conditionType: 'place_visit', conditionDetail: '프로그램 첫 방문', imageUrl: '/uploads/stamp_1.png' },
   });
   const stamp2 = await prisma.stamp.create({
-    data: { name: '미션 완료 스탬프', conditionType: 'mission_complete', conditionDetail: '미션 완료 시 적립', imageUrl: '/uploads/stamp_2.png' },
+    data: { festivalId: festival.id, name: '미션 완료 스탬프', conditionType: 'mission_complete', conditionDetail: '미션 완료 시 적립', imageUrl: '/uploads/stamp_2.png' },
   });
   const stamp3 = await prisma.stamp.create({
-    data: { name: '이벤트 참여 스탬프', conditionType: 'event_participate', conditionDetail: '이벤트 1회 참여', imageUrl: '/uploads/stamp_3.png' },
+    data: { festivalId: festival.id, name: '이벤트 참여 스탬프', conditionType: 'event_participate', conditionDetail: '이벤트 1회 참여', imageUrl: '/uploads/stamp_3.png' },
   });
 
   // 미션에 스탬프 연결
@@ -609,22 +702,23 @@ async function main() {
 
   // 쿠폰
   const coupon1 = await prisma.coupon.create({
-    data: { name: '커피 무료 쿠폰', description: '제휴 카페에서 사용 가능한 커피 무료 쿠폰', requiredStamps: 3, validUntil: new Date('2026-12-31') },
+    data: { festivalId: festival.id, name: '커피 무료 쿠폰', description: '제휴 카페에서 사용 가능한 커피 무료 쿠폰', requiredStamps: 3, validUntil: new Date('2026-12-31') },
   });
   const coupon2 = await prisma.coupon.create({
-    data: { name: '기념품 교환권', description: '프로그램 기념품을 교환할 수 있는 쿠폰', requiredStamps: 5, validUntil: new Date('2026-12-31') },
+    data: { festivalId: festival.id, name: '기념품 교환권', description: '프로그램 기념품을 교환할 수 있는 쿠폰', requiredStamps: 5, validUntil: new Date('2026-12-31') },
   });
   const coupon3 = await prisma.coupon.create({
-    data: { name: '10% 할인 쿠폰', description: '프로그램 내 상점 10% 할인', requiredStamps: 2, validUntil: new Date('2026-12-31') },
+    data: { festivalId: festival.id, name: '10% 할인 쿠폰', description: '프로그램 내 상점 10% 할인', requiredStamps: 2, validUntil: new Date('2026-12-31') },
   });
   const coupon4 = await prisma.coupon.create({
-    data: { name: '런치 세트 할인권', description: '런치 세트 메뉴 20% 할인', requiredStamps: 4, validUntil: new Date('2026-12-31') },
+    data: { festivalId: festival.id, name: '런치 세트 할인권', description: '런치 세트 메뉴 20% 할인', requiredStamps: 4, validUntil: new Date('2026-12-31') },
   });
   console.log('Coupons created');
 
   // 상점 (프로그램 연결)
   const store1 = await prisma.store.create({
     data: {
+      festivalId: festival.id,
       name: '알파시티 카페',
       category: 'cafe',
       ownerName: '김사장',
@@ -643,6 +737,7 @@ async function main() {
   });
   const store2 = await prisma.store.create({
     data: {
+      festivalId: festival.id,
       name: '알파 레스토랑',
       category: 'restaurant',
       ownerName: '이사장',
@@ -661,6 +756,7 @@ async function main() {
   });
   const store3 = await prisma.store.create({
     data: {
+      festivalId: festival.id,
       name: '알파 마트',
       category: 'convenience',
       ownerName: '박사장',
@@ -679,6 +775,7 @@ async function main() {
   });
   await prisma.store.create({
     data: {
+      festivalId: festival.id,
       name: '수성 기념품샵',
       category: 'shopping',
       ownerName: '최사장',

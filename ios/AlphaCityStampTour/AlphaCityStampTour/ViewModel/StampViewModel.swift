@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import Combine
 
 struct RedeemSuccess {
     let couponName: String
@@ -22,6 +23,7 @@ final class StampViewModel: ObservableObject {
     @Published var missions: [MissionData] = []
     @Published var coupons: [CouponData] = []
     @Published var redeemedCouponIds: Set<Int> = []
+    @Published var festivals: [FestivalData] = []
     @Published var isRedeeming = false
     @Published var redeemSuccess: RedeemSuccess? = nil
     @Published var redeemError: String? = nil
@@ -29,6 +31,24 @@ final class StampViewModel: ObservableObject {
     @Published var availableStamps: Int = 0
 
     private let repository = StampRepository.shared
+    private let homeRepository = HomeRepository.shared
+    private let selection = FestivalSelection.shared
+    private var cancellables = Set<AnyCancellable>()
+
+    var selectedFestivalId: Int? { selection.selectedFestivalId }
+
+    func selectFestival(_ id: Int?) {
+        selection.select(id)
+        fetchStampData()
+    }
+
+    init() {
+        // 외부에서 축제가 변경되면 스탬프 화면도 다시 로드
+        selection.$selectedFestivalId
+            .dropFirst()
+            .sink { [weak self] _ in self?.fetchStampData() }
+            .store(in: &cancellables)
+    }
 
     var progress: Float {
         guard totalStampCount > 0 else { return 0 }
@@ -51,9 +71,20 @@ final class StampViewModel: ObservableObject {
         guard !isLoading else { return }
         isLoading = true
 
+        let festivalId = selection.selectedFestivalId
+
         Task {
+            // 축제 목록 (드롭다운용)
+            if festivals.isEmpty {
+                do {
+                    festivals = try await homeRepository.fetchFestivals()
+                } catch {
+                    print("[StampVM] 축제 로드 실패: \(error)")
+                }
+            }
+
             do {
-                let fetchedStamps = try await repository.fetchStamps()
+                let fetchedStamps = try await repository.fetchStamps(festivalId: festivalId)
                 stamps = fetchedStamps
                 totalStampCount = max(fetchedStamps.count, 1)
             } catch {
@@ -61,31 +92,25 @@ final class StampViewModel: ObservableObject {
             }
 
             do {
-                missions = try await repository.fetchMissions()
+                missions = try await repository.fetchMissions(festivalId: festivalId)
             } catch {
                 print("[StampVM] 미션 로드 실패: \(error)")
             }
 
             if TokenManager.shared.isLoggedIn {
                 do {
-                    let fetchedUserStamps = try await repository.fetchUserStamps()
+                    let fetchedUserStamps = try await repository.fetchUserStamps(festivalId: festivalId)
                     userStamps = fetchedUserStamps
                     collectedStampIds = Set(fetchedUserStamps.map { $0.stampId })
                     userStampCount = fetchedUserStamps.count
                 } catch {
                     print("[StampVM] 유저 스탬프 로드 실패: \(error)")
-                    do {
-                        let profile = try await repository.fetchUserProfile()
-                        userStampCount = profile.stampCount ?? 0
-                    } catch {
-                        print("[StampVM] 프로필 로드 실패: \(error)")
-                    }
                 }
             }
 
-            // 쿠폰 목록 로드
+            // 쿠폰 목록 로드 (축제별)
             do {
-                let couponResponse = try await repository.fetchCoupons()
+                let couponResponse = try await repository.fetchCoupons(festivalId: festivalId)
                 coupons = couponResponse.coupons
                 redeemedCouponIds = Set(couponResponse.redeemedCouponIds)
                 availableStamps = couponResponse.availableStamps ?? 0

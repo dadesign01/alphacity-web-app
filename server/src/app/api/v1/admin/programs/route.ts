@@ -21,15 +21,20 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const status = searchParams.get('status');
     const category = searchParams.get('category');
+    const festivalIdRaw = searchParams.get('festivalId');
 
     const where: Record<string, unknown> = {};
     if (category && category !== 'all') {
       where.category = category;
     }
+    if (festivalIdRaw && festivalIdRaw !== 'all') {
+      const festivalId = Number(festivalIdRaw);
+      if (Number.isInteger(festivalId)) where.festivalId = festivalId;
+    }
 
     const programs = await prisma.program.findMany({
       where,
-      include: { _count: { select: { events: true } } },
+      include: { festival: { select: { id: true, name: true } }, _count: { select: { events: true } } },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -53,14 +58,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, category, subcategory, hasCoupon, imageUrl, operatingHours, location, speaker, phone, latitude, longitude, startDate, endDate, status } = body;
+    const { festivalId, name, description, category, subcategory, hasCoupon, imageUrl, operatingHours, location, speaker, phone, latitude, longitude, startDate, endDate } = body;
 
-    if (!name || !startDate || !endDate) {
-      return errorResponse('INVALID_INPUT', '행사명, 시작일, 종료일은 필수입니다');
+    if (!festivalId || !name || !startDate || !endDate) {
+      return errorResponse('INVALID_INPUT', '축제, 행사명, 시작일, 종료일은 필수입니다');
     }
 
     const program = await prisma.program.create({
       data: {
+        festivalId: Number(festivalId),
         name,
         description,
         category: category || 'exhibition',

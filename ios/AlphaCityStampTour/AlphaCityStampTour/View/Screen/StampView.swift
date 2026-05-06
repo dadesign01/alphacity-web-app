@@ -46,6 +46,15 @@ struct StampView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
 
+                    // 축제 선택 드롭다운
+                    FestivalDropdownView(
+                        festivals: viewModel.festivals,
+                        selectedId: viewModel.selectedFestivalId,
+                        onSelect: { id in viewModel.selectFestival(id) }
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+
                     // Progress Card
                     StampProgressCardView(
                         progress: viewModel.progress,
@@ -690,6 +699,43 @@ private struct StampHistoryRowView: View {
                 .fill(Color.white)
                 .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 1)
         )
+    }
+}
+
+struct FestivalDropdownView: View {
+    let festivals: [FestivalData]
+    let selectedId: Int?
+    let onSelect: (Int?) -> Void
+
+    var body: some View {
+        let selectedName = festivals.first(where: { $0.id == selectedId })?.name ?? "전체 축제"
+        Menu {
+            Button("전체 축제") { onSelect(nil) }
+            ForEach(festivals, id: \.id) { f in
+                Button(f.name) { onSelect(f.id) }
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Text("축제 선택")
+                    .font(AppFont.medium(13))
+                    .foregroundColor(Color(hex: "8F8F8F"))
+                Text(selectedName)
+                    .font(AppFont.semibold(14))
+                    .foregroundColor(Color(hex: "121212"))
+                Spacer()
+                Text("▼")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(hex: "8F8F8F"))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.white)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color(hex: "D0D5DD"), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
     }
 }
 

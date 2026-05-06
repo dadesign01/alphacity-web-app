@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 
 interface Program {
   id: number;
+  festivalId: number;
+  festival?: { id: number; name: string };
   name: string;
   description?: string;
   category: string;
@@ -23,6 +25,11 @@ interface Program {
   _count: { events: number };
 }
 
+interface FestivalOption {
+  id: number;
+  name: string;
+}
+
 const STATUS_MAP: Record<string, string> = {
   scheduled: '예정',
   in_progress: '진행중',
@@ -33,15 +40,18 @@ const CATEGORY_MAP: Record<string, string> = {
   exhibition: '전시',
   seminar: '세미나',
   food: '맛집',
+  experience: '체험',
 };
 
 const CATEGORY_COLOR: Record<string, string> = {
   exhibition: 'bg-purple-100 text-purple-800',
   seminar: 'bg-amber-100 text-amber-800',
   food: 'bg-orange-100 text-orange-800',
+  experience: 'bg-emerald-100 text-emerald-800',
 };
 
 interface FormState {
+  festivalId: string;
   name: string;
   description: string;
   category: string;
@@ -59,6 +69,7 @@ interface FormState {
 }
 
 const EMPTY_FORM: FormState = {
+  festivalId: '',
   name: '',
   description: '',
   category: 'exhibition',
@@ -77,6 +88,8 @@ const EMPTY_FORM: FormState = {
 
 export default function ProgramsPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [festivals, setFestivals] = useState<FestivalOption[]>([]);
+  const [festivalFilter, setFestivalFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
@@ -85,16 +98,27 @@ export default function ProgramsPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    fetch('/api/v1/admin/festivals')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setFestivals(data.data.map((f: { id: number; name: string }) => ({ id: f.id, name: f.name })));
+        }
+      });
+  }, []);
+
   const fetchPrograms = () => {
     const params = new URLSearchParams();
     if (statusFilter !== 'all') params.set('status', statusFilter);
     if (categoryFilter !== 'all') params.set('category', categoryFilter);
+    if (festivalFilter !== 'all') params.set('festivalId', festivalFilter);
     fetch(`/api/v1/admin/programs?${params}`)
       .then((res) => res.json())
       .then((data) => { if (data.success) setPrograms(data.data); });
   };
 
-  useEffect(() => { fetchPrograms(); }, [statusFilter, categoryFilter]);
+  useEffect(() => { fetchPrograms(); }, [statusFilter, categoryFilter, festivalFilter]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -118,7 +142,7 @@ export default function ProgramsPage() {
 
   const openCreateForm = () => {
     setEditingId(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, festivalId: festivals[0]?.id ? String(festivals[0].id) : '' });
     if (fileInputRef.current) fileInputRef.current.value = '';
     setShowForm(true);
   };
@@ -126,6 +150,7 @@ export default function ProgramsPage() {
   const openEditForm = (program: Program) => {
     setEditingId(program.id);
     setForm({
+      festivalId: String(program.festivalId),
       name: program.name,
       description: program.description || '',
       category: program.category,
@@ -145,6 +170,10 @@ export default function ProgramsPage() {
   };
 
   const handleSubmit = async () => {
+    if (!form.festivalId) {
+      alert('축제를 선택하세요');
+      return;
+    }
     const isEdit = editingId !== null;
     const url = isEdit ? `/api/v1/admin/programs/${editingId}` : '/api/v1/admin/programs';
     const method = isEdit ? 'PUT' : 'POST';
@@ -155,6 +184,7 @@ export default function ProgramsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          festivalId: Number(form.festivalId),
           latitude: form.latitude ? parseFloat(form.latitude) : undefined,
           longitude: form.longitude ? parseFloat(form.longitude) : undefined,
         }),
@@ -215,6 +245,14 @@ export default function ProgramsPage() {
             </button>
           </div>
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">축제 *</label>
+              <select value={form.festivalId} onChange={(e) => setForm({ ...form, festivalId: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">축제를 선택하세요</option>
+                {festivals.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+              </select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">행사명 *</label>
@@ -229,6 +267,7 @@ export default function ProgramsPage() {
                   <option value="exhibition">전시</option>
                   <option value="seminar">세미나</option>
                   <option value="food">맛집</option>
+                  <option value="experience">체험</option>
                 </select>
               </div>
             </div>
@@ -342,7 +381,15 @@ export default function ProgramsPage() {
           <Filter className="w-4 h-4 text-gray-500" />
           <span className="text-sm font-medium text-gray-700">필터</span>
         </div>
-        <div className="flex gap-6">
+        <div className="flex gap-6 flex-wrap">
+          <div>
+            <span className="text-xs text-gray-500 mb-1 block">축제</span>
+            <select value={festivalFilter} onChange={(e) => setFestivalFilter(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white">
+              <option value="all">전체</option>
+              {festivals.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+          </div>
           <div>
             <span className="text-xs text-gray-500 mb-1 block">상태</span>
             <div className="flex gap-2">
@@ -359,7 +406,7 @@ export default function ProgramsPage() {
           <div>
             <span className="text-xs text-gray-500 mb-1 block">카테고리</span>
             <div className="flex gap-2">
-              {['all', 'exhibition', 'seminar', 'food'].map((cat) => (
+              {['all', 'exhibition', 'seminar', 'food', 'experience'].map((cat) => (
                 <button key={cat} onClick={() => setCategoryFilter(cat)}
                   className={`px-4 py-2 text-sm rounded-lg transition-colors ${
                     categoryFilter === cat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'

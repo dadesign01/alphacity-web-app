@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
     const category = searchParams.get('category');
+    const festivalIdRaw = searchParams.get('festivalId');
 
     // 선택적 인증: 토큰 있으면 userId 추출, 없으면 null
     let userId: number | null = null;
@@ -24,6 +25,10 @@ export async function GET(request: NextRequest) {
 
     if (category && category !== 'all') {
       where.category = category;
+    }
+    if (festivalIdRaw && festivalIdRaw !== 'all') {
+      const festivalId = Number(festivalIdRaw);
+      if (Number.isInteger(festivalId)) where.festivalId = festivalId;
     }
 
     const programs = await prisma.program.findMany({

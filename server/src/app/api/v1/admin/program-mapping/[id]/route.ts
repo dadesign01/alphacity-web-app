@@ -101,6 +101,7 @@ export async function PUT(
           for (const m of missions.create) {
             await tx.mission.create({
               data: {
+                festivalId: program.festivalId,
                 name: m.name,
                 type: m.type,
                 placeId: m.placeId || null,
@@ -133,6 +134,7 @@ export async function PUT(
           for (const s of stamps.create) {
             await tx.stamp.create({
               data: {
+                festivalId: program.festivalId,
                 name: s.name,
                 conditionType: s.conditionType || 'mission_complete',
                 conditionDetail: s.conditionDetail || null,

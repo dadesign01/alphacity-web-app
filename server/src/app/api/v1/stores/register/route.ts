@@ -7,6 +7,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const {
+      festivalId,
       name,
       category,
       ownerName,
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
       closeTime,
     } = body;
 
-    if (!name || !category || !ownerName || !phone) {
+    if (!festivalId || !name || !category || !ownerName || !phone) {
       return errorResponse('INVALID_INPUT', '필수 항목을 입력해주세요', 400);
     }
 
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
 
     const store = await prisma.store.create({
       data: {
+        festivalId: Number(festivalId),
         name,
         category,
         ownerName,

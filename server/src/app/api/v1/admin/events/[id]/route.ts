@@ -52,6 +52,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const event = await prisma.event.update({
       where: { id: Number(id) },
       data: {
+        ...(body.festivalId && { festivalId: Number(body.festivalId) }),
+        ...(body.programId && { programId: Number(body.programId) }),
         ...(body.name && { name: body.name }),
         ...(body.description !== undefined && { description: body.description }),
         ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
@@ -66,6 +68,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         ...(body.duration !== undefined && { duration: body.duration || null }),
         ...(body.capacity !== undefined && { capacity: body.capacity || null }),
         ...(body.location !== undefined && { location: body.location || null }),
+        ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
+        ...(body.isVisible !== undefined && { isVisible: body.isVisible }),
       },
     });
     return successResponse(event, '이벤트가 수정되었습니다');

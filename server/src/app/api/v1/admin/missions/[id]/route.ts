@@ -23,6 +23,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const mission = await prisma.mission.update({
       where: { id: Number(id) },
       data: {
+        ...(body.festivalId && { festivalId: Number(body.festivalId) }),
         ...(body.name && { name: body.name }),
         ...(body.type && { type: body.type }),
         ...(body.placeId !== undefined && { placeId: body.placeId }),

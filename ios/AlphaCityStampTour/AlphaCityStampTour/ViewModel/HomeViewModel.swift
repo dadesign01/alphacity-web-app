@@ -4,10 +4,12 @@
 //
 
 import Foundation
+import Combine
 
 @MainActor
 final class HomeViewModel: ObservableObject {
     @Published var banners: [BannerData] = []
+    @Published var festivals: [FestivalData] = []
     @Published var programs: [ProgramData] = []
     @Published var events: [EventData] = []
     @Published var totalStampCount: Int = 10
@@ -16,21 +18,38 @@ final class HomeViewModel: ObservableObject {
     @Published var isLoading = false
 
     private let repository = HomeRepository.shared
+    private let selection = FestivalSelection.shared
+    private var cancellables = Set<AnyCancellable>()
+
+    init() {
+        // 선택된 축제가 바뀌면 자동으로 다시 로드
+        selection.$selectedFestivalId
+            .dropFirst()
+            .sink { [weak self] _ in self?.fetchHomeData() }
+            .store(in: &cancellables)
+    }
+
+    func selectFestival(_ id: Int?) {
+        selection.select(id)
+    }
+
+    var selectedFestivalId: Int? { selection.selectedFestivalId }
 
     func fetchHomeData() {
         guard !isLoading else { return }
         isLoading = true
 
+        let festivalId = selection.selectedFestivalId
+
         Task {
             async let bannersTask = repository.fetchBanners()
-            async let programsTask = repository.fetchPrograms()
-            async let eventsTask = repository.fetchEvents()
-            async let stampsTask = repository.fetchStamps()
-            do {
-                banners = try await bannersTask
-            } catch {
-                print("[HomeVM] 배너 로드 실패: \(error)")
-            }
+            async let festivalsTask = repository.fetchFestivals()
+            async let programsTask = repository.fetchPrograms(festivalId: festivalId)
+            async let eventsTask = repository.fetchEvents(festivalId: festivalId)
+            async let stampsTask = repository.fetchStamps(festivalId: festivalId)
+
+            do { banners = try await bannersTask } catch { print("[HomeVM] 배너 로드 실패: \(error)") }
+            do { festivals = try await festivalsTask } catch { print("[HomeVM] 축제 로드 실패: \(error)") }
 
             do {
                 let fetchedPrograms = try await programsTask
@@ -39,21 +58,9 @@ final class HomeViewModel: ObservableObject {
                 print("[HomeVM] 프로그램 로드 실패: \(error)")
             }
 
-            do {
-                let fetchedEvents = try await eventsTask
-                events = fetchedEvents
-            } catch {
-                print("[HomeVM] 이벤트 로드 실패: \(error)")
-            }
+            do { events = try await eventsTask } catch { print("[HomeVM] 이벤트 로드 실패: \(error)") }
+            do { totalStampCount = max((try await stampsTask).count, 1) } catch { print("[HomeVM] 스탬프 로드 실패: \(error)") }
 
-            do {
-                let fetchedStamps = try await stampsTask
-                totalStampCount = max(fetchedStamps.count, 1)
-            } catch {
-                print("[HomeVM] 스탬프 로드 실패: \(error)")
-            }
-
-            // 로그인 상태면 유저 프로필도 가져오기
             if TokenManager.shared.isLoggedIn {
                 do {
                     let profile = try await repository.fetchUserProfile()
@@ -77,10 +84,10 @@ final class HomeViewModel: ObservableObject {
             if program.status == "in_progress" { return true }
             guard let start = parser.date(from: String(program.startDate.prefix(10))),
                   let end = parser.date(from: String(program.endDate.prefix(10))) else {
-                return true // 파싱 실패 시 포함
+                return true
             }
             return today >= start && today <= end
         }
-        return filtered.isEmpty ? programs : filtered // 필터 결과 없으면 전체 표시
+        return filtered.isEmpty ? programs : filtered
     }
 }

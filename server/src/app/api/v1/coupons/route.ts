@@ -7,6 +7,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const my = searchParams.get('my');
+    const festivalIdRaw = searchParams.get('festivalId');
+    let festivalIdFilter: number | null = null;
+    if (festivalIdRaw && festivalIdRaw !== 'all') {
+      const fid = Number(festivalIdRaw);
+      if (Number.isInteger(fid)) festivalIdFilter = fid;
+    }
 
     // 내 쿠폰 조회 (발급된 쿠폰만)
     if (my === 'true') {
@@ -17,7 +23,7 @@ export async function GET(request: NextRequest) {
       const userId = payload.userId as number;
 
       const userCoupons = await prisma.userCoupon.findMany({
-        where: { userId },
+        where: { userId, ...(festivalIdFilter !== null && { coupon: { festivalId: festivalIdFilter } }) },
         include: {
           coupon: true,
           store: true,
@@ -25,10 +31,10 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
       });
 
-      // 클라이언트에서 사용하기 편한 형태로 변환
       const result = userCoupons.map((uc) => ({
         id: uc.id,
         couponId: uc.couponId,
+        festivalId: uc.coupon.festivalId,
         name: uc.coupon.name,
         description: uc.coupon.description,
         imageUrl: uc.coupon.imageUrl,
@@ -46,11 +52,14 @@ export async function GET(request: NextRequest) {
 
     // 전체 쿠폰 목록 (교환 가능한 쿠폰)
     const coupons = await prisma.coupon.findMany({
-      where: { validUntil: { gte: new Date() } },
+      where: {
+        validUntil: { gte: new Date() },
+        ...(festivalIdFilter !== null && { festivalId: festivalIdFilter }),
+      },
       orderBy: { requiredStamps: 'asc' },
     });
 
-    // 로그인 사용자면 이미 교환한 쿠폰 ID 목록 + 교환 가능 스탬프 수 반환
+    // 로그인 사용자면 이미 교환한 쿠폰 ID 목록 + 교환 가능 스탬프 수 반환 (축제별)
     let redeemedCouponIds: number[] = [];
     let availableStamps = 0;
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -60,10 +69,15 @@ export async function GET(request: NextRequest) {
         const userId = payload.userId as number;
         const [userCoupons, totalStamps] = await Promise.all([
           prisma.userCoupon.findMany({
-            where: { userId },
+            where: { userId, ...(festivalIdFilter !== null && { coupon: { festivalId: festivalIdFilter } }) },
             include: { coupon: { select: { requiredStamps: true } } },
           }),
-          prisma.userStamp.count({ where: { userId } }),
+          prisma.userStamp.count({
+            where: {
+              userId,
+              ...(festivalIdFilter !== null && { stamp: { festivalId: festivalIdFilter } }),
+            },
+          }),
         ]);
         redeemedCouponIds = userCoupons.map((uc) => uc.couponId);
         const usedStamps = userCoupons.reduce((sum, uc) => sum + uc.coupon.requiredStamps, 0);
