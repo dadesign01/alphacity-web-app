@@ -15,7 +15,12 @@ echo ">>> Generating Prisma client..."
 npx prisma generate
 
 echo ">>> Syncing database schema..."
-npx prisma db push --accept-data-loss
+if [ "$RESET" = "1" ]; then
+  echo "    (RESET=1) Dropping & recreating all tables..."
+  npx prisma db push --force-reset --accept-data-loss
+else
+  npx prisma db push --accept-data-loss
+fi
 
 # Run seed only if explicitly requested via SEED=1 env var
 if [ "$SEED" = "1" ]; then
