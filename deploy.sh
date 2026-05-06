@@ -17,6 +17,12 @@ npx prisma generate
 echo ">>> Syncing database schema..."
 npx prisma db push --accept-data-loss
 
+# Run seed only if explicitly requested via SEED=1 env var
+if [ "$SEED" = "1" ]; then
+  echo ">>> Seeding database (SEED=1)..."
+  npm run seed
+fi
+
 echo ">>> Building..."
 npm run build
 
