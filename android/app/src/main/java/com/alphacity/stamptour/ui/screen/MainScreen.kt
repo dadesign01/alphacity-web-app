@@ -130,6 +130,7 @@ fun MainScreen(
             festival = festival,
             onBackClick = { selectedFestival = null },
             onSeeAllPrograms = {
+                selectedFestival = null
                 showProgramList = true
             },
             onProgramClick = { program -> selectedProgram = program },

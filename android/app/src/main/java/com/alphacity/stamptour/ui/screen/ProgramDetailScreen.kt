@@ -81,7 +81,7 @@ private val GradientGray = Brush.linearGradient(
 fun ProgramDetailScreen(
     program: ProgramItem,
     onBackClick: () -> Unit = {},
-    onNavigateToMap: (lat: Double, lng: Double) -> Unit = { _, _ -> },
+    onNavigateToMap: (lat: Double?, lng: Double?) -> Unit = { _, _ -> },
     viewModel: ProgramDetailViewModel = hiltViewModel(),
     missionViewModel: MissionViewModel = hiltViewModel(),
 ) {
@@ -465,9 +465,7 @@ fun ProgramDetailScreen(
                         .clip(RoundedCornerShape(8.dp))
                         .background(GradientBlue)
                         .clickable {
-                            val lat = program.latitude ?: return@clickable
-                            val lng = program.longitude ?: return@clickable
-                            onNavigateToMap(lat, lng)
+                            onNavigateToMap(program.latitude, program.longitude)
                         },
                     contentAlignment = Alignment.Center,
                 ) {

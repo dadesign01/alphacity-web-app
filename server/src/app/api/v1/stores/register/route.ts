@@ -22,13 +22,26 @@ export async function POST(request: NextRequest) {
       closeTime,
     } = body;
 
-    if (!festivalId || !name || !category || !ownerName || !phone) {
+    if (!name || !category || !ownerName || !phone) {
       return errorResponse('INVALID_INPUT', '필수 항목을 입력해주세요', 400);
     }
 
     const validCategories = ['cafe', 'restaurant', 'shopping', 'hotel', 'convenience'];
     if (!validCategories.includes(category)) {
       return errorResponse('INVALID_INPUT', '유효하지 않은 카테고리입니다', 400);
+    }
+
+    let resolvedFestivalId = festivalId ? Number(festivalId) : null;
+    if (!resolvedFestivalId || Number.isNaN(resolvedFestivalId)) {
+      const fallback = await prisma.festival.findFirst({
+        where: { isActive: true },
+        orderBy: [{ status: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
+        select: { id: true },
+      });
+      if (!fallback) {
+        return errorResponse('NO_FESTIVAL', '등록 가능한 축제가 없습니다', 400);
+      }
+      resolvedFestivalId = fallback.id;
     }
 
     if (storeCode) {
@@ -42,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     const store = await prisma.store.create({
       data: {
-        festivalId: Number(festivalId),
+        festivalId: resolvedFestivalId,
         name,
         category,
         ownerName,
@@ -61,7 +74,8 @@ export async function POST(request: NextRequest) {
     });
 
     return successResponse(store, '상점 등록 신청이 완료되었습니다');
-  } catch {
+  } catch (e) {
+    console.error('[stores/register] failed', e);
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }
 }
