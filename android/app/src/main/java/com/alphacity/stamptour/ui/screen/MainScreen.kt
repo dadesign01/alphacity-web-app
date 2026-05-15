@@ -103,6 +103,7 @@ fun MainScreen(
             onBackClick = { selectedStore = null },
             onNavigateToMap = { lat, lng ->
                 selectedStore = null
+                showProgramList = false
                 mapFocusLat = lat
                 mapFocusLng = lng
                 selectedTab = BottomTab.MAP
@@ -117,6 +118,7 @@ fun MainScreen(
             onBackClick = { selectedProgram = null },
             onNavigateToMap = { lat, lng ->
                 selectedProgram = null
+                showProgramList = false
                 mapFocusLat = lat
                 mapFocusLng = lng
                 selectedTab = BottomTab.MAP
@@ -136,6 +138,7 @@ fun MainScreen(
             onProgramClick = { program -> selectedProgram = program },
             onNavigateToMap = { lat, lng ->
                 selectedFestival = null
+                showProgramList = false
                 mapFocusLat = lat
                 mapFocusLng = lng
                 selectedTab = BottomTab.MAP
