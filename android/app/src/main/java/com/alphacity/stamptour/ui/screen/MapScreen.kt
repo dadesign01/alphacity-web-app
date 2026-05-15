@@ -40,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -267,6 +268,11 @@ private fun KakaoMapContent(
             var zoomLevel: Int = 15
         }
     }
+
+    // onMapReady는 비동기로 나중에 호출되므로, 콜백 클로저가 최신 focus 좌표를 보도록 유지
+    val latestFocusLat by rememberUpdatedState(focusLat)
+    val latestFocusLng by rememberUpdatedState(focusLng)
+    val latestOnFocusConsumed by rememberUpdatedState(onFocusConsumed)
     val currentClusters = remember { mutableListOf<MapCluster>() }
 
     // 최신 programs를 ref로 유지 (zoom 체커 클로저 stale 방지)
@@ -376,8 +382,14 @@ private fun KakaoMapContent(
                         override fun onMapReady(map: KakaoMap) {
                             mapState.kakaoMap = map
 
-                            // 저장된 카메라 위치가 있으면 복원, 없으면 기본 위치
-                            if (viewModel?.hasSavedCameraPosition == true) {
+                            // 우선순위: 1) 외부에서 전달된 focus 좌표, 2) 저장된 카메라 위치, 3) 기본 위치
+                            val fLat = latestFocusLat
+                            val fLng = latestFocusLng
+                            if (fLat != null && fLng != null) {
+                                mapState.zoomLevel = 17
+                                map.moveCamera(CameraUpdateFactory.newCenterPosition(LatLng.from(fLat, fLng), 17))
+                                latestOnFocusConsumed()
+                            } else if (viewModel?.hasSavedCameraPosition == true) {
                                 val savedLat = viewModel.savedCameraLat!!
                                 val savedLng = viewModel.savedCameraLng!!
                                 val savedZoom = viewModel.savedCameraZoom!!
@@ -497,8 +509,9 @@ private fun KakaoMapContent(
                     CameraUpdateFactory.newCenterPosition(pos, 17),
                     CameraAnimation.from(500),
                 )
+                // map이 ready된 경우에만 consume. ready 전이면 onMapReady에서 처리.
+                onFocusConsumed()
             }
-            onFocusConsumed()
         }
     }
 }
