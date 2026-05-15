@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -465,7 +466,13 @@ fun ProgramDetailScreen(
                         .clip(RoundedCornerShape(8.dp))
                         .background(GradientBlue)
                         .clickable {
-                            onNavigateToMap(program.latitude, program.longitude)
+                            val lat = program.latitude
+                            val lng = program.longitude
+                            if (lat != null && lng != null) {
+                                onNavigateToMap(lat, lng)
+                            } else {
+                                Toast.makeText(context, "위치 정보가 등록되지 않은 프로그램입니다", Toast.LENGTH_SHORT).show()
+                            }
                         },
                     contentAlignment = Alignment.Center,
                 ) {
