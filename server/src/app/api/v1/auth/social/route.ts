@@ -14,7 +14,11 @@ async function getKakaoProfile(accessToken: string): Promise<SocialProfile> {
   const res = await fetch('https://kapi.kakao.com/v2/user/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) throw new Error('카카오 프로필 조회 실패');
+  if (!res.ok) {
+    const errorBody = await res.text().catch(() => '<no body>');
+    console.error(`[auth/social] kakao profile failed status=${res.status} body=${errorBody}`);
+    throw new Error(`카카오 프로필 조회 실패 (${res.status})`);
+  }
 
   const data = await res.json();
   const account = data.kakao_account;
@@ -106,6 +110,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    console.error('[auth/social] failed', error);
     const message = error instanceof Error ? error.message : '서버 오류가 발생했습니다';
     return errorResponse('SOCIAL_AUTH_ERROR', message, 500);
   }

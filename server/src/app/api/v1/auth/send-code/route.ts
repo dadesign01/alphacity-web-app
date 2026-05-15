@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
     }
 
     return successResponse({ codeSent: true }, '인증코드가 발송되었습니다');
-  } catch {
+  } catch (e) {
+    console.error('[auth/send-code] failed', e);
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }
 }

@@ -15,7 +15,17 @@ function makeSignature(method: string, url: string, timestamp: string): string {
 
 export async function sendSMS(to: string, content: string): Promise<boolean> {
   if (!NCP_ACCESS_KEY || !NCP_SECRET_KEY || !NCP_SERVICE_ID || !NCP_SENDER) {
-    console.log(`[DEV] SMS to ${to}: ${content}`);
+    const missing = [
+      !NCP_ACCESS_KEY && 'NCP_ACCESS_KEY',
+      !NCP_SECRET_KEY && 'NCP_SECRET_KEY',
+      !NCP_SERVICE_ID && 'NCP_SMS_SERVICE_ID',
+      !NCP_SENDER && 'NCP_SMS_SENDER',
+    ].filter(Boolean);
+    if (process.env.NODE_ENV === 'production') {
+      console.error(`[sms] missing env in production: ${missing.join(', ')}`);
+      return false;
+    }
+    console.log(`[DEV] SMS to ${to}: ${content} (missing: ${missing.join(', ')})`);
     return true;
   }
 
@@ -30,18 +40,27 @@ export async function sendSMS(to: string, content: string): Promise<boolean> {
     messages: [{ to: to.replace(/-/g, '') }],
   };
 
-  const res = await fetch(`https://sens.apigw.ntruss.com${uri}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'x-ncp-apigw-timestamp': timestamp,
-      'x-ncp-iam-access-key': NCP_ACCESS_KEY,
-      'x-ncp-apigw-signature-v2': signature,
-    },
-    body: JSON.stringify(body),
-  });
+  try {
+    const res = await fetch(`https://sens.apigw.ntruss.com${uri}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'x-ncp-apigw-timestamp': timestamp,
+        'x-ncp-iam-access-key': NCP_ACCESS_KEY,
+        'x-ncp-apigw-signature-v2': signature,
+      },
+      body: JSON.stringify(body),
+    });
 
-  return res.ok;
+    if (!res.ok) {
+      const errorBody = await res.text().catch(() => '<no body>');
+      console.error(`[sms] NCP SENS failed status=${res.status} body=${errorBody}`);
+    }
+    return res.ok;
+  } catch (e) {
+    console.error('[sms] NCP SENS request threw', e);
+    return false;
+  }
 }
 
 // 인증코드 임시 저장 (메모리, 5분 TTL)
