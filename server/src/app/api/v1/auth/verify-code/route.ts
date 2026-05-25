@@ -1,15 +1,26 @@
 import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { verificationCodes } from '../send-code/route';
+import { verifyCode as verifyPhoneCode } from '@/lib/sms';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, code } = await request.json();
+    const { email, phone, code } = await request.json();
 
-    if (!email || !code) {
-      return errorResponse('INVALID_INPUT', '이메일과 인증번호를 입력하세요');
+    if (!code || (!email && !phone)) {
+      return errorResponse('INVALID_INPUT', '이메일 또는 전화번호와 인증번호를 입력하세요');
     }
 
+    // 전화번호 기반 검증 (회원가입 / 프로필 수정)
+    if (phone) {
+      const ok = verifyPhoneCode(phone, code);
+      if (!ok) {
+        return errorResponse('INVALID_CODE', '인증번호가 올바르지 않거나 만료되었습니다', 400);
+      }
+      return successResponse(null, '인증이 완료되었습니다');
+    }
+
+    // 이메일 기반 검증 (비밀번호 찾기)
     const stored = verificationCodes.get(email);
     if (!stored) {
       return errorResponse('CODE_NOT_FOUND', '인증코드를 먼저 발송하세요', 400);
