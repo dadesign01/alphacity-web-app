@@ -26,8 +26,8 @@ android {
         applicationId = "com.alphacity.stamptour"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 5
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -52,7 +52,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -75,6 +76,12 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 }
 
@@ -125,8 +132,8 @@ dependencies {
     implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
 
-    // Kakao Map
-    implementation("com.kakao.maps.open:android:2.11.9")
+    // Kakao Map (2.12.x+ supports 16KB page size)
+    implementation("com.kakao.maps.open:android:2.12.8")
 
     // Social Login
     implementation("com.kakao.sdk:v2-user:2.20.6")

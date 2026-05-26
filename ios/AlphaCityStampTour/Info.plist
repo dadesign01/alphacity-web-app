@@ -33,11 +33,5 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>프로필 사진 변경을 위해 사진 라이브러리 접근이 필요합니다.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>스탬프 투어 장소 인증 및 근처 장소 확인을 위해 위치 정보가 필요합니다.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>스탬프 투어 장소 인증 및 근처 장소 확인을 위해 위치 정보가 필요합니다.</string>
 </dict>
 </plist>
