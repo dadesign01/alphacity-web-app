@@ -21,8 +21,6 @@
 		04F6953C2F4EB71F00F2920C /* KakaoSDKShare in Frameworks */ = {isa = PBXBuildFile; productRef = 04F6953B2F4EB71F00F2920C /* KakaoSDKShare */; };
 		04F6953E2F4EB71F00F2920C /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = 04F6953D2F4EB71F00F2920C /* KakaoSDKUser */; };
 		04F695412F4EB7C400F2920C /* NidThirdPartyLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 04F695402F4EB7C400F2920C /* NidThirdPartyLogin */; };
-		8762A424A0924A12B4C05F55 /* alphacity_splash.gif in Resources */ = {isa = PBXBuildFile; fileRef = 449E242ECB5F436BB9ECA36F /* alphacity_splash.gif */; };
-		F77F4CA890DF4CBE9419398A /* GIFImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F866E979EB254B8699DF13D2 /* GIFImageView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -42,27 +40,11 @@
 /* Begin PBXFileReference section */
 		04EABA902F57B00000000000 /* KakaoMapsSDK.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = KakaoMapsSDK.xcframework; path = Frameworks/KakaoMapsSDK.xcframework; sourceTree = "<group>"; };
 		04F694C22F4E8EB000F2920C /* AlphaCityStampTour.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AlphaCityStampTour.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		449E242ECB5F436BB9ECA36F /* alphacity_splash.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = alphacity_splash.gif; sourceTree = "<group>"; };
-		F866E979EB254B8699DF13D2 /* GIFImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GIFImageView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		38327182FD8E4C35A3FEBD6D /* Exceptions for "AlphaCityStampTour" folder in "AlphaCityStampTour" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				alphacity_splash.gif,
-				View/Component/GIFImageView.swift,
-			);
-			target = 04F694C12F4E8EB000F2920C /* AlphaCityStampTour */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		04F694C42F4E8EB000F2920C /* AlphaCityStampTour */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				38327182FD8E4C35A3FEBD6D /* Exceptions for "AlphaCityStampTour" folder in "AlphaCityStampTour" target */,
-			);
 			path = AlphaCityStampTour;
 			sourceTree = "<group>";
 		};
@@ -92,22 +74,12 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		04EAC0C42F6391D1005BC02F /* Recovered References */ = {
-			isa = PBXGroup;
-			children = (
-				F866E979EB254B8699DF13D2 /* GIFImageView.swift */,
-				449E242ECB5F436BB9ECA36F /* alphacity_splash.gif */,
-			);
-			name = "Recovered References";
-			sourceTree = "<group>";
-		};
 		04F694B92F4E8EB000F2920C = {
 			isa = PBXGroup;
 			children = (
 				04EABA902F57B00000000000 /* KakaoMapsSDK.xcframework */,
 				04F694C42F4E8EB000F2920C /* AlphaCityStampTour */,
 				04F694C32F4E8EB000F2920C /* Products */,
-				04EAC0C42F6391D1005BC02F /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -201,7 +173,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8762A424A0924A12B4C05F55 /* alphacity_splash.gif in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -212,7 +183,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F77F4CA890DF4CBE9419398A /* GIFImageView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -71,6 +71,7 @@ extension StoreData {
         let fullAddress = [address, addressDetail].compactMap { $0 }.joined(separator: " ")
         return ProgramData(
             id: -id,
+            festivalId: nil,
             name: name,
             description: description,
             category: "food",

@@ -245,11 +245,18 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             // 저장된 카메라 위치가 있으면 복원, 없으면 기본 위치
             let defaultPosition: MapPoint
             let defaultLevel: Int
-            if let vm = viewModel, vm.hasSavedCameraPosition,
-               let lat = vm.savedCameraLat, let lng = vm.savedCameraLng, let zoom = vm.savedCameraZoom {
-                defaultPosition = MapPoint(longitude: lng, latitude: lat)
-                defaultLevel = zoom
-                currentZoomLevel = zoom
+            // KakaoMap 델리게이트 콜백은 메인 스레드에서 호출되므로 MainActor 격리를 가정해 viewModel 접근
+            let savedCamera: (lat: Double, lng: Double, zoom: Int)? = MainActor.assumeIsolated {
+                guard let vm = viewModel, vm.hasSavedCameraPosition,
+                      let lat = vm.savedCameraLat, let lng = vm.savedCameraLng, let zoom = vm.savedCameraZoom else {
+                    return nil
+                }
+                return (lat, lng, zoom)
+            }
+            if let savedCamera {
+                defaultPosition = MapPoint(longitude: savedCamera.lng, latitude: savedCamera.lat)
+                defaultLevel = savedCamera.zoom
+                currentZoomLevel = savedCamera.zoom
             } else {
                 defaultPosition = MapPoint(longitude: 128.690, latitude: 35.842)
                 defaultLevel = 15

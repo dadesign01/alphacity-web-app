@@ -809,6 +809,7 @@ struct MissionSelectionSheet: View {
     ProgramDetailView(
         program: ProgramData(
             id: 1,
+            festivalId: nil,
             name: "현대 AI 모빌리티 혁신 전시 2026",
             description: "2026, 새로워진 현대의 AI 기술로\n자율주행부터 스마트 이동 기술까지, 미래 모빌리티를 경험하세요.",
             category: "exhibition",
@@ -821,10 +822,15 @@ struct MissionSelectionSheet: View {
             longitude: 128.690,
             phone: nil,
             speaker: nil,
+            ownerName: nil,
+            storeCode: nil,
+            operatingDays: nil,
             startDate: "2026-01-15",
             endDate: "2026-01-31",
             status: "in_progress",
-            events: nil
+            events: nil,
+            storeCoupons: nil,
+            stores: nil
         ),
         onBackTapped: {}
     )
