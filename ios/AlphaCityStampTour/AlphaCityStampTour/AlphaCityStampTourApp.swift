@@ -48,6 +48,12 @@ struct AlphaCityStampTourApp: App {
                         return
                     }
 
+                    // 네이버 로그인 URL 콜백
+                    if url.scheme?.lowercased() == "com.alphacity.stamptour.naverlogin" {
+                        _ = NidOAuth.shared.handleURL(url)
+                        return
+                    }
+
                     // 딥링크: alphacity://program/{id}
                     if url.scheme == "alphacity", url.host == "program",
                        let idStr = url.pathComponents.last, let programId = Int(idStr) {

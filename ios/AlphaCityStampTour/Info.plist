@@ -20,6 +20,14 @@
 				<string>kakaod47f7264eacf91989b2045ee206de4b5</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>naver-login</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.alphacity.stamptour.naverlogin</string>
+			</array>
+		</dict>
 	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
@@ -27,6 +35,7 @@
 		<string>kakaolink</string>
 		<string>kakaoplus</string>
 		<string>kakaotalk</string>
+		<string>naversearchthirdlogin</string>
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
