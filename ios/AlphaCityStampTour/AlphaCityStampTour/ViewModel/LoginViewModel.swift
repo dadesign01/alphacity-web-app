@@ -85,7 +85,7 @@ final class LoginViewModel: ObservableObject {
     func loginWithNaver() {
         NidOAuth.shared.requestLogin(callback: { [weak self] result in
             if case .success(let token) = result {
-                self?.socialLogin(provider: "naver", accessToken: "\(token.accessToken)")
+                self?.socialLogin(provider: "naver", accessToken: token.accessToken.tokenString)
             }
         })
     }

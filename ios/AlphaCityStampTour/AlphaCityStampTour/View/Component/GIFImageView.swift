@@ -22,6 +22,12 @@ struct GIFImageView: UIViewRepresentable {
 
     func updateUIView(_ uiView: UIImageView, context: Context) {}
 
+    // SwiftUI가 제안한 크기(.frame)를 따르도록 함.
+    // 없으면 UIImageView가 GIF 원본 크기(intrinsic size)로 커져 화면을 꽉 채움.
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UIImageView, context: Context) -> CGSize? {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
     private func loadGIF(named name: String) -> UIImage? {
         guard let url = Bundle.main.url(forResource: name, withExtension: "gif"),
               let data = try? Data(contentsOf: url)
