@@ -37,6 +37,8 @@
 		<string>kakaotalk</string>
 		<string>naversearchthirdlogin</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>현재 위치를 지도에 표시하고 가까운 스탬프 장소를 안내하기 위해 위치 권한이 필요합니다.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

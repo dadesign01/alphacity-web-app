@@ -5,6 +5,7 @@
 
 import SwiftUI
 import KakaoMapsSDK
+import CoreLocation
 
 // MARK: - Category
 
@@ -170,12 +171,14 @@ struct KakaoMapRepresentable: UIViewRepresentable {
         context.coordinator.updateStoreMarkers()
 
         if let lat = focusLat, let lng = focusLng {
+            context.coordinator.markCenteredByFocus()
             context.coordinator.moveCameraTo(lat: lat, lng: lng)
             DispatchQueue.main.async {
                 focusLat = nil
                 focusLng = nil
             }
         }
+
     }
 
     // MARK: - MapWrapperView
@@ -207,7 +210,7 @@ struct KakaoMapRepresentable: UIViewRepresentable {
 
     // MARK: - Coordinator
 
-    class Coordinator: NSObject, MapControllerDelegate, KakaoMapEventDelegate {
+    class Coordinator: NSObject, MapControllerDelegate, KakaoMapEventDelegate, CLLocationManagerDelegate {
         var container: KMViewContainer?
         var controller: KMController?
         var kakaoMap: KakaoMap?
@@ -220,6 +223,10 @@ struct KakaoMapRepresentable: UIViewRepresentable {
         private var currentZoomLevel: Int = 15
         private var clusters: [MapCluster] = []
         private var zoomCheckTimer: Timer?
+        // 현재 위치(GPS)
+        private let locationManager = CLLocationManager()
+        private var lastUserLocation: (lat: Double, lng: Double)?
+        private var didCenterOnUser = false
 
         deinit {
             zoomCheckTimer?.invalidate()
@@ -238,6 +245,10 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             controller = KMController(viewContainer: container)
             controller?.delegate = self
             controller?.prepareEngine()
+            // 현재 위치 권한 요청 시작
+            locationManager.delegate = self
+            locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+            locationManager.requestWhenInUseAuthorization()
         }
 
         // KMControllerDelegate
@@ -279,6 +290,7 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             currentZoomLevel = Int(mapView.zoomLevel)
             updateMarkers()
             updateStoreMarkers()
+            centerOnUserIfNeeded()
 
             // 줌 변경 감지 타이머 (0.3초 간격) + 카메라 위치 저장
             zoomCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
@@ -362,11 +374,45 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             // 빈 영역 탭 - 무시
         }
 
-        func moveCameraTo(lat: Double, lng: Double) {
+        func moveCameraTo(lat: Double, lng: Double, zoom: Int = 17) {
             guard let map = kakaoMap else { return }
             let pos = MapPoint(longitude: lng, latitude: lat)
-            let cameraUpdate = CameraUpdate.make(target: pos, zoomLevel: 17, mapView: map)
+            let cameraUpdate = CameraUpdate.make(target: pos, zoomLevel: zoom, mapView: map)
             map.moveCamera(cameraUpdate, callback: nil)
+        }
+
+        // focus 좌표로 이동했으면 현재위치 자동이동 생략 표시
+        func markCenteredByFocus() {
+            didCenterOnUser = true
+        }
+
+        // MARK: - 현재 위치 (CLLocationManagerDelegate)
+
+        func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+            switch manager.authorizationStatus {
+            case .authorizedWhenInUse, .authorizedAlways:
+                manager.requestLocation()
+            default:
+                break
+            }
+        }
+
+        func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+            guard let loc = locations.last else { return }
+            lastUserLocation = (loc.coordinate.latitude, loc.coordinate.longitude)
+            centerOnUserIfNeeded()
+        }
+
+        func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+            // 위치 획득 실패 시 기본 위치 유지
+            print("[MapView] 위치 획득 실패: \(error.localizedDescription)")
+        }
+
+        // 열면 현재 위치 중심으로 (focus 없을 때, 맵·위치 모두 준비되면 최초 1회)
+        func centerOnUserIfNeeded() {
+            guard !didCenterOnUser, isMapReady, let loc = lastUserLocation else { return }
+            didCenterOnUser = true
+            moveCameraTo(lat: loc.lat, lng: loc.lng, zoom: 16)
         }
 
         func updateMarkers() {

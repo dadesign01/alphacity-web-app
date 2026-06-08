@@ -282,6 +282,8 @@ private fun KakaoMapContent(
     // 현위치 마커용 상태
     var userLat by remember { mutableStateOf<Double?>(null) }
     var userLng by remember { mutableStateOf<Double?>(null) }
+    // 열면 현재 위치 중심으로 자동 이동했는지 (최초 1회만 / focus 진입 시엔 생략)
+    var didCenterOnUser by remember { mutableStateOf(false) }
 
     // 위치 권한 요청
     val locationLauncher = rememberLauncherForActivityResult(
@@ -345,12 +347,20 @@ private fun KakaoMapContent(
         }
     }
 
-    // 현위치 마커 갱신
+    // 현위치 마커 갱신 + (열면 현재 위치 중심) 최초 1회 카메라 이동
     LaunchedEffect(userLat, userLng) {
         val lat = userLat ?: return@LaunchedEffect
         val lng = userLng ?: return@LaunchedEffect
         mapState.kakaoMap?.let { map ->
             updateLocationMarker(map, lat, lng, context)
+            if (!didCenterOnUser && focusLat == null && focusLng == null) {
+                mapState.zoomLevel = 16
+                map.moveCamera(
+                    CameraUpdateFactory.newCenterPosition(LatLng.from(lat, lng), 16),
+                    CameraAnimation.from(500),
+                )
+                didCenterOnUser = true
+            }
         }
     }
 
@@ -382,13 +392,20 @@ private fun KakaoMapContent(
                         override fun onMapReady(map: KakaoMap) {
                             mapState.kakaoMap = map
 
-                            // 우선순위: 1) 외부에서 전달된 focus 좌표, 2) 저장된 카메라 위치, 3) 기본 위치
+                            // 우선순위: 1) focus 좌표, 2) 현재 위치(GPS), 3) 저장된 카메라 위치, 4) 기본 위치
                             val fLat = latestFocusLat
                             val fLng = latestFocusLng
+                            val uLat = userLat
+                            val uLng = userLng
                             if (fLat != null && fLng != null) {
                                 mapState.zoomLevel = 17
                                 map.moveCamera(CameraUpdateFactory.newCenterPosition(LatLng.from(fLat, fLng), 17))
                                 latestOnFocusConsumed()
+                            } else if (uLat != null && uLng != null) {
+                                // 위치가 맵 준비보다 먼저 확보된 경우: 현재 위치 중심
+                                mapState.zoomLevel = 16
+                                map.moveCamera(CameraUpdateFactory.newCenterPosition(LatLng.from(uLat, uLng), 16))
+                                didCenterOnUser = true
                             } else if (viewModel?.hasSavedCameraPosition == true) {
                                 val savedLat = viewModel.savedCameraLat!!
                                 val savedLng = viewModel.savedCameraLng!!
@@ -503,6 +520,7 @@ private fun KakaoMapContent(
 
     LaunchedEffect(focusLat, focusLng) {
         if (focusLat != null && focusLng != null) {
+            didCenterOnUser = true // focus 진입 시 현재위치 자동이동 생략
             mapState.kakaoMap?.let { map ->
                 val pos = LatLng.from(focusLat, focusLng)
                 map.moveCamera(
