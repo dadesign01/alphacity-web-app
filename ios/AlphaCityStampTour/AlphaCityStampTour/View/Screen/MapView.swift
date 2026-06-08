@@ -408,11 +408,53 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             print("[MapView] 위치 획득 실패: \(error.localizedDescription)")
         }
 
-        // 열면 현재 위치 중심으로 (focus 없을 때, 맵·위치 모두 준비되면 최초 1회)
+        // 맵·위치 준비되면 내 위치 점 갱신 + (focus 없을 때) 최초 1회 현재 위치 중심으로
         func centerOnUserIfNeeded() {
-            guard !didCenterOnUser, isMapReady, let loc = lastUserLocation else { return }
-            didCenterOnUser = true
-            moveCameraTo(lat: loc.lat, lng: loc.lng, zoom: 16)
+            guard isMapReady, let loc = lastUserLocation else { return }
+            updateLocationMarker(lat: loc.lat, lng: loc.lng)
+            if !didCenterOnUser {
+                didCenterOnUser = true
+                moveCameraTo(lat: loc.lat, lng: loc.lng, zoom: 16)
+            }
+        }
+
+        // 현재 위치 파란 점 마커 (Android와 동일 디자인)
+        func updateLocationMarker(lat: Double, lng: Double) {
+            guard isMapReady, let map = kakaoMap else { return }
+            let manager = map.getLabelManager()
+            manager.removeLabelLayer(layerID: "userLocation")
+            let layerOption = LabelLayerOptions(
+                layerID: "userLocation",
+                competitionType: .none,
+                competitionUnit: .symbolFirst,
+                orderType: .rank,
+                zOrder: 10003
+            )
+            guard let layer = manager.addLabelLayer(option: layerOption) else { return }
+            let styleID = "userLocationStyle"
+            let iconStyle = PoiIconStyle(symbol: createLocationMarkerImage(), anchorPoint: CGPoint(x: 0.5, y: 0.5))
+            let poiStyle = PoiStyle(styleID: styleID, styles: [PerLevelPoiStyle(iconStyle: iconStyle, level: 0)])
+            manager.addPoiStyle(poiStyle)
+            let options = PoiOptions(styleID: styleID, poiID: "user_location")
+            if let poi = layer.addPoi(option: options, at: MapPoint(longitude: lng, latitude: lat)) {
+                poi.show()
+            }
+        }
+
+        // 내 위치 점 이미지 (반투명 외곽 14 + 흰 테두리 10 + 파란 점 8)
+        private func createLocationMarkerImage() -> UIImage {
+            let size: CGFloat = 28
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
+            return renderer.image { _ in
+                let center = CGPoint(x: size / 2, y: size / 2)
+                let blue = UIColor(red: 37/255, green: 99/255, blue: 235/255, alpha: 1)
+                blue.withAlphaComponent(0.25).setFill()
+                UIBezierPath(arcCenter: center, radius: 14, startAngle: 0, endAngle: .pi * 2, clockwise: true).fill()
+                UIColor.white.setFill()
+                UIBezierPath(arcCenter: center, radius: 10, startAngle: 0, endAngle: .pi * 2, clockwise: true).fill()
+                blue.setFill()
+                UIBezierPath(arcCenter: center, radius: 8, startAngle: 0, endAngle: .pi * 2, clockwise: true).fill()
+            }
         }
 
         func updateMarkers() {

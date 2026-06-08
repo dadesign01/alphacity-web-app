@@ -58,6 +58,8 @@ import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.viewmodel.LoginViewModel
 import com.kakao.sdk.auth.model.OAuthToken
+import com.kakao.sdk.common.model.ClientError
+import com.kakao.sdk.common.model.ClientErrorCause
 import com.kakao.sdk.user.UserApiClient
 import com.navercorp.nid.NaverIdLoginSDK
 import com.navercorp.nid.oauth.OAuthLoginCallback
@@ -279,7 +281,18 @@ fun LoginScreen(
                         .background(Color(0xFFFFE200))
                         .clickable {
                             if (UserApiClient.instance.isKakaoTalkLoginAvailable(context)) {
-                                UserApiClient.instance.loginWithKakaoTalk(context, callback = kakaoCallback)
+                                UserApiClient.instance.loginWithKakaoTalk(context) { token, error ->
+                                    // 사용자가 직접 취소한 경우는 중단
+                                    if (error is ClientError && error.reason == ClientErrorCause.Cancelled) {
+                                        return@loginWithKakaoTalk
+                                    }
+                                    // 카카오톡 로그인 실패(계정 미연결 등) → 카카오계정 로그인으로 전환
+                                    if (error != null) {
+                                        UserApiClient.instance.loginWithKakaoAccount(context, callback = kakaoCallback)
+                                    } else if (token != null) {
+                                        viewModel.socialLogin("kakao", token.accessToken)
+                                    }
+                                }
                             } else {
                                 UserApiClient.instance.loginWithKakaoAccount(context, callback = kakaoCallback)
                             }

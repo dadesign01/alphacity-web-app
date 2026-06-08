@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import KakaoSDKCommon
 import KakaoSDKUser
 import KakaoSDKAuth
 import NidThirdPartyLogin
@@ -68,15 +69,32 @@ final class LoginViewModel: ObservableObject {
 
     func loginWithKakao() {
         if UserApi.isKakaoTalkLoginAvailable() {
-            UserApi.shared.loginWithKakaoTalk { [weak self] oauthToken, _ in
+            UserApi.shared.loginWithKakaoTalk { [weak self] oauthToken, error in
+                if let error = error {
+                    // 사용자가 직접 취소한 경우는 중단
+                    if let sdkError = error as? SdkError, case .ClientFailed(let reason, _) = sdkError, reason == .Cancelled {
+                        return
+                    }
+                    // 카카오톡 로그인 실패(계정 미연결 등) → 카카오계정 로그인으로 전환
+                    self?.loginWithKakaoAccount()
+                    return
+                }
                 guard let token = oauthToken?.accessToken else { return }
                 self?.socialLogin(provider: "kakao", accessToken: token)
             }
         } else {
-            UserApi.shared.loginWithKakaoAccount { [weak self] oauthToken, _ in
-                guard let token = oauthToken?.accessToken else { return }
-                self?.socialLogin(provider: "kakao", accessToken: token)
+            loginWithKakaoAccount()
+        }
+    }
+
+    private func loginWithKakaoAccount() {
+        UserApi.shared.loginWithKakaoAccount { [weak self] oauthToken, error in
+            if error != nil {
+                self?.error = "카카오 로그인에 실패했습니다. 다시 시도해 주세요."
+                return
             }
+            guard let token = oauthToken?.accessToken else { return }
+            self?.socialLogin(provider: "kakao", accessToken: token)
         }
     }
 
