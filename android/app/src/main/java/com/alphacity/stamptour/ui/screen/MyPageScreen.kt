@@ -126,7 +126,11 @@ fun MyPageScreen(
     }
 
     if (showSettings) {
-        SettingsScreen(onBackClick = { showSettings = false })
+        SettingsScreen(
+            onBackClick = { showSettings = false },
+            onLogout = onLogout,
+            viewModel = viewModel,
+        )
         return
     }
 

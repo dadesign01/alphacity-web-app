@@ -71,7 +71,11 @@ struct MyPageView: View {
                 viewModel: viewModel
             )
         } else if showSettings {
-            SettingsView(onBackTapped: { showSettings = false })
+            SettingsView(
+                onBackTapped: { showSettings = false },
+                onLogout: onLogout,
+                viewModel: viewModel
+            )
         } else if showStoreRegister {
             StoreRegisterView(onBackTapped: { showStoreRegister = false })
         } else if showMyCoupons {

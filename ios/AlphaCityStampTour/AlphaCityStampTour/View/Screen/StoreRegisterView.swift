@@ -5,6 +5,7 @@
 
 import SwiftUI
 import Combine
+import PhotosUI
 
 private enum StoreCategory: String, CaseIterable {
     case cafe, restaurant, shopping, hotel, convenience
@@ -36,6 +37,8 @@ struct StoreRegisterView: View {
     @StateObject private var viewModel = StoreRegisterViewModel()
     @State private var currentStep = 1
     @State private var selectedCategory: StoreCategory? = nil
+    @State private var selectedPhotoItem: PhotosPickerItem? = nil
+    @State private var selectedImage: UIImage? = nil
 
     // Step 2 form fields
     @State private var storeName = ""
@@ -204,27 +207,56 @@ struct StoreRegisterView: View {
 
                 Spacer().frame(height: 8)
 
-                // Image upload placeholder
-                Button {
-                    // TODO: image picker
-                } label: {
-                    VStack(spacing: 8) {
-                        Image("IconUpload")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 24, height: 24)
-                        Text("이미지를 업로드하세요")
-                            .font(AppFont.medium(16))
-                            .foregroundColor(Color(hex: "BFBFBF"))
+                // Image upload picker
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    ZStack {
+                        if let selectedImage {
+                            Image(uiImage: selectedImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 229)
+                                .clipShape(RoundedRectangle(cornerRadius: 15))
+                        } else {
+                            VStack(spacing: 8) {
+                                Image("IconUpload")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 24, height: 24)
+                                Text("이미지를 업로드하세요")
+                                    .font(AppFont.medium(16))
+                                    .foregroundColor(Color(hex: "BFBFBF"))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 229)
+                            .background(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .fill(Color(hex: "F8F8F8"))
+                            )
+                        }
+
+                        if viewModel.isUploadingImage {
+                            RoundedRectangle(cornerRadius: 15)
+                                .fill(Color.black.opacity(0.3))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 229)
+                            ProgressView()
+                                .tint(.white)
+                        }
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 229)
-                    .background(
-                        RoundedRectangle(cornerRadius: 15)
-                            .fill(Color(hex: "F8F8F8"))
-                    )
                 }
                 .padding(.horizontal, 20)
+                .onChange(of: selectedPhotoItem) { _, newItem in
+                    Task {
+                        guard let item = newItem,
+                              let data = try? await item.loadTransferable(type: Data.self),
+                              let uiImage = UIImage(data: data) else { return }
+                        selectedImage = uiImage
+                        if let uploadData = uiImage.jpegDataForUpload() {
+                            viewModel.uploadImage(uploadData)
+                        }
+                    }
+                }
 
                 Spacer().frame(height: 30)
 

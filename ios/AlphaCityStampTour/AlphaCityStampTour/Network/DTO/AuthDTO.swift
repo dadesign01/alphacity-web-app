@@ -23,6 +23,7 @@ struct RegisterRequest: Encodable {
 struct SocialLoginRequest: Encodable {
     let provider: String
     let accessToken: String
+    var nickname: String?
 }
 
 struct RefreshRequest: Encodable {

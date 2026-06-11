@@ -73,7 +73,8 @@ fun RegisterScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var agreedToTerms by remember { mutableStateOf(false) }
 
-    val isFormValid = name.isNotBlank() && email.isNotBlank() && uiState.isPhoneVerified &&
+    val isFormValid = name.isNotBlank() && email.isNotBlank() &&
+        (phone.isBlank() || uiState.isPhoneVerified) &&
         password.length >= 8 && password == confirmPassword && agreedToTerms
 
     LaunchedEffect(uiState.isRegistered) {
@@ -160,8 +161,8 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 휴대폰
-            FieldLabel("휴대폰", required = true)
+            // 휴대폰 (선택 항목 — 입력 시에만 본인인증 요구)
+            FieldLabel("휴대폰 (선택)", required = false)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

@@ -139,6 +139,19 @@ struct LoginView: View {
 
                 // 소셜 로그인 버튼
                 HStack(spacing: 12) {
+                    // Apple
+                    Button(action: { viewModel.loginWithApple() }) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: 48, height: 48)
+                            Image(systemName: "apple.logo")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.white)
+                                .offset(y: -1)
+                        }
+                    }
+
                     // 카카오
                     Button(action: { viewModel.loginWithKakao() }) {
                         ZStack {

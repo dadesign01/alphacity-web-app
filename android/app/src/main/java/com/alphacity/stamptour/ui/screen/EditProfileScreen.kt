@@ -367,7 +367,7 @@ fun EditProfileScreen(
 
                 // 휴대폰
                 Column {
-                    FormLabel(label = "휴대폰", required = true)
+                    FormLabel(label = "휴대폰", required = false)
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),

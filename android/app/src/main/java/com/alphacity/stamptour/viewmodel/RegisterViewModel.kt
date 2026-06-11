@@ -79,7 +79,8 @@ class RegisterViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(error = "이메일을 입력하세요")
             return
         }
-        if (!_uiState.value.isPhoneVerified) {
+        // 휴대폰은 선택 항목 — 입력한 경우에만 본인인증 요구
+        if (phone.isNotBlank() && !_uiState.value.isPhoneVerified) {
             _uiState.value = _uiState.value.copy(error = "휴대폰 인증을 완료하세요")
             return
         }
@@ -94,7 +95,7 @@ class RegisterViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            authRepository.register(email, password, name, phone, name)
+            authRepository.register(email, password, name, phone.ifBlank { null }, name)
                 .onSuccess { data ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,

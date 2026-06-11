@@ -16,3 +16,7 @@ struct APIErrorDetail: Decodable {
     let code: String
     let message: String
 }
+
+struct UploadData: Decodable {
+    let imageUrl: String
+}

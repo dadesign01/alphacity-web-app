@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import AuthenticationServices
 import KakaoSDKCommon
 import KakaoSDKUser
 import KakaoSDKAuth
@@ -19,6 +20,7 @@ final class LoginViewModel: ObservableObject {
     @Published var showForgotPasswordHint = false
 
     private let authRepository = AuthRepository.shared
+    private let appleSignInCoordinator = AppleSignInCoordinator()
 
     // MARK: - 이메일 로그인
 
@@ -49,19 +51,42 @@ final class LoginViewModel: ObservableObject {
 
     // MARK: - 소셜 로그인 (서버로 토큰 전달)
 
-    func socialLogin(provider: String, accessToken: String) {
+    func socialLogin(provider: String, accessToken: String, nickname: String? = nil) {
         isLoading = true
         error = nil
 
         Task {
             do {
-                let data = try await authRepository.socialLogin(provider: provider, accessToken: accessToken)
+                let data = try await authRepository.socialLogin(provider: provider, accessToken: accessToken, nickname: nickname)
                 isLoggedIn = true
                 user = data.user
             } catch {
                 self.error = error.localizedDescription
             }
             isLoading = false
+        }
+    }
+
+    // MARK: - Apple 로그인
+
+    func loginWithApple() {
+        appleSignInCoordinator.signIn { [weak self] result in
+            Task { @MainActor in
+                switch result {
+                case .success(let appleResult):
+                    self?.socialLogin(
+                        provider: "apple",
+                        accessToken: appleResult.identityToken,
+                        nickname: appleResult.nickname
+                    )
+                case .failure(let error):
+                    // 사용자가 직접 취소한 경우는 무시
+                    if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+                        return
+                    }
+                    self?.error = "Apple 로그인에 실패했습니다. 다시 시도해 주세요."
+                }
+            }
         }
     }
 

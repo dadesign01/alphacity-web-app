@@ -9,12 +9,32 @@ import Foundation
 final class StoreRegisterViewModel: ObservableObject {
     @Published var isSubmitting = false
     @Published var submitResult: SubmitResult? = nil
+    @Published var isUploadingImage = false
+    @Published var uploadedImageUrl: String? = nil
 
     private let repository = StoreRepository.shared
+    private let client = APIClient.shared
 
     enum SubmitResult {
         case success
         case error(String)
+    }
+
+    // MARK: - 대표 이미지 업로드
+
+    func uploadImage(_ data: Data) {
+        guard !isUploadingImage else { return }
+        isUploadingImage = true
+
+        Task {
+            do {
+                uploadedImageUrl = try await client.uploadImage(data, filename: "store_\(Int(Date().timeIntervalSince1970)).jpg")
+            } catch {
+                print("[StoreRegisterVM] 이미지 업로드 실패: \(error)")
+                uploadedImageUrl = nil
+            }
+            isUploadingImage = false
+        }
     }
 
     func registerStore(
@@ -42,6 +62,7 @@ final class StoreRegisterViewModel: ObservableObject {
                 address: address.isEmpty ? nil : address,
                 addressDetail: addressDetail.isEmpty ? nil : addressDetail,
                 description: description.isEmpty ? nil : description,
+                imageUrl: uploadedImageUrl,
                 storeCode: storeCode.isEmpty ? nil : storeCode,
                 operatingDays: operatingDays.isEmpty ? nil : operatingDays,
                 openTime: openTime.isEmpty ? nil : openTime,

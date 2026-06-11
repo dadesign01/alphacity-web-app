@@ -34,11 +34,11 @@ final class AuthRepository {
         return data
     }
 
-    func socialLogin(provider: String, accessToken: String) async throws -> AuthData {
+    func socialLogin(provider: String, accessToken: String, nickname: String? = nil) async throws -> AuthData {
         let data: AuthData = try await client.request(
             path: "auth/social",
             method: "POST",
-            body: SocialLoginRequest(provider: provider, accessToken: accessToken)
+            body: SocialLoginRequest(provider: provider, accessToken: accessToken, nickname: nickname)
         )
         tokenManager.saveTokens(access: data.token, refresh: data.refreshToken)
         registerFcmToken()

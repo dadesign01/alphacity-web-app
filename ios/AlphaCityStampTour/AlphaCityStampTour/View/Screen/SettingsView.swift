@@ -19,8 +19,11 @@ enum PolicyType: String {
 
 struct SettingsView: View {
     var onBackTapped: () -> Void
+    var onLogout: () -> Void = {}
+    @ObservedObject var viewModel: MyPageViewModel
 
     @State private var showPolicy: PolicyType? = nil
+    @State private var showDeleteAlert = false
     @State private var notifyNewEvent = true
     @State private var notifyEventUpdate = true
     @State private var notifyMission = true
@@ -128,6 +131,14 @@ struct SettingsView: View {
                     settingsDivider
                     SettingsNavRow(title: "위치 정보 이용약관") { showPolicy = .location }
 
+                    // === 계정 ===
+                    if viewModel.isLoggedIn {
+                        settingsDivider
+                        sectionHeader("계정")
+                        settingsDivider
+                        SettingsNavRow(title: "회원탈퇴") { showDeleteAlert = true }
+                    }
+
                     // === 앱 정보 ===
                     settingsDivider
                     sectionHeader("앱 정보")
@@ -194,6 +205,26 @@ struct SettingsView: View {
             }
         }
         .background(Color.white)
+        .alert("회원탈퇴", isPresented: $showDeleteAlert) {
+            Button("취소", role: .cancel) {}
+            Button("탈퇴", role: .destructive) {
+                Task { await viewModel.deleteAccount() }
+            }
+        } message: {
+            Text("정말 탈퇴하시겠습니까?\n모든 데이터가 삭제됩니다.")
+        }
+        .alert(viewModel.deleteError ?? "", isPresented: Binding(
+            get: { viewModel.deleteError != nil },
+            set: { if !$0 { viewModel.clearDeleteState() } }
+        )) {
+            Button("확인") { viewModel.clearDeleteState() }
+        }
+        .onChange(of: viewModel.deleteSuccess) { _, success in
+            if success {
+                viewModel.clearDeleteState()
+                onLogout()
+            }
+        }
     }
 
     private var settingsDivider: some View {
@@ -299,5 +330,5 @@ private struct SettingsNavRow: View {
 }
 
 #Preview {
-    SettingsView(onBackTapped: {})
+    SettingsView(onBackTapped: {}, viewModel: MyPageViewModel())
 }

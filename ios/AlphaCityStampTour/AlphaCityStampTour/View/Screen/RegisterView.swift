@@ -68,8 +68,8 @@ struct RegisterView: View {
 
                     Spacer().frame(height: 20)
 
-                    // 휴대폰
-                    fieldLabel("휴대폰", required: true)
+                    // 휴대폰 (선택 항목 — 입력 시에만 본인인증 요구)
+                    fieldLabel("휴대폰 (선택)")
                     HStack(spacing: 8) {
                         RegisterTextField(
                             text: $phone,
@@ -253,7 +253,7 @@ struct RegisterView: View {
     }
 
     private var isFormValid: Bool {
-        !name.isEmpty && !email.isEmpty && viewModel.isPhoneVerified &&
+        !name.isEmpty && !email.isEmpty && (phone.isEmpty || viewModel.isPhoneVerified) &&
         password.count >= 8 && password == confirmPassword && agreedToTerms
     }
 

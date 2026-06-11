@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { prisma } from '@/lib/prisma';
 import { signToken } from '@/lib/auth';
 import { successResponse, errorResponse } from '@/lib/api-response';
@@ -8,6 +9,32 @@ interface SocialProfile {
   email: string;
   nickname: string;
   profileImage?: string;
+}
+
+const APPLE_JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
+const APPLE_BUNDLE_ID = 'com.brint.AlphaCityStampTour';
+
+// Apple은 identityToken(JWT)을 전달받아 Apple 공개키로 서명 검증
+async function getAppleProfile(identityToken: string, nickname?: string): Promise<SocialProfile> {
+  let payload;
+  try {
+    ({ payload } = await jwtVerify(identityToken, APPLE_JWKS, {
+      issuer: 'https://appleid.apple.com',
+      audience: APPLE_BUNDLE_ID,
+    }));
+  } catch (e) {
+    console.error('[auth/social] apple token verify failed', e);
+    throw new Error('Apple 로그인 검증에 실패했습니다');
+  }
+
+  const socialId = payload.sub;
+  if (!socialId) throw new Error('Apple 로그인 검증에 실패했습니다');
+
+  return {
+    socialId,
+    email: typeof payload.email === 'string' ? payload.email : `apple_${socialId}@apple.com`,
+    nickname: nickname || `애플유저${socialId.slice(-6)}`,
+  };
 }
 
 async function getKakaoProfile(accessToken: string): Promise<SocialProfile> {
@@ -50,20 +77,22 @@ async function getNaverProfile(accessToken: string): Promise<SocialProfile> {
 
 export async function POST(request: NextRequest) {
   try {
-    const { provider, accessToken } = await request.json();
+    const { provider, accessToken, nickname } = await request.json();
 
     if (!provider || !accessToken) {
       return errorResponse('INVALID_INPUT', 'provider와 accessToken을 입력하세요');
     }
 
-    if (provider !== 'kakao' && provider !== 'naver') {
+    if (provider !== 'kakao' && provider !== 'naver' && provider !== 'apple') {
       return errorResponse('INVALID_INPUT', '지원하지 않는 소셜 로그인입니다');
     }
 
     // 소셜 프로필 조회
     const profile = provider === 'kakao'
       ? await getKakaoProfile(accessToken)
-      : await getNaverProfile(accessToken);
+      : provider === 'naver'
+        ? await getNaverProfile(accessToken)
+        : await getAppleProfile(accessToken, typeof nickname === 'string' ? nickname : undefined);
 
     // 기존 유저 검색 (provider + socialId)
     let user = await prisma.user.findUnique({

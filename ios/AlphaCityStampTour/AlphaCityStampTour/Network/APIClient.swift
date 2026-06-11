@@ -68,4 +68,37 @@ final class APIClient {
             }
         }
     }
+
+    /// 이미지 멀티파트 업로드 → 서버에 저장된 이미지 URL 반환
+    func uploadImage(_ imageData: Data, filename: String = "image.jpg") async throws -> String {
+        guard let url = URL(string: "\(baseURL)/upload") else {
+            throw APIError.invalidInput("잘못된 URL입니다")
+        }
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append(Data("--\(boundary)\r\n".utf8))
+        body.append(Data("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".utf8))
+        body.append(Data("Content-Type: image/jpeg\r\n\r\n".utf8))
+        body.append(imageData)
+        body.append(Data("\r\n--\(boundary)--\r\n".utf8))
+        request.httpBody = body
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard response is HTTPURLResponse else {
+            throw APIError.serverError("서버 응답을 받을 수 없습니다")
+        }
+
+        let apiResponse = try decoder.decode(APIResponse<UploadData>.self, from: data)
+
+        if apiResponse.success, let result = apiResponse.data {
+            return result.imageUrl
+        }
+        throw APIError.serverError(apiResponse.error?.message ?? "이미지 업로드에 실패했습니다")
+    }
 }

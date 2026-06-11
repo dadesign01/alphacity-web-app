@@ -1,5 +1,6 @@
 package com.alphacity.stamptour.ui.screen
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -8,8 +9,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,6 +21,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import com.alphacity.stamptour.R
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
+import com.alphacity.stamptour.viewmodel.MyPageViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 
 enum class PolicyType(val title: String) {
     TERMS("서비스 이용약관"),
@@ -35,6 +41,8 @@ enum class PolicyType(val title: String) {
 @Composable
 fun SettingsScreen(
     onBackClick: () -> Unit,
+    onLogout: () -> Unit = {},
+    viewModel: MyPageViewModel? = null,
 ) {
     var showPolicy by remember { mutableStateOf<PolicyType?>(null) }
 
@@ -51,6 +59,47 @@ fun SettingsScreen(
     var notifyMission by remember { mutableStateOf(true) }
     var notifyMarketing by remember { mutableStateOf(false) }
     var locationConsent by remember { mutableStateOf(true) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val userProfile by (viewModel?.userProfile ?: MutableStateFlow(null)).collectAsState()
+    val deleteSuccess by (viewModel?.deleteSuccess ?: MutableStateFlow(false)).collectAsState()
+    val deleteError by (viewModel?.deleteError ?: MutableStateFlow(null)).collectAsState()
+
+    LaunchedEffect(deleteSuccess) {
+        if (deleteSuccess) {
+            Toast.makeText(context, "회원 탈퇴가 완료되었습니다.", Toast.LENGTH_SHORT).show()
+            viewModel?.clearDeleteState()
+            onLogout()
+        }
+    }
+    LaunchedEffect(deleteError) {
+        deleteError?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel?.clearDeleteState()
+        }
+    }
+
+    // 회원탈퇴 확인 다이얼로그
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("회원탈퇴", fontFamily = Pretendard, fontWeight = FontWeight.SemiBold, fontSize = 18.sp) },
+            text = { Text("정말 탈퇴하시겠습니까?\n모든 데이터가 삭제됩니다.", fontFamily = Pretendard, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    viewModel?.deleteAccount()
+                }) {
+                    Text("탈퇴", fontFamily = Pretendard, fontWeight = FontWeight.SemiBold, color = Color(0xFFEA580C))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("취소", fontFamily = Pretendard, fontWeight = FontWeight.Medium, color = Color(0xFF8F8F8F))
+                }
+            },
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -166,6 +215,14 @@ fun SettingsScreen(
             SettingsNavItem(title = "개인정보 처리방침") { showPolicy = PolicyType.PRIVACY }
             SettingsDivider()
             SettingsNavItem(title = "위치 정보 이용약관") { showPolicy = PolicyType.LOCATION }
+
+            // === 계정 Section ===
+            if (userProfile != null) {
+                SettingsDivider()
+                SectionHeader(title = "계정")
+                SettingsDivider()
+                SettingsNavItem(title = "회원탈퇴") { showDeleteDialog = true }
+            }
 
             // === 앱 정보 Section ===
             SettingsDivider()

@@ -193,7 +193,7 @@ struct EditProfileView: View {
 
                         // 휴대폰
                         VStack(alignment: .leading, spacing: 6) {
-                            ProfileFieldLabel(label: "휴대폰", required: true)
+                            ProfileFieldLabel(label: "휴대폰", required: false)
                             HStack(spacing: 8) {
                                 ProfileTextFieldView(
                                     text: $phone,

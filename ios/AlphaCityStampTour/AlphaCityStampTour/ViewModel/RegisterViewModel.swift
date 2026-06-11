@@ -80,7 +80,8 @@ final class RegisterViewModel: ObservableObject {
             error = "이메일을 입력하세요"
             return
         }
-        guard isPhoneVerified else {
+        // 휴대폰은 선택 항목 — 입력한 경우에만 본인인증 요구
+        guard phone.isEmpty || isPhoneVerified else {
             error = "휴대폰 인증을 완료하세요"
             return
         }
@@ -98,7 +99,7 @@ final class RegisterViewModel: ObservableObject {
 
         Task {
             do {
-                let data = try await authRepository.register(email: email, password: password, nickname: name, phone: phone, name: name)
+                let data = try await authRepository.register(email: email, password: password, nickname: name, phone: phone.isEmpty ? nil : phone, name: name)
                 isRegistered = true
                 user = data.user
             } catch {

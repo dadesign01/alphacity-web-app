@@ -29,6 +29,14 @@ export async function POST(request: NextRequest) {
         return errorResponse('SOCIAL_ACCOUNT', '소셜 로그인 계정은 비밀번호를 변경할 수 없습니다', 400);
       }
 
+      // 계정에 등록된 휴대폰 번호로만 인증코드 발송 (타인 번호로 코드 수신 → 계정 탈취 방지)
+      if (!user.phone) {
+        return errorResponse('NO_PHONE', '계정에 등록된 휴대폰 번호가 없어 비밀번호를 재설정할 수 없습니다. 고객센터(contact@di-flo.com)로 문의해주세요.', 400);
+      }
+      if (user.phone.replace(/-/g, '') !== String(phone).replace(/-/g, '')) {
+        return errorResponse('PHONE_MISMATCH', '계정에 등록된 휴대폰 번호와 일치하지 않습니다', 400);
+      }
+
       // email 기반 저장 (비밀번호 찾기)
       verificationCodes.set(email, { code, expiresAt: Date.now() + 5 * 60 * 1000 });
     }
