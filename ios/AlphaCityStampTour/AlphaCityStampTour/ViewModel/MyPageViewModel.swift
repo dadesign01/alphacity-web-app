@@ -94,11 +94,16 @@ final class MyPageViewModel: ObservableObject {
         verificationError = nil
     }
 
-    func updateProfile(nickname: String, currentPassword: String?, newPassword: String?, phone: String? = nil, name: String? = nil, address: String? = nil, addressDetail: String? = nil, birthDate: String? = nil, gender: String? = nil) async {
+    func updateProfile(nickname: String, currentPassword: String?, newPassword: String?, phone: String? = nil, name: String? = nil, address: String? = nil, addressDetail: String? = nil, birthDate: String? = nil, gender: String? = nil, imageData: Data? = nil) async {
         isLoading = true
         saveError = nil
         do {
-            let updated = try await repository.updateProfile(nickname: nickname, currentPassword: currentPassword, newPassword: newPassword, phone: phone, name: name, address: address, addressDetail: addressDetail, birthDate: birthDate, gender: gender)
+            // 새 프로필 이미지가 선택됐으면 먼저 업로드 후 URL을 프로필에 반영
+            var profileImageUrl: String? = nil
+            if let imageData = imageData {
+                profileImageUrl = try await client.uploadImage(imageData)
+            }
+            let updated = try await repository.updateProfile(nickname: nickname, currentPassword: currentPassword, newPassword: newPassword, phone: phone, name: name, address: address, addressDetail: addressDetail, birthDate: birthDate, gender: gender, profileImage: profileImageUrl)
             userProfile = updated
             saveSuccess = true
         } catch {

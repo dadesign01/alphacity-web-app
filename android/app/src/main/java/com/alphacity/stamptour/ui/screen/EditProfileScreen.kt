@@ -30,7 +30,9 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import com.alphacity.stamptour.network.uploadImageToServer
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -81,6 +83,7 @@ fun EditProfileScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     val isSocialLogin = initialProvider != null
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val isLoading by (viewModel?.isLoading ?: MutableStateFlow(false)).collectAsState()
     val saveSuccess by (viewModel?.saveSuccess ?: MutableStateFlow(false)).collectAsState()
     val saveError by (viewModel?.saveError ?: MutableStateFlow(null)).collectAsState()
@@ -618,17 +621,21 @@ fun EditProfileScreen(
                             Toast.makeText(context, "현재 비밀번호를 입력해주세요.", Toast.LENGTH_SHORT).show()
                             return@clickable
                         }
-                        viewModel?.updateProfile(
-                            nickname,
-                            currentPassword.ifBlank { null },
-                            newPassword.ifBlank { null },
-                            if (isPhoneVerified) phone else null,
-                            name.ifBlank { null },
-                            address.ifBlank { null },
-                            addressDetail.ifBlank { null },
-                            birthDate.ifBlank { null },
-                            gender.ifBlank { null },
-                        )
+                        scope.launch {
+                            val uploadedUrl = selectedImageUri?.let { uploadImageToServer(context, it, "profile") }
+                            viewModel?.updateProfile(
+                                nickname,
+                                currentPassword.ifBlank { null },
+                                newPassword.ifBlank { null },
+                                if (isPhoneVerified) phone else null,
+                                name.ifBlank { null },
+                                address.ifBlank { null },
+                                addressDetail.ifBlank { null },
+                                birthDate.ifBlank { null },
+                                gender.ifBlank { null },
+                                uploadedUrl,
+                            )
+                        }
                     },
                 contentAlignment = Alignment.Center,
             ) {

@@ -49,7 +49,7 @@ final class HomeRepository {
         return try await client.request(path: "users/me", authenticated: true)
     }
 
-    func updateProfile(nickname: String, currentPassword: String?, newPassword: String?, phone: String? = nil, name: String? = nil, address: String? = nil, addressDetail: String? = nil, birthDate: String? = nil, gender: String? = nil) async throws -> UserProfileData {
+    func updateProfile(nickname: String, currentPassword: String?, newPassword: String?, phone: String? = nil, name: String? = nil, address: String? = nil, addressDetail: String? = nil, birthDate: String? = nil, gender: String? = nil, profileImage: String? = nil) async throws -> UserProfileData {
         var body: [String: String] = ["nickname": nickname]
         if let currentPassword = currentPassword, !currentPassword.isEmpty {
             body["currentPassword"] = currentPassword
@@ -74,6 +74,9 @@ final class HomeRepository {
         }
         if let gender = gender, !gender.isEmpty {
             body["gender"] = gender
+        }
+        if let profileImage = profileImage, !profileImage.isEmpty {
+            body["profileImage"] = profileImage
         }
         return try await client.request(
             path: "users/me",

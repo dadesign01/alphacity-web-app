@@ -392,7 +392,8 @@ struct EditProfileView: View {
                                 address: address.trimmingCharacters(in: .whitespaces).isEmpty ? nil : address,
                                 addressDetail: addressDetail.trimmingCharacters(in: .whitespaces).isEmpty ? nil : addressDetail,
                                 birthDate: birthDate.isEmpty ? nil : birthDate,
-                                gender: gender.isEmpty ? nil : gender
+                                gender: gender.isEmpty ? nil : gender,
+                                imageData: selectedImage?.jpegData(compressionQuality: 0.8)
                             )
                         }
                     } label: {

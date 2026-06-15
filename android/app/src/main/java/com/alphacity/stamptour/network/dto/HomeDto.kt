@@ -283,6 +283,7 @@ data class UpdateProfileRequest(
     val addressDetail: String? = null,
     val birthDate: String? = null,
     val gender: String? = null,
+    val profileImage: String? = null,
 )
 
 // === 활동 이력 ===
