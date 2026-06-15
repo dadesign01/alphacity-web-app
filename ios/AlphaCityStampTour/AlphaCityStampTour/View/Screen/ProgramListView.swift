@@ -21,6 +21,13 @@ struct ProgramListView: View {
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
+                    // 축제 선택 드롭다운
+                    FestivalSelectBarView(
+                        festivals: viewModel.festivals,
+                        selectedId: viewModel.selectedFestivalId,
+                        onSelect: { viewModel.selectFestival($0) }
+                    )
+
                     // Category Tabs
                     CategoryTabsView(
                         selectedCategory: viewModel.selectedCategory,
@@ -103,6 +110,50 @@ private struct ProgramListHeaderView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
         .background(Color.white)
+    }
+}
+
+// MARK: - 축제 선택 드롭다운
+
+private struct FestivalSelectBarView: View {
+    let festivals: [FestivalData]
+    let selectedId: Int?
+    let onSelect: (Int?) -> Void
+
+    private var selectedName: String {
+        festivals.first(where: { $0.id == selectedId })?.name ?? "전체 축제"
+    }
+
+    var body: some View {
+        Menu {
+            Button("전체 축제") { onSelect(nil) }
+            ForEach(festivals, id: \.id) { festival in
+                Button(festival.name) { onSelect(festival.id) }
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Text("축제 선택")
+                    .font(AppFont.medium(13))
+                    .foregroundColor(Color(hex: "8F8F8F"))
+                Text(selectedName)
+                    .font(AppFont.semibold(14))
+                    .foregroundColor(Color(hex: "121212"))
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(hex: "8F8F8F"))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.white)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color(hex: "D0D5DD"), lineWidth: 1)
+            )
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
     }
 }
 

@@ -74,7 +74,7 @@ struct MainTabView: View {
             FestivalDetailView(
                 festival: festival,
                 onBackTapped: { selectedFestival = nil },
-                onSeeAllPrograms: { showProgramList = true },
+                onSeeAllPrograms: { selectedFestival = nil; showProgramList = true },
                 onProgramTapped: { p in selectedProgram = p },
                 onNavigateToMap: { lat, lng in
                     selectedFestival = nil

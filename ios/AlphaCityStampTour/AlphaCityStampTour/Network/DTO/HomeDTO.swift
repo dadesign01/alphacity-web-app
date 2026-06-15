@@ -23,8 +23,8 @@ struct FestivalData: Decodable, Identifiable {
     let bannerUrl: String?
     let startDate: String
     let endDate: String
-    let latitude: Double?
-    let longitude: Double?
+    @FlexibleDouble var latitude: Double?
+    @FlexibleDouble var longitude: Double?
     let address: String?
     let sortOrder: Int
     let isActive: Bool
@@ -39,8 +39,8 @@ struct FestivalDetailData: Decodable, Identifiable {
     let bannerUrl: String?
     let startDate: String
     let endDate: String
-    let latitude: Double?
-    let longitude: Double?
+    @FlexibleDouble var latitude: Double?
+    @FlexibleDouble var longitude: Double?
     let address: String?
     let sortOrder: Int
     let isActive: Bool
@@ -57,8 +57,8 @@ struct FestivalProgramSummary: Decodable, Identifiable {
     let endDate: String
     let status: String?
     let location: String?
-    let latitude: Double?
-    let longitude: Double?
+    @FlexibleDouble var latitude: Double?
+    @FlexibleDouble var longitude: Double?
 }
 
 // MARK: - 프로그램
@@ -74,8 +74,8 @@ struct ProgramData: Decodable, Identifiable {
     let imageUrl: String?
     let operatingHours: String?
     let location: String?
-    let latitude: Double?
-    let longitude: Double?
+    @FlexibleDouble var latitude: Double?
+    @FlexibleDouble var longitude: Double?
     let phone: String?
     let speaker: String?
     let ownerName: String?
@@ -121,8 +121,8 @@ struct MissionData: Decodable, Identifiable {
 
     struct MissionPlace: Decodable {
         let name: String
-        let latitude: Double?
-        let longitude: Double?
+        @FlexibleDouble var latitude: Double?
+        @FlexibleDouble var longitude: Double?
     }
 }
 

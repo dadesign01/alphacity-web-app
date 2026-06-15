@@ -286,6 +286,7 @@ private struct FestivalCardView: View {
             .padding(.top, 4)
         }
         .frame(width: 260)
+        .contentShape(Rectangle())
         .onTapGesture { onTap() }
     }
 }

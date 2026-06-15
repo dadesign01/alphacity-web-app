@@ -34,8 +34,8 @@ struct StoreData: Decodable, Identifiable {
     let operatingDays: String?
     let openTime: String?
     let closeTime: String?
-    let latitude: Double?
-    let longitude: Double?
+    @FlexibleDouble var latitude: Double?
+    @FlexibleDouble var longitude: Double?
     let status: String
     let mission: StoreMissionInfo?
     let storeCoupons: [StoreCouponDetail]?
