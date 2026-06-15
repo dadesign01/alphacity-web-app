@@ -63,14 +63,14 @@ struct SplashView: View {
                     Spacer()
                         .frame(height: geometry.size.height * 0.14)
 
-                    // "디지털 혁신거점" 배지
-                    SplashBadge(text: "디지털 혁신거점")
+                    // "여행+체험+보상" 배지
+                    SplashBadge(text: "여행+체험+보상")
 
                     Spacer()
                         .frame(height: 20)
 
                     // 메인 타이틀
-                    Text("수성알파시티\n스탬프 투어")
+                    Text("올리와 함께하는\n스탬프투어")
                         .font(AppFont.black(45))
                         .tracking(-0.45)
                         .lineSpacing(6)
@@ -81,9 +81,10 @@ struct SplashView: View {
                         .frame(height: 16)
 
                     // 서브 타이틀
-                    Text("뚜비와 함께 알파시티 스탬프 나들이를 떠나요!")
+                    Text("올리와 함께 스탬프투어를 떠나요!\n전국 스탬프 탐방 시작!")
                         .font(AppFont.medium(14))
                         .tracking(-0.42)
+                        .multilineTextAlignment(.center)
                         .foregroundStyle(AppColor.textGray)
 
                     Spacer()
