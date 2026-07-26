@@ -7,27 +7,22 @@ import SwiftUI
 
 struct StampView: View {
     @StateObject private var viewModel = StampViewModel()
-    var onNavigateToMap: () -> Void = {}
+    var onNavigateToMap: (Double?, Double?) -> Void = { _, _ in }
     var onNavigateToExchange: () -> Void = {}
-    @State private var selectedMission: MissionData? = nil
+    var onProfileTap: (() -> Void)? = nil
+    var showBack: Bool = false
+    var onBack: (() -> Void)? = nil
 
-    /// 스탬프 클릭 시 연결된 미션 찾기
+    /// 스탬프 클릭 시 지도로 이동 (연결된 미션 장소가 있으면 해당 위치로 포커스)
     private func handleStampTap(_ stamp: StampData) {
         let linkedMission = viewModel.missions.first { $0.stampId == stamp.id }
-        if let mission = linkedMission {
-            selectedMission = mission
-        } else {
-            // 연결된 미션이 없으면: 미수집은 지도로, 수집 완료는 아무 동작 없음
-            if !viewModel.collectedStampIds.contains(stamp.id) {
-                onNavigateToMap()
-            }
-        }
+        onNavigateToMap(linkedMission?.place?.latitude, linkedMission?.place?.longitude)
     }
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            StampHeaderView()
+            StampHeaderView(showBack: showBack, onBack: onBack, onProfileTap: onProfileTap)
 
             ScrollView {
                 VStack(spacing: 0) {
@@ -111,13 +106,6 @@ struct StampView: View {
                         )
                     }
 
-                    // Footer
-                    Text("© 2026 Alpha Stamp. All rights reserved.")
-                        .font(AppFont.regular(10))
-                        .foregroundColor(Color(hex: "AFBFCC"))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color(hex: "EDF7FF"))
                 }
             }
         }
@@ -125,66 +113,63 @@ struct StampView: View {
         .onAppear {
             viewModel.fetchStampData()
         }
-        .fullScreenCover(item: $selectedMission) { mission in
-            missionDetailView(for: mission)
-        }
-    }
-
-    @ViewBuilder
-    private func missionDetailView(for mission: MissionData) -> some View {
-        switch mission.type {
-        case "quiz":
-            QuizMissionView(
-                mission: mission,
-                onDismiss: { selectedMission = nil },
-                onCompleted: { viewModel.fetchStampData() }
-            )
-        case "location_auth":
-            LocationMissionView(
-                mission: mission,
-                onDismiss: { selectedMission = nil },
-                onCompleted: { viewModel.fetchStampData() }
-            )
-        case "stay_time":
-            StayTimeMissionView(
-                mission: mission,
-                onDismiss: { selectedMission = nil },
-                onCompleted: { viewModel.fetchStampData() }
-            )
-        default:
-            EmptyView()
-        }
     }
 }
 
 // MARK: - Header
 
 private struct StampHeaderView: View {
+    var showBack: Bool = false
+    var onBack: (() -> Void)? = nil
+    var onProfileTap: (() -> Void)? = nil
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                Image("HeaderLogo")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 40, height: 40)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                if showBack {
+                    // 하위 페이지로 진입한 경우: 로고 대신 뒤로가기 + 제목 (다른 상세 페이지와 통일)
+                    Button(action: { onBack?() }) {
+                        Image("IconBackArrow")
+                            .renderingMode(.original)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 13, height: 26)
+                    }
+                    .padding(.trailing, 6)
 
-                Text("알파스탬프")
-                    .font(AppFont.semibold(18))
-                    .foregroundColor(Color(hex: "121212"))
-                    .tracking(-0.36)
+                    Text("스탬프 컬렉션")
+                        .font(AppFont.semibold(18))
+                        .foregroundColor(Color(hex: "121212"))
+                        .tracking(-0.36)
 
-                Spacer()
+                    Spacer()
+                } else {
+                    // 하단 탭으로 진입한 경우: 로고 + 프로필
+                    Image("HeaderLogo")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 40, height: 40)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
 
-                Image("IconProfile")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 40, height: 40)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color(hex: "EBEBEB"), lineWidth: 1)
-                    )
+                    Text("올리모아")
+                        .font(AppFont.semibold(18))
+                        .foregroundColor(Color(hex: "121212"))
+                        .tracking(-0.36)
+
+                    Spacer()
+
+                    Button(action: { onProfileTap?() }) {
+                        Image("IconProfile")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 40, height: 40)
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(Color(hex: "EBEBEB"), lineWidth: 1)
+                            )
+                    }
+                }
             }
             .padding(.leading, 15)
             .padding(.trailing, 20)
@@ -401,6 +386,9 @@ private struct StampGridView: View {
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 19), count: 3)
 
+    // 시안 요구: 스탬프가 부족해도 잠금 플레이스홀더로 최소 12칸(3열×4행) 채움
+    private var placeholderCount: Int { max(0, 12 - stamps.count) }
+
     var body: some View {
         LazyVGrid(columns: columns, spacing: 12) {
             ForEach(stamps) { stamp in
@@ -413,6 +401,41 @@ private struct StampGridView: View {
                     onStampTap(stamp)
                 }
             }
+
+            ForEach(0..<placeholderCount, id: \.self) { _ in
+                LockedPlaceholderSlotView()
+            }
+        }
+    }
+}
+
+// 등록된 스탬프가 없는 칸에 표시하는 회색 잠금 플레이스홀더
+private struct LockedPlaceholderSlotView: View {
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 35)
+                    .fill(Color.white)
+                    .shadow(color: Color.black.opacity(0.05), radius: 7, x: 0, y: 1)
+                    .aspectRatio(1, contentMode: .fit)
+
+                VStack(spacing: 4) {
+                    Image("StampLocked")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 29, height: 40)
+
+                    Text("MISSION CLEAR")
+                        .font(AppFont.medium(8))
+                        .foregroundColor(Color(hex: "121212").opacity(0.6))
+                }
+                .opacity(0.28)
+            }
+
+            Text(" ")
+                .font(AppFont.medium(14))
+                .foregroundColor(Color(hex: "121212"))
+                .lineLimit(1)
         }
     }
 }

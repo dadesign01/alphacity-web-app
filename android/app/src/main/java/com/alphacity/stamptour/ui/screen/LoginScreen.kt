@@ -364,7 +364,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             Text(
-                text = "© 2026 Alpha Stamp. All rights reserved.",
+                text = "2026 OLLYMOA. All rights reserved.",
                 style = androidx.compose.ui.text.TextStyle(fontFamily = Pretendard, fontWeight = FontWeight.Normal, fontSize = 10.sp),
                 color = Color(0xFF8F8F8F),
                 textAlign = TextAlign.Center,

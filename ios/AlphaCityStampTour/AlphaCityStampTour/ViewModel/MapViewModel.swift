@@ -9,6 +9,7 @@ import Foundation
 final class MapViewModel: ObservableObject {
     @Published var programs: [ProgramData] = []
     @Published var stores: [StoreData] = []
+    @Published var missions: [MissionData] = []
     @Published var selectedCategory: String = "all"
     @Published var isLoading = false
 
@@ -46,6 +47,15 @@ final class MapViewModel: ObservableObject {
         return []
     }
 
+    // 좌표가 있는 미션만 지도에 표시 (quiz 미션은 place 좌표가 없어 제외)
+    var filteredMissions: [MissionData] {
+        let withCoords = missions.filter { $0.place?.latitude != nil && $0.place?.longitude != nil }
+        if selectedCategory == "all" || selectedCategory == "mission" {
+            return withCoords
+        }
+        return []
+    }
+
     func fetchPrograms() {
         guard !isLoading else { return }
         isLoading = true
@@ -66,6 +76,16 @@ final class MapViewModel: ObservableObject {
                 stores = try await storeRepository.fetchApprovedStores()
             } catch {
                 print("[MapVM] 상점 로드 실패: \(error)")
+            }
+        }
+    }
+
+    func fetchMissions() {
+        Task {
+            do {
+                missions = try await repository.fetchMissions()
+            } catch {
+                print("[MapVM] 미션 로드 실패: \(error)")
             }
         }
     }

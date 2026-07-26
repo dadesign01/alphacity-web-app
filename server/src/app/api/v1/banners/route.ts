@@ -6,7 +6,7 @@ export async function GET() {
     const banners = await prisma.banner.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: 'asc' },
-      select: { id: true, title: true, imageUrl: true },
+      select: { id: true, title: true, imageUrl: true, linkType: true, linkId: true },
     });
     return successResponse(banners);
   } catch {

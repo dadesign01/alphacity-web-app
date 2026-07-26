@@ -114,6 +114,11 @@ final class HomeRepository {
         return try await client.request(path: "programs/\(programId)/missions", authenticated: true)
     }
 
+    func fetchMissions(festivalId: Int? = nil) async throws -> [MissionData] {
+        let path = festivalId.map { "missions?festivalId=\($0)" } ?? "missions"
+        return try await client.request(path: path)
+    }
+
     func completeMission(missionId: Int, answer: String? = nil) async throws -> MissionCompletionData {
         var body: [String: String]? = nil
         if let answer = answer {

@@ -70,7 +70,7 @@ async function getNaverProfile(accessToken: string): Promise<SocialProfile> {
   return {
     socialId: profile.id,
     email: profile.email || `naver_${profile.id}@naver.com`,
-    nickname: profile.nickname || profile.name || `네이버유저${profile.id}`,
+    nickname: profile.nickname || profile.name || `네이버유저${String(profile.id).slice(-6)}`,
     profileImage: profile.profile_image,
   };
 }

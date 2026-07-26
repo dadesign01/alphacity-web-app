@@ -51,6 +51,7 @@ fun HomeScreen(
     onNavigateToCoupons: () -> Unit = {},
     onProgramClick: (ProgramItem) -> Unit = {},
     onFestivalClick: (FestivalItem) -> Unit = {},
+    onBannerClick: (BannerItem) -> Unit = {},
     onGuestRestricted: () -> Unit = {},
     isGuest: Boolean = false,
     viewModel: HomeViewModel = hiltViewModel(),
@@ -79,7 +80,7 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState()),
         ) {
             // Banner Carousel
-            BannerCarousel(banners = banners)
+            BannerCarousel(banners = banners, onBannerClick = onBannerClick)
 
             // 진행중인 축제
             FestivalSection(
@@ -115,7 +116,7 @@ fun HomeScreen(
             )
 
             Text(
-                text = "© 2026 Alpha Stamp. All rights reserved.",
+                text = "2026 OLLYMOA. All rights reserved.",
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.Normal,
                 fontSize = 11.sp,
@@ -153,7 +154,7 @@ private fun HomeHeader(onProfileTap: () -> Unit = {}) {
         Spacer(modifier = Modifier.width(8.dp))
 
         Text(
-            text = "알파스탬프",
+            text = "올리모아",
             fontFamily = Pretendard,
             fontWeight = FontWeight.SemiBold,
             fontSize = 18.sp,
@@ -183,7 +184,10 @@ private fun HomeHeader(onProfileTap: () -> Unit = {}) {
 // MARK: - Banner Carousel
 
 @Composable
-private fun BannerCarousel(banners: List<BannerItem> = emptyList()) {
+private fun BannerCarousel(
+    banners: List<BannerItem> = emptyList(),
+    onBannerClick: (BannerItem) -> Unit = {},
+) {
     if (banners.isEmpty()) {
         // placeholder
         Box(
@@ -231,7 +235,9 @@ private fun BannerCarousel(banners: List<BannerItem> = emptyList()) {
             AsyncImage(
                 model = fullUrl,
                 contentDescription = banner.title,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { onBannerClick(banner) },
                 contentScale = ContentScale.Crop,
             )
         }

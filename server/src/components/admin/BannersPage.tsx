@@ -7,10 +7,18 @@ interface Banner {
   id: number;
   title: string;
   imageUrl: string;
+  linkType: string | null;
+  linkId: number | null;
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
 }
+
+const LINK_TYPE_LABELS: Record<string, string> = {
+  festival: '축제',
+  program: '프로그램',
+  event: '이벤트',
+};
 
 export default function BannersPage() {
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -18,6 +26,8 @@ export default function BannersPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [title, setTitle] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [linkType, setLinkType] = useState('');
+  const [linkId, setLinkId] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
@@ -78,6 +88,8 @@ export default function BannersPage() {
           title,
           imageUrl,
           isActive,
+          linkType: linkType || null,
+          linkId: linkType && linkId.trim() ? Number(linkId) : null,
           sortOrder: editingId
             ? banners.find(b => b.id === editingId)?.sortOrder ?? 0
             : banners.length,
@@ -150,6 +162,8 @@ export default function BannersPage() {
     setEditingId(banner.id);
     setTitle(banner.title);
     setImageUrl(banner.imageUrl);
+    setLinkType(banner.linkType ?? '');
+    setLinkId(banner.linkId != null ? String(banner.linkId) : '');
     setIsActive(banner.isActive);
     setShowForm(true);
   };
@@ -159,6 +173,8 @@ export default function BannersPage() {
     setEditingId(null);
     setTitle('');
     setImageUrl('');
+    setLinkType('');
+    setLinkId('');
     setIsActive(true);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -221,6 +237,36 @@ export default function BannersPage() {
               )}
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">클릭 시 이동 (선택)</label>
+              <div className="flex items-center gap-2">
+                <select
+                  value={linkType}
+                  onChange={e => setLinkType(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">연결 안 함</option>
+                  <option value="festival">축제</option>
+                  <option value="program">프로그램</option>
+                  <option value="event">이벤트</option>
+                </select>
+                {linkType && (
+                  <input
+                    type="number"
+                    value={linkId}
+                    onChange={e => setLinkId(e.target.value)}
+                    placeholder="연결 대상 ID"
+                    className="w-40 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
+              </div>
+              {linkType && (
+                <p className="text-xs text-gray-400 mt-1">
+                  배너를 누르면 해당 {LINK_TYPE_LABELS[linkType]} 상세 화면으로 이동합니다 (ID 입력).
+                </p>
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -264,6 +310,7 @@ export default function BannersPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">순서</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">이미지</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">제목</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">연결</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">관리</th>
               </tr>
@@ -305,6 +352,11 @@ export default function BannersPage() {
                     )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">{banner.title}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {banner.linkType
+                      ? `${LINK_TYPE_LABELS[banner.linkType] ?? banner.linkType} #${banner.linkId ?? '-'}`
+                      : <span className="text-gray-300">-</span>}
+                  </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex px-2 py-1 text-xs rounded-full font-medium ${
                       banner.isActive

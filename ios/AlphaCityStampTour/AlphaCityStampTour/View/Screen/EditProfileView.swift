@@ -443,7 +443,7 @@ struct EditProfileView: View {
                     Spacer().frame(height: 32)
 
                     // === Footer ===
-                    Text("© 2026 Alpha Stamp. All rights reserved.")
+                    Text("2026 OLLYMOA. All rights reserved.")
                         .font(AppFont.regular(10))
                         .foregroundColor(Color(hex: "8F8F8F"))
                         .frame(maxWidth: .infinity)
@@ -577,6 +577,8 @@ private struct ProfileTextFieldView: View {
     var body: some View {
         TextField(placeholder, text: $text)
             .font(AppFont.regular(14))
+            .foregroundColor(Color(hex: "121212"))
+            .tint(AppColor.primary)
             .padding(.horizontal, 14)
             .frame(height: 48)
             .overlay(

@@ -16,6 +16,7 @@ private struct MapCategory: Identifiable {
 
 private let categories = [
     MapCategory(id: "all", label: "전체"),
+    MapCategory(id: "mission", label: "미션"),
     MapCategory(id: "food", label: "맛집"),
     MapCategory(id: "exhibition", label: "전시"),
     MapCategory(id: "seminar", label: "세미나"),
@@ -64,6 +65,64 @@ private func clusterPrograms(_ programs: [ProgramData], zoomLevel: Int) -> [MapC
     }
 }
 
+private struct MapMissionCluster {
+    let center: (lat: Double, lng: Double)
+    let missions: [MissionData]
+    var count: Int { missions.count }
+    var isSingle: Bool { missions.count == 1 }
+}
+
+private func clusterMissions(_ missions: [MissionData], zoomLevel: Int) -> [MapMissionCluster] {
+    let valid = missions.filter { $0.place?.latitude != nil && $0.place?.longitude != nil }
+    guard !valid.isEmpty else { return [] }
+
+    guard zoomLevel < 18 else {
+        return valid.map { MapMissionCluster(center: ($0.place!.latitude!, $0.place!.longitude!), missions: [$0]) }
+    }
+
+    let gridSize: Double
+    switch zoomLevel {
+    case 0...10: gridSize = 0.05
+    case 11...12: gridSize = 0.02
+    case 13: gridSize = 0.01
+    case 14: gridSize = 0.005
+    case 15: gridSize = 0.003
+    case 16: gridSize = 0.0015
+    default: gridSize = 0.0008
+    }
+
+    var grid: [String: [MissionData]] = [:]
+    for m in valid {
+        let lat = m.place!.latitude!
+        let lng = m.place!.longitude!
+        let key = "\(Int(floor(lat / gridSize)))_\(Int(floor(lng / gridSize)))"
+        grid[key, default: []].append(m)
+    }
+
+    return grid.values.map { items in
+        let avgLat = items.compactMap { $0.place?.latitude }.reduce(0, +) / Double(items.count)
+        let avgLng = items.compactMap { $0.place?.longitude }.reduce(0, +) / Double(items.count)
+        return MapMissionCluster(center: (avgLat, avgLng), missions: items)
+    }
+}
+
+// 클러스터 탭 시 실제로 클러스터가 풀리는 최소 줌 (해제 기준인 18을 넘지 않음)
+private func splitZoomForPrograms(_ programs: [ProgramData], from currentZoom: Int) -> Int {
+    guard currentZoom < 18 else { return 18 }
+    for z in (currentZoom + 1)...18 where clusterPrograms(programs, zoomLevel: z).count > 1 {
+        return z
+    }
+    return 18
+}
+
+private func splitZoomForMissions(_ missions: [MissionData], from currentZoom: Int) -> Int {
+    guard currentZoom < 18 else { return 18 }
+    for z in (currentZoom + 1)...18 where clusterMissions(missions, zoomLevel: z).count > 1 {
+        return z
+    }
+    return 18
+}
+
 // MARK: - MapView
 
 struct MapContentView: View {
@@ -73,11 +132,13 @@ struct MapContentView: View {
     var onProfileTap: (() -> Void)? = nil
     @Binding var focusLat: Double?
     @Binding var focusLng: Double?
+    var showBack: Bool = false
+    var onBack: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            MapHeaderView(onProfileTap: { onProfileTap?() })
+            MapHeaderView(onProfileTap: { onProfileTap?() }, showBack: showBack, onBack: onBack)
 
             Divider()
                 .foregroundColor(Color(hex: "E2E2E2"))
@@ -87,8 +148,9 @@ struct MapContentView: View {
                 KakaoMapRepresentable(
                     programs: viewModel.filteredPrograms,
                     stores: viewModel.filteredStores,
+                    missions: viewModel.filteredMissions,
                     onMarkerTapped: { programId in
-                        if let program = viewModel.filteredPrograms.first(where: { $0.id == programId }) {
+                        if let program = viewModel.programs.first(where: { $0.id == programId }) {
                             onProgramTapped?(program)
                         }
                     },
@@ -137,6 +199,7 @@ struct MapContentView: View {
         .onAppear {
             viewModel.fetchPrograms()
             viewModel.fetchStores()
+            viewModel.fetchMissions()
         }
     }
 }
@@ -146,6 +209,7 @@ struct MapContentView: View {
 struct KakaoMapRepresentable: UIViewRepresentable {
     let programs: [ProgramData]
     let stores: [StoreData]
+    let missions: [MissionData]
     var onMarkerTapped: ((Int) -> Void)?
     var onStoreTapped: ((Int) -> Void)?
     @Binding var focusLat: Double?
@@ -153,7 +217,7 @@ struct KakaoMapRepresentable: UIViewRepresentable {
     var viewModel: MapViewModel?
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(programs: programs, stores: stores, onMarkerTapped: onMarkerTapped, onStoreTapped: onStoreTapped, viewModel: viewModel)
+        Coordinator(programs: programs, stores: stores, missions: missions, onMarkerTapped: onMarkerTapped, onStoreTapped: onStoreTapped, viewModel: viewModel)
     }
 
     func makeUIView(context: Context) -> UIView {
@@ -165,10 +229,12 @@ struct KakaoMapRepresentable: UIViewRepresentable {
     func updateUIView(_ uiView: UIView, context: Context) {
         context.coordinator.programs = programs
         context.coordinator.stores = stores
+        context.coordinator.missions = missions
         context.coordinator.onMarkerTapped = onMarkerTapped
         context.coordinator.onStoreTapped = onStoreTapped
         context.coordinator.updateMarkers()
         context.coordinator.updateStoreMarkers()
+        context.coordinator.updateMissionMarkers()
 
         if let lat = focusLat, let lng = focusLng {
             context.coordinator.markCenteredByFocus()
@@ -216,25 +282,31 @@ struct KakaoMapRepresentable: UIViewRepresentable {
         var kakaoMap: KakaoMap?
         var programs: [ProgramData]
         var stores: [StoreData]
+        var missions: [MissionData]
         var onMarkerTapped: ((Int) -> Void)?
         var onStoreTapped: ((Int) -> Void)?
         weak var viewModel: MapViewModel?
         private var isMapReady = false
         private var currentZoomLevel: Int = 15
         private var clusters: [MapCluster] = []
+        private var missionClusters: [MapMissionCluster] = []
         private var zoomCheckTimer: Timer?
         // 현재 위치(GPS)
         private let locationManager = CLLocationManager()
         private var lastUserLocation: (lat: Double, lng: Double)?
         private var didCenterOnUser = false
+        // 포커스/GPS/저장 카메라가 없을 때 데이터 위치로 1회 자동 센터링했는지
+        private var didCenterOnData = false
+        private var didRestoreSavedCamera = false
 
         deinit {
             zoomCheckTimer?.invalidate()
         }
 
-        init(programs: [ProgramData], stores: [StoreData], onMarkerTapped: ((Int) -> Void)?, onStoreTapped: ((Int) -> Void)?, viewModel: MapViewModel?) {
+        init(programs: [ProgramData], stores: [StoreData], missions: [MissionData], onMarkerTapped: ((Int) -> Void)?, onStoreTapped: ((Int) -> Void)?, viewModel: MapViewModel?) {
             self.programs = programs
             self.stores = stores
+            self.missions = missions
             self.onMarkerTapped = onMarkerTapped
             self.onStoreTapped = onStoreTapped
             self.viewModel = viewModel
@@ -268,6 +340,7 @@ struct KakaoMapRepresentable: UIViewRepresentable {
                 defaultPosition = MapPoint(longitude: savedCamera.lng, latitude: savedCamera.lat)
                 defaultLevel = savedCamera.zoom
                 currentZoomLevel = savedCamera.zoom
+                didRestoreSavedCamera = true
             } else {
                 defaultPosition = MapPoint(longitude: 128.690, latitude: 35.842)
                 defaultLevel = 15
@@ -287,9 +360,14 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             isMapReady = true
             mapView.eventDelegate = self
 
+            // 카카오 기본 POI(식당/상호명 등) 라벨 숨김 — 우리 마커만 표시되도록.
+            // (확대 시 주변 상호명이 계속 바뀌어 마커 라벨처럼 보이는 문제 방지)
+            mapView.setPoiEnabled(false)
+
             currentZoomLevel = Int(mapView.zoomLevel)
             updateMarkers()
             updateStoreMarkers()
+            updateMissionMarkers()
             centerOnUserIfNeeded()
 
             // 줌 변경 감지 타이머 (0.3초 간격) + 카메라 위치 저장
@@ -314,6 +392,7 @@ struct KakaoMapRepresentable: UIViewRepresentable {
                     self.currentZoomLevel = newZoom
                     self.updateMarkers()
                     self.updateStoreMarkers()
+                    self.updateMissionMarkers()
                 }
             }
         }
@@ -353,6 +432,30 @@ struct KakaoMapRepresentable: UIViewRepresentable {
                 return
             }
 
+            // 미션 마커 클릭
+            if layerID == "missionMarkers" {
+                let idx = poiID.replacingOccurrences(of: "mission_", with: "")
+                guard let index = Int(idx), index < missionClusters.count else { return }
+                let cluster = missionClusters[index]
+                if cluster.isSingle, let mission = cluster.missions.first {
+                    // 미션이 속한 프로그램 상세로 이동 (없으면 해당 위치 줌인)
+                    if let programId = mission.programId,
+                       programs.contains(where: { $0.id == programId }) {
+                        onMarkerTapped?(programId)
+                    } else {
+                        let pos = MapPoint(longitude: cluster.center.lng, latitude: cluster.center.lat)
+                        let cameraUpdate = CameraUpdate.make(target: pos, zoomLevel: 18, mapView: kakaoMap)
+                        kakaoMap.moveCamera(cameraUpdate, callback: nil)
+                    }
+                } else {
+                    let pos = MapPoint(longitude: cluster.center.lng, latitude: cluster.center.lat)
+                    let newZoom = splitZoomForMissions(cluster.missions, from: currentZoomLevel)
+                    let cameraUpdate = CameraUpdate.make(target: pos, zoomLevel: newZoom, mapView: kakaoMap)
+                    kakaoMap.moveCamera(cameraUpdate, callback: nil)
+                }
+                return
+            }
+
             // 프로그램 마커 클릭
             guard layerID == "programMarkers" else { return }
             let idx = poiID.replacingOccurrences(of: "poi_", with: "")
@@ -362,9 +465,9 @@ struct KakaoMapRepresentable: UIViewRepresentable {
             if cluster.isSingle, let program = cluster.programs.first {
                 onMarkerTapped?(program.id)
             } else {
-                // 클러스터 탭 -> 줌 인
+                // 클러스터 탭 -> 클러스터가 풀리는 줌으로 이동
                 let pos = MapPoint(longitude: cluster.center.lng, latitude: cluster.center.lat)
-                let newZoom = min(currentZoomLevel + 2, 17)
+                let newZoom = splitZoomForPrograms(cluster.programs, from: currentZoomLevel)
                 let cameraUpdate = CameraUpdate.make(target: pos, zoomLevel: newZoom, mapView: kakaoMap)
                 kakaoMap.moveCamera(cameraUpdate, callback: nil)
             }
@@ -509,6 +612,20 @@ struct KakaoMapRepresentable: UIViewRepresentable {
                     poi.show()
                 }
             }
+
+            // 포커스/GPS/저장 카메라가 없으면 기본 좌표 대신 등록된 프로그램 위치로 1회 이동
+            if !didCenterOnData && !didCenterOnUser && !didRestoreSavedCamera && lastUserLocation == nil {
+                let valid = programs.filter { $0.latitude != nil && $0.longitude != nil }
+                if !valid.isEmpty {
+                    let avgLat = valid.compactMap(\.latitude).reduce(0, +) / Double(valid.count)
+                    let avgLng = valid.compactMap(\.longitude).reduce(0, +) / Double(valid.count)
+                    let pos = MapPoint(longitude: avgLng, latitude: avgLat)
+                    let cameraUpdate = CameraUpdate.make(target: pos, zoomLevel: 15, mapView: map)
+                    map.moveCamera(cameraUpdate, callback: nil)
+                    currentZoomLevel = 15
+                    didCenterOnData = true
+                }
+            }
         }
 
         func updateStoreMarkers() {
@@ -542,6 +659,56 @@ struct KakaoMapRepresentable: UIViewRepresentable {
 
                 let options = PoiOptions(styleID: styleID, poiID: "store_\(index)")
                 options.rank = validStores.count - index
+
+                if let poi = layer.addPoi(option: options, at: position) {
+                    poi.clickable = true
+                    poi.show()
+                }
+            }
+        }
+
+        func updateMissionMarkers() {
+            guard isMapReady, let map = kakaoMap else { return }
+
+            let manager = map.getLabelManager()
+            manager.removeLabelLayer(layerID: "missionMarkers")
+
+            missionClusters = clusterMissions(missions, zoomLevel: currentZoomLevel)
+            guard !missionClusters.isEmpty else { return }
+
+            let layerOption = LabelLayerOptions(
+                layerID: "missionMarkers",
+                competitionType: .none,
+                competitionUnit: .symbolFirst,
+                orderType: .rank,
+                zOrder: 10000
+            )
+            guard let layer = manager.addLabelLayer(option: layerOption) else { return }
+
+            for (index, cluster) in missionClusters.enumerated() {
+                let position = MapPoint(longitude: cluster.center.lng, latitude: cluster.center.lat)
+                let styleID: String
+                let markerImage: UIImage
+                let anchor: CGPoint
+
+                if cluster.isSingle {
+                    styleID = "mission_single_\(index)"
+                    markerImage = createMissionBubbleImage(name: cluster.missions.first?.name ?? "")
+                    anchor = CGPoint(x: 0.5, y: 1.0)
+                } else {
+                    styleID = "mission_cluster_\(index)"
+                    markerImage = createMissionClusterImage(count: cluster.count)
+                    anchor = CGPoint(x: 0.5, y: 0.5)
+                }
+
+                let iconStyle = PoiIconStyle(symbol: markerImage, anchorPoint: anchor)
+                let poiStyle = PoiStyle(styleID: styleID, styles: [
+                    PerLevelPoiStyle(iconStyle: iconStyle, level: 0)
+                ])
+                manager.addPoiStyle(poiStyle)
+
+                let options = PoiOptions(styleID: styleID, poiID: "mission_\(index)")
+                options.rank = missionClusters.count - index
 
                 if let poi = layer.addPoi(option: options, at: position) {
                     poi.clickable = true
@@ -742,6 +909,81 @@ struct KakaoMapRepresentable: UIViewRepresentable {
                 duck.draw(in: CGRect(x: duckLeft, y: duckTop, width: duckW, height: duckH))
             }
         }
+
+        // 미션 이름 말풍선 (보라 #4C27D0, Android와 동일)
+        private func createMissionBubbleImage(name: String) -> UIImage {
+            let textAttrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 11, weight: .semibold),
+                .foregroundColor: UIColor.white,
+            ]
+            let textNS = name as NSString
+            let textSize = textNS.size(withAttributes: textAttrs)
+            let paddingH: CGFloat = 10
+            let paddingV: CGFloat = 6
+            let boxWidth = textSize.width + paddingH * 2
+            let boxHeight = textSize.height + paddingV * 2
+            let cornerRadius: CGFloat = 7
+            let pointerH: CGFloat = 5
+            let shadowPad: CGFloat = 5
+
+            let totalW = boxWidth + shadowPad * 2
+            let totalH = shadowPad + boxHeight + pointerH
+
+            let missionPurple = UIColor(red: 76/255, green: 39/255, blue: 208/255, alpha: 1)
+
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: totalW, height: totalH))
+            return renderer.image { ctx in
+                let cgCtx = ctx.cgContext
+                let cx = totalW / 2
+
+                let boxLeft = cx - boxWidth / 2
+                let boxTop = shadowPad
+                let boxRect = CGRect(x: boxLeft, y: boxTop, width: boxWidth, height: boxHeight)
+
+                cgCtx.setShadow(offset: CGSize(width: 0, height: 2), blur: 4,
+                                color: UIColor.black.withAlphaComponent(0.2).cgColor)
+                missionPurple.setFill()
+                UIBezierPath(roundedRect: boxRect, cornerRadius: cornerRadius).fill()
+
+                cgCtx.setShadow(offset: .zero, blur: 0, color: nil)
+                let pointerY = boxTop + boxHeight
+                let pointer = UIBezierPath()
+                pointer.move(to: CGPoint(x: cx - 4, y: pointerY))
+                pointer.addLine(to: CGPoint(x: cx, y: pointerY + pointerH))
+                pointer.addLine(to: CGPoint(x: cx + 4, y: pointerY))
+                pointer.close()
+                missionPurple.setFill()
+                pointer.fill()
+
+                textNS.draw(at: CGPoint(x: boxLeft + paddingH, y: boxTop + paddingV),
+                            withAttributes: textAttrs)
+            }
+        }
+
+        // 미션 클러스터 배지 (보라 원 + 카운트)
+        private func createMissionClusterImage(count: Int) -> UIImage {
+            let radius: CGFloat = 15
+            let border: CGFloat = 2
+            let size = (radius + border) * 2
+            let missionPurple = UIColor(red: 76/255, green: 39/255, blue: 208/255, alpha: 1)
+
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
+            return renderer.image { _ in
+                let center = CGPoint(x: size / 2, y: size / 2)
+                UIColor.white.setFill()
+                UIBezierPath(arcCenter: center, radius: radius + border, startAngle: 0, endAngle: .pi * 2, clockwise: true).fill()
+                missionPurple.setFill()
+                UIBezierPath(arcCenter: center, radius: radius, startAngle: 0, endAngle: .pi * 2, clockwise: true).fill()
+
+                let text = "\(count)" as NSString
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.boldSystemFont(ofSize: 12),
+                    .foregroundColor: UIColor.white,
+                ]
+                let textSize = text.size(withAttributes: attrs)
+                text.draw(at: CGPoint(x: center.x - textSize.width / 2, y: center.y - textSize.height / 2), withAttributes: attrs)
+            }
+        }
     }
 }
 
@@ -749,32 +991,54 @@ struct KakaoMapRepresentable: UIViewRepresentable {
 
 private struct MapHeaderView: View {
     var onProfileTap: () -> Void
+    var showBack: Bool = false
+    var onBack: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 8) {
-            Image("HeaderLogo")
-                .resizable()
-                .scaledToFill()
-                .frame(width: 40, height: 40)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+            if showBack {
+                // 축제/행사 상세에서 '지도에서 보기'로 진입: 로고 대신 뒤로가기 + 제목
+                Button(action: { onBack?() }) {
+                    Image("IconBackArrow")
+                        .renderingMode(.original)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 13, height: 26)
+                }
+                .padding(.trailing, 6)
 
-            Text("알파스탬프")
-                .font(AppFont.semibold(18))
-                .foregroundColor(Color(hex: "121212"))
-                .tracking(-0.36)
+                Text("지도 상세보기")
+                    .font(AppFont.semibold(18))
+                    .foregroundColor(Color(hex: "121212"))
+                    .tracking(-0.36)
 
-            Spacer()
-
-            Button(action: onProfileTap) {
-                Image("IconProfile")
+                Spacer()
+            } else {
+                // 하단 탭 '지도'로 진입: 로고 + 프로필
+                Image("HeaderLogo")
                     .resizable()
                     .scaledToFill()
                     .frame(width: 40, height: 40)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color(hex: "EBEBEB"), lineWidth: 1)
-                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                Text("올리모아")
+                    .font(AppFont.semibold(18))
+                    .foregroundColor(Color(hex: "121212"))
+                    .tracking(-0.36)
+
+                Spacer()
+
+                Button(action: onProfileTap) {
+                    Image("IconProfile")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(Color(hex: "EBEBEB"), lineWidth: 1)
+                        )
+                }
             }
         }
         .padding(.leading, 15)

@@ -9,7 +9,13 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, imageUrl, sortOrder, isActive } = body;
+    const { title, imageUrl, sortOrder, isActive, linkType, linkId } = body;
+
+    const allowedLinkTypes = ['festival', 'program', 'event'];
+    const normalizedLinkType =
+      linkType && allowedLinkTypes.includes(linkType) ? linkType : null;
+    const normalizedLinkId =
+      normalizedLinkType && linkId != null ? Number(linkId) : null;
 
     const banner = await prisma.banner.update({
       where: { id: Number(id) },
@@ -18,6 +24,7 @@ export async function PUT(
         ...(imageUrl !== undefined && { imageUrl }),
         ...(sortOrder !== undefined && { sortOrder }),
         ...(isActive !== undefined && { isActive }),
+        ...(linkType !== undefined && { linkType: normalizedLinkType, linkId: normalizedLinkId }),
       },
     });
 

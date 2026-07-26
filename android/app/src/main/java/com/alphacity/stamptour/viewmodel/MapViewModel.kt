@@ -2,6 +2,7 @@ package com.alphacity.stamptour.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StoreData
 import com.alphacity.stamptour.repository.HomeRepository
@@ -43,6 +44,8 @@ class MapViewModel @Inject constructor(
     private val _stores = MutableStateFlow<List<StoreData>>(emptyList())
     val stores: StateFlow<List<StoreData>> = _stores
 
+    private val _missions = MutableStateFlow<List<MissionItem>>(emptyList())
+
     private val _selectedCategory = MutableStateFlow("all")
     val selectedCategory: StateFlow<String> = _selectedCategory
 
@@ -62,6 +65,15 @@ class MapViewModel @Inject constructor(
     ) { stores, category ->
         val withCoords = stores.filter { it.latitude != null && it.longitude != null }
         if (category == "all" || category == "food") withCoords
+        else emptyList()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // 좌표가 있는 미션만 지도에 표시 (quiz 미션은 place 좌표가 없어 제외)
+    val filteredMissions: StateFlow<List<MissionItem>> = combine(
+        _missions, _selectedCategory
+    ) { missions, category ->
+        val withCoords = missions.filter { it.place?.latitude != null && it.place?.longitude != null }
+        if (category == "all" || category == "mission") withCoords
         else emptyList()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -85,6 +97,16 @@ class MapViewModel @Inject constructor(
             storeRepository.getApprovedStores()
                 .onSuccess { _stores.value = it }
                 .onFailure { println("[MapVM] 상점 로드 실패: $it") }
+        }
+    }
+
+    fun fetchMissions() {
+        if (_missions.value.isNotEmpty()) return
+
+        viewModelScope.launch {
+            repository.getMissions()
+                .onSuccess { _missions.value = it }
+                .onFailure { println("[MapVM] 미션 로드 실패: $it") }
         }
     }
 

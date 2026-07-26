@@ -18,9 +18,11 @@ struct LocationMissionView: View {
             // Header
             HStack(spacing: 12) {
                 Button(action: { onDismiss?() }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(Color(hex: "121212"))
+                    Image("IconBackArrow")
+                        .renderingMode(.original)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 13, height: 26)
                 }
                 Text("위치 인증 미션")
                     .font(AppFont.semibold(18))

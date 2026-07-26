@@ -103,7 +103,7 @@ struct PolicyDetailView: View {
                         Spacer().frame(height: 20)
 
                         // Footer
-                        Text("\u{00A9} 2026 Alpha Stamp. All rights reserved.")
+                        Text("2026 OLLYMOA. All rights reserved.")
                             .font(AppFont.regular(10))
                             .foregroundColor(Color(hex: "8F8F8F"))
                             .frame(maxWidth: .infinity)

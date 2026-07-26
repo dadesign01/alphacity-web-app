@@ -698,7 +698,7 @@ fun EditProfileScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "\u00A9 2026 Alpha Stamp. All rights reserved.",
+                    text = "2026 OLLYMOA. All rights reserved.",
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Normal,
                     fontSize = 10.sp,

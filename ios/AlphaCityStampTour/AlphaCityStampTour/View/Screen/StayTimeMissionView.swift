@@ -28,9 +28,11 @@ struct StayTimeMissionView: View {
                     viewModel.stopTimer()
                     onDismiss?()
                 }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(Color(hex: "121212"))
+                    Image("IconBackArrow")
+                        .renderingMode(.original)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 13, height: 26)
                 }
                 Text("체류시간 미션")
                     .font(AppFont.semibold(18))

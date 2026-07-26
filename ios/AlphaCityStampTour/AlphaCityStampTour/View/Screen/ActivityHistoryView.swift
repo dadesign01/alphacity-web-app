@@ -154,15 +154,21 @@ struct ActivityHistoryView: View {
                     Button {
                         selectedFilter = isSelected ? nil : filter
                     } label: {
-                        Text(filter.filterLabel)
-                            .font(AppFont.regular(14))
-                            .foregroundColor(isSelected ? .white : Color(hex: "121212"))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
-                            .background(
-                                RoundedRectangle(cornerRadius: 11)
-                                    .fill(isSelected ? Color(hex: "121212") : Color(hex: "F8F8F8"))
-                            )
+                        HStack(spacing: 5) {
+                            Image(filter.iconName)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 16, height: 16)
+                            Text(filter.filterLabel)
+                                .font(AppFont.regular(14))
+                                .foregroundColor(isSelected ? .white : Color(hex: "121212"))
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(
+                            RoundedRectangle(cornerRadius: 11)
+                                .fill(isSelected ? Color(hex: "121212") : Color(hex: "F8F8F8"))
+                        )
                     }
                 }
                 Spacer()
@@ -177,24 +183,33 @@ struct ActivityHistoryView: View {
                     .tint(AppColor.primary)
                 Spacer()
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(filteredActivities) { activity in
-                            ActivityItemRow(activity: activity)
-                            Divider()
-                                .background(Color(hex: "B5B5B5"))
-                                .padding(.horizontal, 20)
+                if filteredActivities.isEmpty {
+                    // Empty state: 안내 문구를 화면 중앙에 배치
+                    Spacer()
+                    Text("활동 이력이 없습니다.")
+                        .font(AppFont.regular(14))
+                        .foregroundColor(Color(hex: "8F8F8F"))
+                    Spacer()
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(filteredActivities) { activity in
+                                ActivityItemRow(activity: activity)
+                                Divider()
+                                    .background(Color(hex: "B5B5B5"))
+                                    .padding(.horizontal, 20)
+                            }
                         }
-
-                        // Footer
-                        Text("© 2026 Alpha Stamp. All rights reserved.")
-                            .font(AppFont.regular(10))
-                            .foregroundColor(Color(hex: "8F8F8F"))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
-                            .background(Color(hex: "F9F9F9"))
                     }
                 }
+
+                // Footer - 하단 고정 (스크롤 영역 밖)
+                Text("2026 OLLYMOA. All rights reserved.")
+                    .font(AppFont.regular(10))
+                    .foregroundColor(Color(hex: "8F8F8F"))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                    .background(Color(hex: "F9F9F9"))
             }
         }
         .background(Color.white)

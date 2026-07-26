@@ -64,7 +64,7 @@ struct ProgramListView: View {
 
                     // Footer - always at bottom
                     VStack {
-                        Text("© 2026 Alpha Stamp. All rights reserved.")
+                        Text("2026 OLLYMOA. All rights reserved.")
                             .font(AppFont.regular(10))
                             .foregroundColor(Color(hex: "8F8F8F"))
                             .padding(.vertical, 20)

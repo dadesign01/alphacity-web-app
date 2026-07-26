@@ -13,6 +13,7 @@ struct HomeView: View {
     var onNavigateToCoupons: (() -> Void)?
     var onProgramClick: ((ProgramData) -> Void)?
     var onFestivalClick: ((FestivalData) -> Void)?
+    var onBannerClick: ((BannerData) -> Void)?
     var onGuestRestricted: (() -> Void)?
     var isGuest: Bool = false
 
@@ -26,7 +27,8 @@ struct HomeView: View {
                     // Banner Carousel
                     BannerCarouselView(
                         banners: viewModel.banners,
-                        currentIndex: $currentBannerIndex
+                        currentIndex: $currentBannerIndex,
+                        onBannerTapped: { banner in onBannerClick?(banner) }
                     )
                     .onReceive(bannerTimer) { _ in
                         let count = max(viewModel.banners.count, 1)
@@ -69,7 +71,7 @@ struct HomeView: View {
                             }
                         )
 
-                        Text("© 2026 Alpha Stamp. All rights reserved.")
+                        Text("2026 OLLYMOA. All rights reserved.")
                             .font(AppFont.regular(11))
                             .foregroundColor(Color(hex: "999999"))
                             .padding(.vertical, 24)
@@ -98,7 +100,7 @@ private struct HomeHeaderView: View {
                 .frame(width: 40, height: 40)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
-            Text("알파스탬프")
+            Text("올리모아")
                 .font(AppFont.semibold(18))
                 .foregroundColor(Color(hex: "121212"))
                 .tracking(-0.36)
@@ -129,6 +131,7 @@ private struct HomeHeaderView: View {
 private struct BannerCarouselView: View {
     let banners: [BannerData]
     @Binding var currentIndex: Int
+    var onBannerTapped: ((BannerData) -> Void)?
 
     var body: some View {
         if banners.isEmpty {
@@ -162,6 +165,8 @@ private struct BannerCarouselView: View {
                                     .frame(height: 150)
                             }
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture { onBannerTapped?(banner) }
                         .tag(index)
                     }
                 }

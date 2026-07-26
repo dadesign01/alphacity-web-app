@@ -50,6 +50,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       }
       return {
         ...rest,
+        place: rest.place
+          ? {
+              name: rest.place.name,
+              latitude: rest.place.latitude != null ? Number(rest.place.latitude) : null,
+              longitude: rest.place.longitude != null ? Number(rest.place.longitude) : null,
+            }
+          : null,
         options: parsedOptions,
         isCompleted: completedMissionIds.has(mission.id),
       };

@@ -34,6 +34,8 @@ final class StampViewModel: ObservableObject {
     private let homeRepository = HomeRepository.shared
     private let selection = FestivalSelection.shared
     private var cancellables = Set<AnyCancellable>()
+    // 진행 중인 로드 작업 (축제 변경 시 취소 후 즉시 재요청)
+    private var fetchTask: Task<Void, Never>? = nil
 
     var selectedFestivalId: Int? { selection.selectedFestivalId }
 
@@ -68,12 +70,15 @@ final class StampViewModel: ObservableObject {
     }
 
     func fetchStampData() {
-        guard !isLoading else { return }
-        isLoading = true
+        // 이전 로드를 취소해 오래된 축제 데이터가 새 선택을 덮어쓰지 않도록 함
+        fetchTask?.cancel()
 
         let festivalId = selection.selectedFestivalId
 
-        Task {
+        fetchTask = Task {
+            isLoading = true
+            defer { isLoading = false }
+
             // 축제 목록 (드롭다운용)
             if festivals.isEmpty {
                 do {
@@ -84,7 +89,11 @@ final class StampViewModel: ObservableObject {
             }
 
             do {
-                let fetchedStamps = try await repository.fetchStamps(festivalId: festivalId)
+                var fetchedStamps = try await repository.fetchStamps(festivalId: festivalId)
+                // 선택한 축제에 스탬프가 없으면 전체 축제 스탬프를 잠금 상태로 노출 (#8-1)
+                if fetchedStamps.isEmpty, festivalId != nil {
+                    fetchedStamps = (try? await repository.fetchStamps(festivalId: nil)) ?? []
+                }
                 stamps = fetchedStamps
                 totalStampCount = max(fetchedStamps.count, 1)
             } catch {
@@ -117,8 +126,6 @@ final class StampViewModel: ObservableObject {
             } catch {
                 print("[StampVM] 쿠폰 로드 실패: \(error)")
             }
-
-            isLoading = false
         }
     }
 

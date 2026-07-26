@@ -388,7 +388,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(40.dp))
 
             Text(
-                text = "© 2026 Alpha Stamp. All rights reserved.",
+                text = "2026 OLLYMOA. All rights reserved.",
                 style = androidx.compose.ui.text.TextStyle(
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Normal,

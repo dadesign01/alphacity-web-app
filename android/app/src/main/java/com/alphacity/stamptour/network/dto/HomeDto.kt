@@ -9,6 +9,8 @@ data class BannerItem(
     val id: Int,
     val title: String,
     val imageUrl: String,
+    val linkType: String? = null,
+    val linkId: Int? = null,
 )
 
 // === 축제 ===
@@ -198,7 +200,9 @@ data class MissionCompletionResult(
 @Serializable
 data class MissionPlace(
     val name: String,
+    @Serializable(with = FlexibleDoubleSerializer::class)
     val latitude: Double? = null,
+    @Serializable(with = FlexibleDoubleSerializer::class)
     val longitude: Double? = null,
 )
 

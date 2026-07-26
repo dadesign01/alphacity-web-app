@@ -417,6 +417,8 @@ model Banner {
   id        Int      @id @default(autoincrement())
   title     String   @db.VarChar(255)
   imageUrl  String   @map("image_url") @db.VarChar(500)
+  linkType  String?  @map("link_type") @db.VarChar(20) // festival | program | event | null
+  linkId    Int?     @map("link_id")                   // 연결 대상 id
   sortOrder Int      @default(0) @map("sort_order")
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")

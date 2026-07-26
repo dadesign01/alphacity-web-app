@@ -1,6 +1,5 @@
 package com.alphacity.stamptour.ui.screen
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -49,6 +48,9 @@ fun StampScreen(
     viewModel: StampViewModel = hiltViewModel(),
     onNavigateToMap: (lat: Double?, lng: Double?) -> Unit = { _, _ -> },
     onNavigateToExchange: () -> Unit = {},
+    onNavigateToMyPage: () -> Unit = {},
+    showBack: Boolean = false,
+    onBack: () -> Unit = {},
 ) {
     val stamps by viewModel.stamps.collectAsState()
     val userStampCount by viewModel.userStampCount.collectAsState()
@@ -58,12 +60,6 @@ fun StampScreen(
     val userStamps by viewModel.userStamps.collectAsState()
     val festivals by viewModel.festivals.collectAsState()
     val selectedFestivalId by viewModel.selectedFestivalId.collectAsState()
-    var selectedMission by remember { mutableStateOf<MissionItem?>(null) }
-
-    // 미션 상세 화면에서 뒤로가기
-    BackHandler(enabled = selectedMission != null) {
-        selectedMission = null
-    }
 
     // 탭 전환 시마다 최신 데이터 로드
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -85,39 +81,10 @@ fun StampScreen(
     val completedMissionCount = missions.count { it.isCompleted == true }
     val remainingMissionCount = missions.size - completedMissionCount
 
-    // 미션 상세 전체화면 (스탬프 클릭 시)
-    selectedMission?.let { mission ->
-        when (mission.type) {
-            "quiz" -> QuizMissionScreen(
-                mission = mission,
-                onDismiss = { selectedMission = null },
-                onCompleted = { viewModel.fetchStampData() },
-            )
-            "location_auth" -> LocationMissionScreen(
-                mission = mission,
-                onDismiss = { selectedMission = null },
-                onCompleted = { viewModel.fetchStampData() },
-            )
-            "stay_time" -> StayTimeMissionScreen(
-                mission = mission,
-                onDismiss = { selectedMission = null },
-                onCompleted = { viewModel.fetchStampData() },
-            )
-        }
-        return
-    }
-
-    // 스탬프 클릭 시 연결된 미션 찾기
+    // 스탬프 클릭 시 지도로 이동 (연결된 미션 장소가 있으면 해당 위치로 포커스)
     val onStampClick: (StampItem) -> Unit = { stamp ->
         val linkedMission = missions.find { it.stampId == stamp.id }
-        if (linkedMission != null) {
-            selectedMission = linkedMission
-        } else {
-            // 연결된 미션이 없으면: 미수집은 지도로, 수집 완료는 아무 동작 없음
-            if (!collectedStampIds.contains(stamp.id)) {
-                onNavigateToMap(null, null)
-            }
-        }
+        onNavigateToMap(linkedMission?.place?.latitude, linkedMission?.place?.longitude)
     }
 
     Column(
@@ -126,7 +93,7 @@ fun StampScreen(
             .background(Color.White),
     ) {
         // Header
-        StampHeader()
+        StampHeader(showBack = showBack, onBack = onBack, onProfileClick = onNavigateToMyPage)
 
         // Scrollable content
         Column(
@@ -228,20 +195,6 @@ fun StampScreen(
                     onStampClick = onStampClick,
                 )
             }
-
-            // Footer
-            Text(
-                text = "\u00A9 2026 Alpha Stamp. All rights reserved.",
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.Normal,
-                fontSize = 10.sp,
-                color = Color(0xFFAFBFCC),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFEDF7FF))
-                    .padding(vertical = 16.dp),
-                textAlign = TextAlign.Center,
-            )
         }
     }
 }
@@ -249,7 +202,11 @@ fun StampScreen(
 // MARK: - Header
 
 @Composable
-private fun StampHeader() {
+private fun StampHeader(
+    showBack: Boolean = false,
+    onBack: () -> Unit = {},
+    onProfileClick: () -> Unit = {},
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -257,40 +214,64 @@ private fun StampHeader() {
             .padding(start = 15.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.header_logo),
-            contentDescription = "Logo",
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp)),
-            contentScale = ContentScale.Crop,
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Text(
-            text = "알파스탬프",
-            fontFamily = Pretendard,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 18.sp,
-            color = Color(0xFF121212),
-            letterSpacing = (-0.36).sp,
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .border(1.dp, Color(0xFFEBEBEB), CircleShape),
-        ) {
+        if (showBack) {
+            // 하위 페이지로 진입한 경우: 로고 대신 뒤로가기 + 제목 (다른 상세 페이지와 통일)
             Image(
-                painter = painterResource(id = R.drawable.icon_profile),
-                contentDescription = "프로필",
-                modifier = Modifier.fillMaxSize(),
+                painter = painterResource(id = R.drawable.icon_back_arrow),
+                contentDescription = "뒤로",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .size(13.dp, 26.dp)
+                    .clickable { onBack() },
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(
+                text = "스탬프 컬렉션",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp,
+                color = Color(0xFF121212),
+                letterSpacing = (-0.36).sp,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+        } else {
+            // 하단 탭으로 진입한 경우: 로고 + 프로필
+            Image(
+                painter = painterResource(id = R.drawable.header_logo),
+                contentDescription = "Logo",
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp)),
                 contentScale = ContentScale.Crop,
             )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = "올리모아",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp,
+                color = Color(0xFF121212),
+                letterSpacing = (-0.36).sp,
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, Color(0xFFEBEBEB), CircleShape)
+                    .clickable { onProfileClick() },
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.icon_profile),
+                    contentDescription = "프로필",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            }
         }
     }
 
@@ -574,7 +555,9 @@ private fun StampGrid(
     collectedStampIds: Set<Int>,
     onStampClick: (StampItem) -> Unit = {},
 ) {
-    val chunkedStamps = stamps.chunked(3)
+    // 시안 요구: 스탬프가 부족해도 잠금 플레이스홀더로 최소 12칸(3열×4행) 채움
+    val cells: List<StampItem?> = stamps + List((12 - stamps.size).coerceAtLeast(0)) { null }
+    val chunkedStamps = cells.chunked(3)
 
     Column(
         modifier = Modifier
@@ -588,14 +571,18 @@ private fun StampGrid(
                 horizontalArrangement = Arrangement.spacedBy(19.dp),
             ) {
                 row.forEach { stamp ->
-                    val isCollected = collectedStampIds.contains(stamp.id)
+                    if (stamp != null) {
+                        val isCollected = collectedStampIds.contains(stamp.id)
 
-                    StampSlot(
-                        stamp = stamp,
-                        isCollected = isCollected,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onStampClick(stamp) },
-                    )
+                        StampSlot(
+                            stamp = stamp,
+                            isCollected = isCollected,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onStampClick(stamp) },
+                        )
+                    } else {
+                        LockedPlaceholderSlot(modifier = Modifier.weight(1f))
+                    }
                 }
 
                 repeat(3 - row.size) {
@@ -603,6 +590,62 @@ private fun StampGrid(
                 }
             }
         }
+    }
+}
+
+// 등록된 스탬프가 없는 칸에 표시하는 회색 잠금 플레이스홀더
+@Composable
+private fun LockedPlaceholderSlot(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .aspectRatio(1f)
+                .shadow(
+                    elevation = 4.dp,
+                    shape = RoundedCornerShape(35.dp),
+                    ambientColor = Color(0x0D000000),
+                    spotColor = Color(0x0D000000),
+                )
+                .clip(RoundedCornerShape(35.dp))
+                .background(Color.White),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.stamp_locked),
+                    contentDescription = "잠김",
+                    modifier = Modifier.size(29.dp, 40.dp),
+                    contentScale = ContentScale.Fit,
+                    alpha = 0.28f,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "MISSION CLEAR",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 8.sp,
+                    color = Color(0xFF121212).copy(alpha = 0.6f * 0.28f),
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = " ",
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp,
+            color = Color(0xFF121212),
+        )
     }
 }
 

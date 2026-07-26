@@ -129,10 +129,16 @@ fun MyCouponsScreen(
             }
             Divider(color = Color(0xFFE2E2E2), thickness = 1.dp)
 
+            // 빈 상태에서는 스크롤을 끄고 안내 문구를 남은 공간 세로 중앙에 배치
+            val couponScrollState = rememberScrollState()
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .then(
+                        if (availableCoupons.isEmpty()) Modifier
+                        else Modifier.verticalScroll(couponScrollState)
+                    ),
             ) {
                 // === Blue Info Card ===
                 Box(
@@ -226,17 +232,21 @@ fun MyCouponsScreen(
 
                 // === Coupon Cards ===
                 if (availableCoupons.isEmpty()) {
-                    Text(
-                        text = "사용 가능한 쿠폰이 없습니다.",
-                        fontFamily = Pretendard,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp,
-                        color = Color(0xFF9CA3AF),
-                        textAlign = TextAlign.Center,
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 40.dp),
-                    )
+                            .weight(1f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "사용 가능한 쿠폰이 없습니다.",
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp,
+                            color = Color(0xFF9CA3AF),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 } else {
                     Column(
                         modifier = Modifier
@@ -249,21 +259,21 @@ fun MyCouponsScreen(
                         }
                     }
                 }
-
-                // Footer
-                Text(
-                    text = "\u00A9 2026 Alpha Stamp. All rights reserved.",
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 10.sp,
-                    color = Color(0xFF8F8F8F),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFFF9F9F9))
-                        .padding(vertical = 40.dp),
-                )
             }
+
+            // === Footer (하단 고정) ===
+            Text(
+                text = "2026 OLLYMOA. All rights reserved.",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Normal,
+                fontSize = 11.sp,
+                color = Color(0xFF999999),
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFF9F9F9))
+                    .padding(vertical = 24.dp),
+            )
         }
 
         // === Bottom Sheet Overlay ===

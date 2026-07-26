@@ -196,6 +196,16 @@ class HomeRepository @Inject constructor(
         }
     }
 
+    suspend fun getMissions(festivalId: Int? = null): Result<List<MissionItem>> {
+        return try {
+            val response = apiService.getMissions(festivalId)
+            if (response.success && response.data != null) Result.success(response.data)
+            else Result.failure(Exception(response.error?.message ?: "미션 로드 실패"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun completeMission(missionId: Int, answer: String? = null): Result<MissionCompletionResult> {
         return try {
             val body = if (answer != null) mapOf("answer" to answer) else emptyMap()

@@ -132,7 +132,7 @@ fun ProgramListScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "© 2026 Alpha Stamp. All rights reserved.",
+                    text = "2026 OLLYMOA. All rights reserved.",
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Normal,
                     fontSize = 10.sp,

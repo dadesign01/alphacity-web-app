@@ -21,17 +21,21 @@ struct ForgotPasswordView: View {
                 // 헤더
                 HStack {
                     Button(action: onBackTapped) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundStyle(Color(hex: "121212"))
+                        Image("IconBackArrow")
+                            .renderingMode(.original)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 13, height: 26)
                     }
                     Spacer()
                     Text("비밀번호 찾기")
                         .font(AppFont.semibold(18))
                         .foregroundStyle(Color(hex: "121212"))
                     Spacer()
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .medium))
+                    Image("IconBackArrow")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 13, height: 26)
                         .opacity(0)
                 }
                 .padding(.top, 16)

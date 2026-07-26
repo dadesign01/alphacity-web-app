@@ -221,7 +221,7 @@ struct RegisterView: View {
                     Spacer().frame(height: 40)
 
                     // 하단 저작권
-                    Text("© 2026 Alpha Stamp. All rights reserved.")
+                    Text("2026 OLLYMOA. All rights reserved.")
                         .font(AppFont.regular(10))
                         .foregroundStyle(Color(hex: "8F8F8F"))
                         .padding(.bottom, 40)

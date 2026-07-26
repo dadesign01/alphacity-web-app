@@ -35,6 +35,7 @@
 		<string>kakaolink</string>
 		<string>kakaoplus</string>
 		<string>kakaotalk</string>
+		<string>kakaomap</string>
 		<string>naversearchthirdlogin</string>
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>

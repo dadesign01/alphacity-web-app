@@ -393,7 +393,7 @@ fun MyPageScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "디지털 페스티벌 앱 v1.0.0",
+                        text = "올리모아 앱 v1.0.0",
                         fontFamily = Pretendard,
                         fontWeight = FontWeight.Normal,
                         fontSize = 12.sp,
@@ -469,22 +469,25 @@ fun ProfileInfoScreen(
                 modifier = Modifier.padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                ProfileInfoRow(label = "이름", value = userProfile?.name ?: "-")
-                ProfileInfoRow(label = "닉네임", value = userProfile?.nickname ?: "-")
-                ProfileInfoRow(label = "이메일", value = userProfile?.email ?: "-")
-                ProfileInfoRow(label = "휴대폰", value = userProfile?.phone ?: "-")
-                ProfileInfoRow(label = "주소", value = buildString {
-                    val addr = userProfile?.address ?: ""
-                    val detail = userProfile?.addressDetail ?: ""
-                    if (addr.isNotBlank()) append(addr)
-                    if (detail.isNotBlank()) {
-                        if (isNotBlank()) append(" ")
-                        append(detail)
-                    }
-                    if (isBlank()) append("-")
-                })
-                ProfileInfoRow(label = "생년월일", value = userProfile?.birthDate ?: "-")
-                ProfileInfoRow(label = "성별", value = genderText.ifBlank { "-" })
+                ProfileInfoRow(label = "이름", value = userProfile?.name ?: "", placeholder = "이름을 입력해주세요.")
+                ProfileInfoRow(label = "닉네임", value = userProfile?.nickname ?: "", placeholder = "닉네임을 입력해주세요.")
+                ProfileInfoRow(label = "이메일", value = userProfile?.email ?: "", placeholder = "이메일을 입력해주세요.")
+                ProfileInfoRow(label = "휴대폰", value = userProfile?.phone ?: "", placeholder = "휴대폰 번호를 입력해주세요.")
+                ProfileInfoRow(
+                    label = "주소",
+                    value = buildString {
+                        val addr = userProfile?.address ?: ""
+                        val detail = userProfile?.addressDetail ?: ""
+                        if (addr.isNotBlank()) append(addr)
+                        if (detail.isNotBlank()) {
+                            if (isNotBlank()) append(" ")
+                            append(detail)
+                        }
+                    },
+                    placeholder = "주소를 입력해주세요.",
+                )
+                ProfileInfoRow(label = "생년월일", value = userProfile?.birthDate ?: "", placeholder = "생년월일을 입력해주세요.")
+                ProfileInfoRow(label = "성별", value = genderText, placeholder = "성별을 선택해주세요.")
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -526,6 +529,7 @@ fun ProfileInfoScreen(
 private fun ProfileInfoRow(
     label: String,
     value: String,
+    placeholder: String = "-",
 ) {
     Column {
         Text(
@@ -536,12 +540,13 @@ private fun ProfileInfoRow(
             color = Color(0xFF8F8F8F),
         )
         Spacer(modifier = Modifier.height(6.dp))
+        // 값이 없으면 입력 안내 멘트를 회색으로 표시
         Text(
-            text = value,
+            text = value.ifBlank { placeholder },
             fontFamily = Pretendard,
             fontWeight = FontWeight.Normal,
             fontSize = 16.sp,
-            color = Color(0xFF121212),
+            color = if (value.isBlank()) Color(0xFFBFBFBF) else Color(0xFF121212),
         )
         Spacer(modifier = Modifier.height(12.dp))
         Divider(color = Color(0xFFEDEDED), thickness = 1.dp)

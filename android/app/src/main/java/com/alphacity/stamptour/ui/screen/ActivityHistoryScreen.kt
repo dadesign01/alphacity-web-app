@@ -4,9 +4,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -158,7 +158,13 @@ fun ActivityHistoryScreen(
         ) {
             ActivityFilter.entries.forEach { filter ->
                 val isSelected = selectedFilter == filter
-                Box(
+                val iconRes = when (filter) {
+                    ActivityFilter.STAMP -> R.drawable.activity_stamp
+                    ActivityFilter.MISSION -> R.drawable.activity_mission
+                    ActivityFilter.EVENT -> R.drawable.activity_event
+                    ActivityFilter.COUPON -> R.drawable.activity_coupon
+                }
+                Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(11.dp))
                         .background(if (isSelected) Color(0xFF121212) else Color(0xFFF8F8F8))
@@ -166,8 +172,15 @@ fun ActivityHistoryScreen(
                             selectedFilter = if (isSelected) null else filter
                         }
                         .padding(horizontal = 14.dp, vertical = 7.dp),
-                    contentAlignment = Alignment.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
+                    Image(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        contentScale = ContentScale.Fit,
+                    )
                     Text(
                         text = filter.label,
                         fontFamily = Pretendard,
@@ -188,36 +201,61 @@ fun ActivityHistoryScreen(
                 CircularProgressIndicator(color = Primary)
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+            // 스크롤 콘텐츠 (남은 공간 차지) — 푸터는 아래에 별도로 고정
+            // 빈 상태에서는 스크롤을 끄고 안내 문구를 화면 중앙에 배치
+            val historyScrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .then(
+                        if (filteredActivities.isEmpty()) Modifier
+                        else Modifier.verticalScroll(historyScrollState)
+                    ),
             ) {
-                items(filteredActivities) { activity ->
-                    ActivityItemRow(activity = activity)
-                    Divider(
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                        color = Color(0xFFB5B5B5),
-                        thickness = 0.5.dp,
-                    )
-                }
-
-                // Footer
-                item {
+                if (filteredActivities.isEmpty()) {
+                    // Empty state
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFF9F9F9))
-                            .padding(vertical = 40.dp),
+                            .weight(1f),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "© 2026 Alpha Stamp. All rights reserved.",
+                            text = "활동 이력이 없습니다.",
                             fontFamily = Pretendard,
                             fontWeight = FontWeight.Normal,
-                            fontSize = 10.sp,
+                            fontSize = 14.sp,
                             color = Color(0xFF8F8F8F),
                         )
                     }
+                } else {
+                    filteredActivities.forEach { activity ->
+                        ActivityItemRow(activity = activity)
+                        Divider(
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                            color = Color(0xFFB5B5B5),
+                            thickness = 0.5.dp,
+                        )
+                    }
                 }
+            }
+
+            // Footer - 하단 고정 (스크롤 영역 밖)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFF9F9F9))
+                    .padding(vertical = 40.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "2026 OLLYMOA. All rights reserved.",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 10.sp,
+                    color = Color(0xFF8F8F8F),
+                )
             }
         }
     }

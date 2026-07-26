@@ -43,10 +43,11 @@ struct FestivalDetailView: View {
                 // Top bar
                 HStack(spacing: 8) {
                     Button(action: onBackTapped) {
-                        Image("BackArrow")
+                        Image("IconBackArrow")
+                            .renderingMode(.original)
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 24, height: 24)
+                            .frame(width: 13, height: 26)
                     }
                     Text("축제 상세")
                         .font(AppFont.semibold(18))

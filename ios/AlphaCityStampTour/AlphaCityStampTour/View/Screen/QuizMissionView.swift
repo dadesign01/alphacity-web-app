@@ -43,9 +43,11 @@ struct QuizMissionView: View {
             // Header
             HStack(spacing: 12) {
                 Button(action: { onDismiss?() }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(Color(hex: "121212"))
+                    Image("IconBackArrow")
+                        .renderingMode(.original)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 13, height: 26)
                 }
                 Text("퀴즈 미션")
                     .font(AppFont.semibold(18))

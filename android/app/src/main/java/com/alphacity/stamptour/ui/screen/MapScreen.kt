@@ -59,6 +59,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.alphacity.stamptour.R
+import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StoreData
 import com.alphacity.stamptour.ui.theme.Pretendard
@@ -79,7 +80,6 @@ import com.kakao.vectormap.label.LabelTextBuilder
 import android.os.Handler
 import android.os.Looper
 import kotlin.math.floor
-import kotlin.math.min
 
 private data class MapCluster(
     val centerLat: Double,
@@ -98,15 +98,7 @@ private fun clusterPrograms(programs: List<ProgramItem>, zoomLevel: Int): List<M
         return valid.map { MapCluster(it.latitude!!, it.longitude!!, listOf(it)) }
     }
 
-    val gridSize = when (zoomLevel) {
-        in 0..10 -> 0.05
-        in 11..12 -> 0.02
-        13 -> 0.01
-        14 -> 0.005
-        15 -> 0.003
-        16 -> 0.0015
-        else -> 0.0008
-    }
+    val gridSize = gridSizeFor(zoomLevel)
 
     val grid = mutableMapOf<String, MutableList<ProgramItem>>()
     for (p in valid) {
@@ -121,10 +113,69 @@ private fun clusterPrograms(programs: List<ProgramItem>, zoomLevel: Int): List<M
     }
 }
 
+private fun gridSizeFor(zoomLevel: Int): Double = when (zoomLevel) {
+    in 0..10 -> 0.05
+    in 11..12 -> 0.02
+    13 -> 0.01
+    14 -> 0.005
+    15 -> 0.003
+    16 -> 0.0015
+    else -> 0.0008
+}
+
+private data class MissionCluster(
+    val centerLat: Double,
+    val centerLng: Double,
+    val missions: List<MissionItem>,
+) {
+    val count get() = missions.size
+    val isSingle get() = missions.size == 1
+}
+
+private fun clusterMissions(missions: List<MissionItem>, zoomLevel: Int): List<MissionCluster> {
+    val valid = missions.filter { it.place?.latitude != null && it.place?.longitude != null }
+    if (valid.isEmpty()) return emptyList()
+
+    if (zoomLevel >= 18) {
+        return valid.map { MissionCluster(it.place!!.latitude!!, it.place!!.longitude!!, listOf(it)) }
+    }
+
+    val gridSize = gridSizeFor(zoomLevel)
+    val grid = mutableMapOf<String, MutableList<MissionItem>>()
+    for (m in valid) {
+        val lat = m.place!!.latitude!!
+        val lng = m.place!!.longitude!!
+        val key = "${floor(lat / gridSize).toInt()}_${floor(lng / gridSize).toInt()}"
+        grid.getOrPut(key) { mutableListOf() }.add(m)
+    }
+
+    return grid.values.map { items ->
+        val avgLat = items.mapNotNull { it.place?.latitude }.average()
+        val avgLng = items.mapNotNull { it.place?.longitude }.average()
+        MissionCluster(avgLat, avgLng, items)
+    }
+}
+
+// 클러스터 탭 시 실제로 클러스터가 풀리는 최소 줌 (해제 기준인 18을 넘지 않음)
+private fun splitZoomForPrograms(programs: List<ProgramItem>, currentZoom: Int): Int {
+    for (z in (currentZoom + 1)..18) {
+        if (clusterPrograms(programs, z).size > 1) return z
+    }
+    return 18
+}
+
+private fun splitZoomForMissions(missions: List<MissionItem>, currentZoom: Int): Int {
+    for (z in (currentZoom + 1)..18) {
+        if (clusterMissions(missions, z).size > 1) return z
+    }
+    return 18
+}
+
 private data class MapCategory(val key: String, val label: String)
 
 private val categories = listOf(
     MapCategory("all", "전체"),
+    MapCategory("mission", "미션"),
     MapCategory("food", "맛집"),
     MapCategory("exhibition", "전시"),
     MapCategory("seminar", "세미나"),
@@ -140,18 +191,22 @@ fun MapScreen(
     focusLat: Double? = null,
     focusLng: Double? = null,
     onFocusConsumed: () -> Unit = {},
+    showBack: Boolean = false,
+    onBack: () -> Unit = {},
 ) {
     val filteredPrograms by viewModel.filteredPrograms.collectAsState()
     val filteredStores by viewModel.filteredStores.collectAsState()
+    val filteredMissions by viewModel.filteredMissions.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.fetchPrograms()
         viewModel.fetchStores()
+        viewModel.fetchMissions()
     }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        MapHeader(onProfileClick = onNavigateToMyPage)
+        MapHeader(onProfileClick = onNavigateToMyPage, showBack = showBack, onBack = onBack)
 
         Divider(color = Color(0xFFE2E2E2), thickness = 1.dp)
 
@@ -159,6 +214,7 @@ fun MapScreen(
             KakaoMapContent(
                 programs = filteredPrograms,
                 stores = filteredStores,
+                missions = filteredMissions,
                 onProgramClick = { program ->
                     onProgramClick(program)
                 },
@@ -202,7 +258,11 @@ fun MapScreen(
 }
 
 @Composable
-private fun MapHeader(onProfileClick: () -> Unit) {
+private fun MapHeader(
+    onProfileClick: () -> Unit,
+    showBack: Boolean = false,
+    onBack: () -> Unit = {},
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -210,38 +270,61 @@ private fun MapHeader(onProfileClick: () -> Unit) {
             .padding(start = 15.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.header_logo),
-            contentDescription = "로고",
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp)),
-            contentScale = ContentScale.Crop,
-        )
+        if (showBack) {
+            // 축제/행사 상세에서 '지도에서 보기'로 진입: 로고 대신 뒤로가기 + 제목
+            Image(
+                painter = painterResource(id = R.drawable.icon_back_arrow),
+                contentDescription = "뒤로",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .size(13.dp, 26.dp)
+                    .clickable { onBack() },
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(
+                text = "지도 상세보기",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp,
+                color = Color(0xFF121212),
+                letterSpacing = (-0.36).sp,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+        } else {
+            // 하단 탭 '지도'로 진입: 로고 + 프로필
+            Image(
+                painter = painterResource(id = R.drawable.header_logo),
+                contentDescription = "로고",
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp)),
+                contentScale = ContentScale.Crop,
+            )
 
-        Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-        Text(
-            text = "알파스탬프",
-            fontFamily = Pretendard,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 18.sp,
-            color = Color(0xFF121212),
-            letterSpacing = (-0.36).sp,
-        )
+            Text(
+                text = "올리모아",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp,
+                color = Color(0xFF121212),
+                letterSpacing = (-0.36).sp,
+            )
 
-        Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(1f))
 
-        Image(
-            painter = painterResource(id = R.drawable.icon_profile),
-            contentDescription = "프로필",
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .border(1.dp, Color(0xFFEBEBEB), CircleShape)
-                .clickable { onProfileClick() },
-            contentScale = ContentScale.Crop,
-        )
+            Image(
+                painter = painterResource(id = R.drawable.icon_profile),
+                contentDescription = "프로필",
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, Color(0xFFEBEBEB), CircleShape)
+                    .clickable { onProfileClick() },
+                contentScale = ContentScale.Crop,
+            )
+        }
     }
 }
 
@@ -249,6 +332,7 @@ private fun MapHeader(onProfileClick: () -> Unit) {
 private fun KakaoMapContent(
     programs: List<ProgramItem>,
     stores: List<StoreData> = emptyList(),
+    missions: List<MissionItem> = emptyList(),
     onProgramClick: (ProgramItem) -> Unit,
     onStoreClick: (StoreData) -> Unit = {},
     focusLat: Double? = null,
@@ -274,16 +358,20 @@ private fun KakaoMapContent(
     val latestFocusLng by rememberUpdatedState(focusLng)
     val latestOnFocusConsumed by rememberUpdatedState(onFocusConsumed)
     val currentClusters = remember { mutableListOf<MapCluster>() }
+    val currentMissionClusters = remember { mutableListOf<MissionCluster>() }
 
     // 최신 programs를 ref로 유지 (zoom 체커 클로저 stale 방지)
     val programsRef = remember { mutableListOf<ProgramItem>() }
     val storesRef = remember { mutableListOf<StoreData>() }
+    val missionsRef = remember { mutableListOf<MissionItem>() }
 
     // 현위치 마커용 상태
     var userLat by remember { mutableStateOf<Double?>(null) }
     var userLng by remember { mutableStateOf<Double?>(null) }
     // 열면 현재 위치 중심으로 자동 이동했는지 (최초 1회만 / focus 진입 시엔 생략)
     var didCenterOnUser by remember { mutableStateOf(false) }
+    // 포커스/GPS/저장 카메라가 없을 때 데이터 위치로 1회 자동 센터링했는지
+    var didCenterOnData by remember { mutableStateOf(false) }
 
     // 위치 권한 요청
     val locationLauncher = rememberLauncherForActivityResult(
@@ -335,6 +423,23 @@ private fun KakaoMapContent(
             currentClusters.addAll(
                 addClusteredMarkers(map, programs, mapState.zoomLevel, context)
             )
+
+            // 포커스/GPS/저장 카메라가 없으면 기본 좌표 대신 등록된 프로그램 위치로 1회 이동
+            if (!didCenterOnData && !didCenterOnUser && focusLat == null && focusLng == null &&
+                userLat == null && viewModel?.hasSavedCameraPosition != true
+            ) {
+                val valid = programs.filter { it.latitude != null && it.longitude != null }
+                if (valid.isNotEmpty()) {
+                    val avgLat = valid.mapNotNull { it.latitude }.average()
+                    val avgLng = valid.mapNotNull { it.longitude }.average()
+                    mapState.zoomLevel = 15
+                    map.moveCamera(
+                        CameraUpdateFactory.newCenterPosition(LatLng.from(avgLat, avgLng), 15),
+                        CameraAnimation.from(300),
+                    )
+                    didCenterOnData = true
+                }
+            }
         }
     }
 
@@ -344,6 +449,18 @@ private fun KakaoMapContent(
         storesRef.addAll(stores)
         mapState.kakaoMap?.let { map ->
             addStoreMarkers(map, stores, context)
+        }
+    }
+
+    // missions가 바뀔 때마다 ref 동기화 + 마커 갱신
+    LaunchedEffect(missions) {
+        missionsRef.clear()
+        missionsRef.addAll(missions)
+        mapState.kakaoMap?.let { map ->
+            currentMissionClusters.clear()
+            currentMissionClusters.addAll(
+                addClusteredMissionMarkers(map, missions, mapState.zoomLevel, context)
+            )
         }
     }
 
@@ -392,6 +509,11 @@ private fun KakaoMapContent(
                         override fun onMapReady(map: KakaoMap) {
                             mapState.kakaoMap = map
 
+                            // 카카오 기본 POI(식당/상호명 등) 라벨 숨김 — 우리 마커만 표시되도록.
+                            // (확대 시 주변 상호명이 계속 바뀌어 마커 라벨처럼 보이는 문제 방지)
+                            map.setPoiVisible(false)
+                            map.setPoiClickable(false)
+
                             // 우선순위: 1) focus 좌표, 2) 현재 위치(GPS), 3) 저장된 카메라 위치, 4) 기본 위치
                             val fLat = latestFocusLat
                             val fLng = latestFocusLng
@@ -414,8 +536,18 @@ private fun KakaoMapContent(
                                 mapState.zoomLevel = savedZoom
                                 map.moveCamera(CameraUpdateFactory.newCenterPosition(center, savedZoom))
                             } else {
-                                val center = LatLng.from(35.842, 128.690)
-                                map.moveCamera(CameraUpdateFactory.newCenterPosition(center, 15))
+                                // 기본: 등록된 프로그램 위치로, 없으면 기본 좌표(수성알파시티)
+                                val valid = programsRef.filter { it.latitude != null && it.longitude != null }
+                                if (valid.isNotEmpty()) {
+                                    val avgLat = valid.mapNotNull { it.latitude }.average()
+                                    val avgLng = valid.mapNotNull { it.longitude }.average()
+                                    mapState.zoomLevel = 15
+                                    map.moveCamera(CameraUpdateFactory.newCenterPosition(LatLng.from(avgLat, avgLng), 15))
+                                    didCenterOnData = true
+                                } else {
+                                    val center = LatLng.from(35.842, 128.690)
+                                    map.moveCamera(CameraUpdateFactory.newCenterPosition(center, 15))
+                                }
                             }
 
                             // 맵 준비됐을 때 이미 programs가 있으면 바로 마커 추가
@@ -429,6 +561,14 @@ private fun KakaoMapContent(
                             // 상점 마커
                             if (storesRef.isNotEmpty()) {
                                 addStoreMarkers(map, storesRef, context)
+                            }
+
+                            // 미션 마커
+                            if (missionsRef.isNotEmpty()) {
+                                currentMissionClusters.clear()
+                                currentMissionClusters.addAll(
+                                    addClusteredMissionMarkers(map, missionsRef, mapState.zoomLevel, context)
+                                )
                             }
 
                             // 현위치 마커 (이미 위치 있으면)
@@ -452,6 +592,38 @@ private fun KakaoMapContent(
                                     }
                                 }
 
+                                // 미션 클러스터 클릭
+                                if (labelId != null && labelId.startsWith("mission_")) {
+                                    val mIdx = labelId.removePrefix("mission_").toIntOrNull()
+                                    val mCluster = if (mIdx != null) currentMissionClusters.getOrNull(mIdx) else null
+                                    if (mCluster != null) {
+                                        if (mCluster.isSingle) {
+                                            // 미션이 속한 프로그램 상세로 이동 (없으면 해당 위치 줌인)
+                                            val mission = mCluster.missions.first()
+                                            val program = programsRef.firstOrNull { it.id == mission.programId }
+                                            if (program != null) {
+                                                onProgramClick(program)
+                                            } else {
+                                                map.moveCamera(
+                                                    CameraUpdateFactory.newCenterPosition(
+                                                        LatLng.from(mCluster.centerLat, mCluster.centerLng), 18
+                                                    ),
+                                                    CameraAnimation.from(300),
+                                                )
+                                            }
+                                        } else {
+                                            val newZoom = splitZoomForMissions(mCluster.missions, mapState.zoomLevel)
+                                            map.moveCamera(
+                                                CameraUpdateFactory.newCenterPosition(
+                                                    LatLng.from(mCluster.centerLat, mCluster.centerLng), newZoom
+                                                ),
+                                                CameraAnimation.from(300),
+                                            )
+                                        }
+                                        return@setOnLabelClickListener true
+                                    }
+                                }
+
                                 // 프로그램 클러스터 클릭
                                 val idx = labelId?.removePrefix("cluster_")?.toIntOrNull()
                                 val cluster = if (idx != null) currentClusters.getOrNull(idx) else null
@@ -461,7 +633,7 @@ private fun KakaoMapContent(
                                         onProgramClick(cluster.programs.first())
                                     } else {
                                         val pos = LatLng.from(cluster.centerLat, cluster.centerLng)
-                                        val newZoom = min(mapState.zoomLevel + 2, 17)
+                                        val newZoom = splitZoomForPrograms(cluster.programs, mapState.zoomLevel)
                                         map.moveCamera(
                                             CameraUpdateFactory.newCenterPosition(pos, newZoom),
                                             CameraAnimation.from(300),
@@ -504,6 +676,10 @@ private fun KakaoMapContent(
                                                 addClusteredMarkers(map, programsRef, mapState.zoomLevel, context)
                                             )
                                             addStoreMarkers(map, storesRef, context)
+                                            currentMissionClusters.clear()
+                                            currentMissionClusters.addAll(
+                                                addClusteredMissionMarkers(map, missionsRef, mapState.zoomLevel, context)
+                                            )
                                         }
                                     } catch (_: Exception) {}
                                     handler.postDelayed(this, 300)
@@ -702,6 +878,135 @@ private fun createClusterBitmap(count: Int, context: android.content.Context): B
         isFakeBoldText = true
     }
     canvas.drawText(count.toString(), badgeCx, badgeCy + textPaint.textSize / 3f, textPaint)
+
+    return bitmap
+}
+
+private fun addClusteredMissionMarkers(
+    map: KakaoMap,
+    missions: List<MissionItem>,
+    zoomLevel: Int,
+    context: android.content.Context,
+): List<MissionCluster> {
+    val labelManager = map.labelManager ?: return emptyList()
+
+    val existingLayer = labelManager.getLayer("missionMarkers")
+    existingLayer?.removeAll()
+
+    val clusters = clusterMissions(missions, zoomLevel)
+    if (clusters.isEmpty()) return clusters
+
+    val layer = existingLayer ?: labelManager.addLayer(
+        com.kakao.vectormap.label.LabelLayerOptions.from("missionMarkers")
+    ) ?: return clusters
+
+    clusters.forEachIndexed { index, cluster ->
+        val position = LatLng.from(cluster.centerLat, cluster.centerLng)
+
+        val bitmap = if (cluster.isSingle) {
+            createMissionBubbleBitmap(cluster.missions.first().name, context)
+        } else {
+            createMissionClusterBitmap(cluster.count, context)
+        }
+
+        val style = LabelStyles.from(
+            LabelStyle.from(bitmap).setApplyDpScale(false)
+        )
+
+        val options = LabelOptions.from("mission_$index", position)
+            .setStyles(style)
+            .setTexts(LabelTextBuilder().setTexts("$index"))
+            .setClickable(true)
+
+        layer.addLabel(options)
+    }
+
+    return clusters
+}
+
+private fun createMissionBubbleBitmap(name: String, context: android.content.Context): Bitmap {
+    val d = context.resources.displayMetrics.density
+    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFFFFF.toInt()
+        textSize = 13 * d
+        textAlign = Paint.Align.CENTER
+        isFakeBoldText = true
+    }
+    val paddingH = 12 * d
+    val paddingV = 8 * d
+    val boxWidth = textPaint.measureText(name) + paddingH * 2
+    val boxHeight = textPaint.textSize + paddingV * 2
+    val cornerRadius = 7 * d
+    val pointerH = 5 * d
+    val shadowPad = 5 * d
+
+    val totalW = (boxWidth + shadowPad * 2).toInt()
+    val totalH = (shadowPad + boxHeight + pointerH).toInt()
+
+    val bitmap = Bitmap.createBitmap(totalW, totalH, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val cx = totalW / 2f
+    val boxLeft = cx - boxWidth / 2
+    val boxTop = shadowPad
+
+    // 보라 배경 + 그림자 (미션 구분)
+    val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF4C27D0.toInt()
+        style = Paint.Style.FILL
+        setShadowLayer(4 * d, 0f, 2 * d, 0x33000000)
+    }
+    canvas.drawRoundRect(
+        RectF(boxLeft, boxTop, boxLeft + boxWidth, boxTop + boxHeight),
+        cornerRadius, cornerRadius, boxPaint
+    )
+
+    val pointerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF4C27D0.toInt()
+        style = Paint.Style.FILL
+    }
+    val pointerY = boxTop + boxHeight
+    val path = Path().apply {
+        moveTo(cx - 4 * d, pointerY)
+        lineTo(cx, pointerY + pointerH)
+        lineTo(cx + 4 * d, pointerY)
+        close()
+    }
+    canvas.drawPath(path, pointerPaint)
+
+    canvas.drawText(name, cx, boxTop + boxHeight / 2 + textPaint.textSize / 3f, textPaint)
+
+    return bitmap
+}
+
+private fun createMissionClusterBitmap(count: Int, context: android.content.Context): Bitmap {
+    val d = context.resources.displayMetrics.density
+    val radius = 20 * d
+    val border = 3 * d
+    val size = ((radius + border) * 2).toInt()
+
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val c = size / 2f
+
+    val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFFFFF.toInt()
+        style = Paint.Style.FILL
+    }
+    canvas.drawCircle(c, c, radius + border, borderPaint)
+
+    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF4C27D0.toInt()
+        style = Paint.Style.FILL
+    }
+    canvas.drawCircle(c, c, radius, bgPaint)
+
+    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFFFFF.toInt()
+        textSize = 15 * d
+        textAlign = Paint.Align.CENTER
+        isFakeBoldText = true
+    }
+    canvas.drawText(count.toString(), c, c + textPaint.textSize / 3f, textPaint)
 
     return bitmap
 }

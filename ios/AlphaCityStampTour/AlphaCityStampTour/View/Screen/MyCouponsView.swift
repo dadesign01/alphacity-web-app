@@ -10,6 +10,75 @@ struct MyCouponsView: View {
     @StateObject private var viewModel = MyCouponsViewModel()
     @State private var selectedCoupon: MyCouponData? = nil
 
+    // 파란 보유쿠폰 카드 + CTA + "내 쿠폰" 타이틀 (빈 상태/목록 상태 공용)
+    @ViewBuilder
+    private var couponsHeader: some View {
+        // === Blue Info Card ===
+        ZStack {
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color(hex: "EDF7FF"))
+                .frame(height: 185)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("나의 보유 쿠폰")
+                    .font(AppFont.semibold(18))
+                    .foregroundColor(Color(hex: "121212"))
+                Text("사용 시에는 해당 장소에서 고유 코드를 제시해주세요.")
+                    .font(AppFont.semibold(13))
+                    .foregroundColor(Color(hex: "3D608D"))
+                Spacer()
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 185)
+
+            Text("\(viewModel.availableCoupons.count)개")
+                .font(AppFont.bold(35))
+                .foregroundColor(AppColor.primary)
+                .padding(.trailing, 20)
+                .padding(.bottom, 20)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        }
+        .frame(height: 185)
+        .padding(.horizontal, 20)
+        .padding(.top, 30)
+
+        // === CTA Button ===
+        Button(action: onBackTapped) {
+            HStack {
+                Spacer()
+                Text("추가 쿠폰 받으러 가기")
+                    .font(AppFont.medium(16))
+                    .foregroundColor(.white)
+                Text(">")
+                    .font(AppFont.medium(16))
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            .frame(height: 56)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: "6092FF"), Color(hex: "2563EB"), Color(hex: "1551D3")],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
+
+        // === Section Title ===
+        Text("내 쿠폰")
+            .font(AppFont.semibold(18))
+            .foregroundColor(Color(hex: "121212"))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
+    }
+
     var body: some View {
         ZStack {
             Color.white.ignoresSafeArea()
@@ -35,81 +104,26 @@ struct MyCouponsView: View {
                 Divider()
                     .background(Color(hex: "E2E2E2"))
 
-                ScrollView {
+                if viewModel.availableCoupons.isEmpty {
+                    // 빈 상태: 스크롤 없이 안내 문구를 콘텐츠 영역 세로 중앙에 배치
                     VStack(spacing: 0) {
-                        // === Blue Info Card ===
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 22)
-                                .fill(Color(hex: "EDF7FF"))
-                                .frame(height: 185)
+                        couponsHeader
 
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("나의 보유 쿠폰")
-                                    .font(AppFont.semibold(18))
-                                    .foregroundColor(Color(hex: "121212"))
-                                Text("사용 시에는 해당 장소에서 고유 코드를 제시해주세요.")
-                                    .font(AppFont.semibold(13))
-                                    .foregroundColor(Color(hex: "3D608D"))
-                                Spacer()
-                            }
-                            .padding(20)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .frame(height: 185)
+                        Spacer()
 
-                            Text("\(viewModel.availableCoupons.count)개")
-                                .font(AppFont.bold(35))
-                                .foregroundColor(AppColor.primary)
-                                .padding(.trailing, 20)
-                                .padding(.bottom, 20)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                        }
-                        .frame(height: 185)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 30)
+                        Text("사용 가능한 쿠폰이 없습니다.")
+                            .font(AppFont.medium(14))
+                            .foregroundColor(Color(hex: "9CA3AF"))
+                            .frame(maxWidth: .infinity)
 
-                        // === CTA Button ===
-                        Button(action: onBackTapped) {
-                            HStack {
-                                Spacer()
-                                Text("추가 쿠폰 받으러 가기")
-                                    .font(AppFont.medium(16))
-                                    .foregroundColor(.white)
-                                Text(">")
-                                    .font(AppFont.medium(16))
-                                    .foregroundColor(.white)
-                                Spacer()
-                            }
-                            .frame(height: 56)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color(hex: "6092FF"), Color(hex: "2563EB"), Color(hex: "1551D3")],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                            )
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 16)
+                        Spacer()
+                    }
+                } else {
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            couponsHeader
 
-                        // === Section Title ===
-                        Text("내 쿠폰")
-                            .font(AppFont.semibold(18))
-                            .foregroundColor(Color(hex: "121212"))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 24)
-
-                        // === Coupon List ===
-                        if viewModel.availableCoupons.isEmpty {
-                            Text("사용 가능한 쿠폰이 없습니다.")
-                                .font(AppFont.medium(14))
-                                .foregroundColor(Color(hex: "9CA3AF"))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 40)
-                        } else {
+                            // === Coupon List ===
                             VStack(spacing: 12) {
                                 ForEach(viewModel.availableCoupons) { coupon in
                                     MyCouponCard(coupon: coupon) {
@@ -120,16 +134,16 @@ struct MyCouponsView: View {
                             .padding(.horizontal, 20)
                             .padding(.top, 16)
                         }
-
-                        // Footer
-                        Text("\u{00A9} 2026 Alpha Stamp. All rights reserved.")
-                            .font(AppFont.regular(10))
-                            .foregroundColor(Color(hex: "8F8F8F"))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
-                            .background(Color(hex: "F9F9F9"))
                     }
                 }
+
+                // === Footer (하단 고정) ===
+                Text("2026 OLLYMOA. All rights reserved.")
+                    .font(AppFont.regular(11))
+                    .foregroundColor(Color(hex: "999999"))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                    .background(Color(hex: "F9F9F9"))
             }
 
             // === Bottom Sheet Overlay ===

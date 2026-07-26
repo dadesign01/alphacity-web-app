@@ -1,6 +1,7 @@
 package com.alphacity.stamptour.ui.screen
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -18,7 +19,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.alphacity.stamptour.R
 import com.alphacity.stamptour.ui.theme.Pretendard
 import com.alphacity.stamptour.ui.theme.Primary
 import com.alphacity.stamptour.viewmodel.ForgotPasswordStep
@@ -86,13 +88,13 @@ fun ForgotPasswordScreen(
 
             // 헤더
             Box(modifier = Modifier.fillMaxWidth()) {
-                Icon(
-                    painter = painterResource(android.R.drawable.ic_menu_revert),
+                Image(
+                    painter = painterResource(id = R.drawable.icon_back_arrow),
                     contentDescription = "뒤로가기",
-                    tint = Color(0xFF121212),
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .align(Alignment.CenterStart)
-                        .size(24.dp)
+                        .size(13.dp, 26.dp)
                         .clickable { onBackClick() },
                 )
                 Text(

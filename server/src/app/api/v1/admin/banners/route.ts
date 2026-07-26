@@ -16,16 +16,24 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, imageUrl, sortOrder, isActive } = body;
+    const { title, imageUrl, sortOrder, isActive, linkType, linkId } = body;
 
     if (!title || !imageUrl) {
       return errorResponse('INVALID_INPUT', '제목과 이미지는 필수입니다');
     }
 
+    const allowedLinkTypes = ['festival', 'program', 'event'];
+    const normalizedLinkType =
+      linkType && allowedLinkTypes.includes(linkType) ? linkType : null;
+    const normalizedLinkId =
+      normalizedLinkType && linkId != null ? Number(linkId) : null;
+
     const banner = await prisma.banner.create({
       data: {
         title,
         imageUrl,
+        linkType: normalizedLinkType,
+        linkId: normalizedLinkId,
         sortOrder: sortOrder ?? 0,
         isActive: isActive ?? true,
       },

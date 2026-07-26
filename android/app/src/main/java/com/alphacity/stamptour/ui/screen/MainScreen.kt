@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.alphacity.stamptour.R
 import com.alphacity.stamptour.network.TokenManager
+import com.alphacity.stamptour.network.dto.BannerItem
 import com.alphacity.stamptour.network.dto.FestivalItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StoreData
@@ -42,6 +43,14 @@ enum class BottomTab(val title: String, val iconRes: Int) {
     MAP("지도", R.drawable.tab_map),
     STAMP("스탬프", R.drawable.tab_stamp),
     MYPAGE("마이페이지", R.drawable.tab_mypage),
+}
+
+// '지도에서 보기'로 지도 탭에 진입했을 때, 뒤로가기 시 복원할 직전 상세 화면
+private sealed interface MapBackTarget {
+    data class Program(val program: ProgramItem) : MapBackTarget
+    data class Festival(val festival: FestivalItem) : MapBackTarget
+    data class Store(val store: StoreData) : MapBackTarget
+    object Stamp : MapBackTarget
 }
 
 @Composable
@@ -64,9 +73,25 @@ fun MainScreen(
     var showGuestDialog by remember { mutableStateOf(false) }
     var mapFocusLat by remember { mutableStateOf<Double?>(null) }
     var mapFocusLng by remember { mutableStateOf<Double?>(null) }
+    // 지도/스탬프 탭 진입 맥락 (뒤로가기 복원용)
+    var mapBackTarget by remember { mutableStateOf<MapBackTarget?>(null) }
+    var stampFromHome by remember { mutableStateOf(false) }
+
+    // 지도 → 직전 상세 복원
+    val restoreFromMap = {
+        when (val t = mapBackTarget) {
+            is MapBackTarget.Program -> selectedProgram = t.program
+            is MapBackTarget.Festival -> selectedFestival = t.festival
+            is MapBackTarget.Store -> selectedStore = t.store
+            MapBackTarget.Stamp -> selectedTab = BottomTab.STAMP
+            null -> {}
+        }
+        mapBackTarget = null
+    }
 
     val isGuest = !tokenManager.isLoggedIn
     val deepLinkProgram by deepLinkViewModel.program.collectAsState()
+    val deepLinkFestival by deepLinkViewModel.festival.collectAsState()
     val activity = LocalContext.current as? Activity
 
     // 뒤로가기: 오버레이 화면이 열려있으면 닫고, 다른 탭이면 홈으로, 홈이면 백그라운드로
@@ -79,6 +104,11 @@ fun MainScreen(
             showMyCoupons -> showMyCoupons = false
             showEventHighlight -> showEventHighlight = false
             showProgramList -> { showProgramList = false; programListCategory = null }
+            mapBackTarget != null && selectedTab == BottomTab.MAP -> restoreFromMap()
+            stampFromHome && selectedTab == BottomTab.STAMP -> {
+                stampFromHome = false
+                selectedTab = BottomTab.HOME
+            }
             selectedTab != BottomTab.HOME -> selectedTab = BottomTab.HOME
             else -> activity?.moveTaskToBack(true)
         }
@@ -97,11 +127,20 @@ fun MainScreen(
         }
     }
 
+    // 배너 → 축제 링크 로드 완료 → 축제 상세 이동
+    LaunchedEffect(deepLinkFestival) {
+        deepLinkFestival?.let {
+            selectedFestival = it
+            deepLinkViewModel.clear()
+        }
+    }
+
     selectedStore?.let { store ->
         ProgramDetailScreen(
             program = store.toProgramItem(),
             onBackClick = { selectedStore = null },
             onNavigateToMap = { lat, lng ->
+                mapBackTarget = MapBackTarget.Store(store)
                 selectedStore = null
                 showProgramList = false
                 mapFocusLat = lat
@@ -117,6 +156,7 @@ fun MainScreen(
             program = program,
             onBackClick = { selectedProgram = null },
             onNavigateToMap = { lat, lng ->
+                mapBackTarget = MapBackTarget.Program(program)
                 selectedProgram = null
                 showProgramList = false
                 mapFocusLat = lat
@@ -137,6 +177,7 @@ fun MainScreen(
             },
             onProgramClick = { program -> selectedProgram = program },
             onNavigateToMap = { lat, lng ->
+                mapBackTarget = MapBackTarget.Festival(festival)
                 selectedFestival = null
                 showProgramList = false
                 mapFocusLat = lat
@@ -208,10 +249,18 @@ fun MainScreen(
                     },
                     onNavigateToEventHighlight = { showEventHighlight = true },
                     onNavigateToMap = { selectedTab = BottomTab.MAP },
-                    onNavigateToStamp = { selectedTab = BottomTab.STAMP },
+                    onNavigateToStamp = { stampFromHome = true; selectedTab = BottomTab.STAMP },
                     onNavigateToCoupons = { showMyCoupons = true },
                     onProgramClick = { program -> selectedProgram = program },
                     onFestivalClick = { festival -> selectedFestival = festival },
+                    onBannerClick = { banner ->
+                        when (banner.linkType) {
+                            "program" -> banner.linkId?.let { deepLinkViewModel.loadProgram(it) }
+                            "festival" -> banner.linkId?.let { deepLinkViewModel.loadFestival(it) }
+                            "event" -> showEventHighlight = true
+                            else -> {}
+                        }
+                    },
                     onGuestRestricted = { showGuestDialog = true },
                     isGuest = isGuest,
                 )
@@ -225,14 +274,23 @@ fun MainScreen(
                     focusLat = mapFocusLat,
                     focusLng = mapFocusLng,
                     onFocusConsumed = { mapFocusLat = null; mapFocusLng = null },
+                    showBack = mapBackTarget != null,
+                    onBack = { restoreFromMap() },
                 )
                 BottomTab.STAMP -> StampScreen(
                     onNavigateToMap = { lat, lng ->
+                        mapBackTarget = MapBackTarget.Stamp
                         mapFocusLat = lat
                         mapFocusLng = lng
                         selectedTab = BottomTab.MAP
                     },
                     onNavigateToExchange = { showStampExchange = true },
+                    onNavigateToMyPage = {
+                        if (isGuest) showGuestDialog = true
+                        else selectedTab = BottomTab.MYPAGE
+                    },
+                    showBack = stampFromHome,
+                    onBack = { stampFromHome = false; selectedTab = BottomTab.HOME },
                 )
                 BottomTab.MYPAGE -> MyPageScreen(onLogout = onLogout)
             }
@@ -246,18 +304,21 @@ fun MainScreen(
                 .fillMaxWidth()
                 .background(Color.White)
                 .navigationBarsPadding()
-                .padding(top = 8.dp, bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+                .padding(horizontal = 28.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             BottomTab.entries.forEach { tab ->
                 val isSelected = selectedTab == tab
                 Column(
                     modifier = Modifier
-                        .weight(1f)
+                        .widthIn(min = 56.dp)
                         .clickable {
                             if (isGuest && tab != BottomTab.HOME) {
                                 showGuestDialog = true
                             } else {
+                                // 하단 탭 직접 이동은 진입 맥락 초기화 (탭 루트 동작)
+                                mapBackTarget = null
+                                stampFromHome = false
                                 selectedTab = tab
                             }
                         },

@@ -1,6 +1,8 @@
 package com.alphacity.stamptour.ui.screen
 
 import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import com.alphacity.stamptour.viewmodel.MissionViewModel
 import android.content.pm.PackageManager
@@ -10,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +31,7 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.outlined.Navigation
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Timer
@@ -448,6 +452,46 @@ fun ProgramDetailScreen(
                         .padding(horizontal = 20.dp)
                         .padding(bottom = 8.dp),
                 )
+            }
+
+            // "길찾기" button (외부 지도앱으로 현위치→목적지 길찾기)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 11.dp)
+                    .height(56.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, Primary, RoundedCornerShape(8.dp))
+                    .clickable {
+                        val lat = program.latitude
+                        val lng = program.longitude
+                        if (lat != null && lng != null) {
+                            openDirections(context, program.name, lat, lng)
+                        } else {
+                            Toast.makeText(context, "위치 정보가 등록되지 않은 프로그램입니다", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Navigation,
+                        contentDescription = "길찾기",
+                        modifier = Modifier.size(20.dp),
+                        tint = Primary,
+                    )
+                    Text(
+                        text = "길찾기",
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp,
+                        color = Primary,
+                    )
+                }
             }
 
             // Action buttons: "지도에서 보기" + "참여하기"
@@ -940,5 +984,30 @@ private fun TTSSoundBars() {
                     .background(Primary),
             )
         }
+    }
+}
+
+/**
+ * 외부 지도앱으로 현위치→목적지 길찾기를 연다.
+ * 카카오맵 앱이 있으면 카카오맵으로, 없으면 카카오맵 웹 길찾기로 폴백한다.
+ */
+private fun openDirections(context: Context, name: String, lat: Double, lng: Double) {
+    val kakaoIntent = Intent(
+        Intent.ACTION_VIEW,
+        Uri.parse("kakaomap://route?ep=$lat,$lng&by=FOOT"),
+    ).apply { setPackage("net.daum.android.map") }
+
+    try {
+        context.startActivity(kakaoIntent)
+        return
+    } catch (_: ActivityNotFoundException) {
+        // 카카오맵 미설치 → 웹 길찾기로 폴백
+    }
+
+    val webUri = Uri.parse("https://map.kakao.com/link/to/${Uri.encode(name)},$lat,$lng")
+    try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, webUri))
+    } catch (_: Exception) {
+        Toast.makeText(context, "지도 앱을 열 수 없습니다", Toast.LENGTH_SHORT).show()
     }
 }

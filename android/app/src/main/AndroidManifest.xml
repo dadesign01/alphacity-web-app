@@ -7,6 +7,11 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- 외부 지도앱(카카오맵) 길찾기 호출용 패키지 가시성 (Android 11+) -->
+    <queries>
+        <package android:name="net.daum.android.map" />
+    </queries>
+
     <application
         android:name=".StampTourApplication"
         android:allowBackup="true"

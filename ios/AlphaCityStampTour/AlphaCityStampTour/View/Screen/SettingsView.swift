@@ -179,7 +179,7 @@ struct SettingsView: View {
                     settingsDivider
 
                     // Security notice
-                    Text("디지털 페스티벌 앱은 안전한 사용자 경험을 위해\n최신 보안 기술을 적용하고 있습니다.")
+                    Text("올리모아 앱은 안전한 사용자 경험을 위해\n최신 보안 기술을 적용하고 있습니다.")
                         .font(AppFont.regular(10))
                         .foregroundColor(Color(hex: "8F8F8F"))
                         .lineSpacing(4)
@@ -195,7 +195,7 @@ struct SettingsView: View {
                         .padding(.vertical, 12)
 
                     // Footer
-                    Text("© 2026 Alpha Stamp. All rights reserved.")
+                    Text("2026 OLLYMOA. All rights reserved.")
                         .font(AppFont.regular(10))
                         .foregroundColor(Color(hex: "8F8F8F"))
                         .frame(maxWidth: .infinity)

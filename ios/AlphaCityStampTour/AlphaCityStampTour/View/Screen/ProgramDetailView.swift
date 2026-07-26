@@ -5,6 +5,20 @@
 
 import SwiftUI
 
+/// 외부 지도앱으로 현위치→목적지 길찾기를 연다.
+/// 카카오맵 앱이 설치돼 있으면 카카오맵으로, 없으면 카카오맵 웹 길찾기로 폴백한다.
+private func openDirections(name: String, lat: Double, lng: Double) {
+    if let kakaoURL = URL(string: "kakaomap://route?ep=\(lat),\(lng)&by=FOOT"),
+       UIApplication.shared.canOpenURL(kakaoURL) {
+        UIApplication.shared.open(kakaoURL)
+        return
+    }
+    let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? name
+    if let webURL = URL(string: "https://map.kakao.com/link/to/\(encoded),\(lat),\(lng)") {
+        UIApplication.shared.open(webURL)
+    }
+}
+
 struct ProgramDetailView: View {
     let program: ProgramData
     var onBackTapped: (() -> Void)?
@@ -251,6 +265,31 @@ struct ProgramDetailView: View {
                             .padding(.horizontal, 20)
                             .padding(.bottom, 8)
                     }
+
+                    // "길찾기" button (외부 지도앱으로 현위치→목적지 길찾기)
+                    Button(action: {
+                        guard let lat = program.latitude, let lng = program.longitude else { return }
+                        openDirections(name: program.name, lat: lat, lng: lng)
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "location.fill")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 18, height: 18)
+                            Text("길찾기")
+                                .font(AppFont.semibold(16))
+                                .tracking(-0.32)
+                        }
+                        .foregroundColor(AppColor.primary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(AppColor.primary, lineWidth: 1)
+                        )
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 11)
 
                     // Action buttons: "지도에서 보기" + "참여하기"
                     HStack(spacing: 11) {

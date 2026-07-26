@@ -45,12 +45,6 @@ struct MyPageView: View {
             )
         } else if showActivityHistory {
             ActivityHistoryView(onBackTapped: { showActivityHistory = false })
-        } else if showProfileInfo {
-            ProfileInfoView(
-                onBackTapped: { showProfileInfo = false },
-                onEditTapped: { showEditProfile = true },
-                userProfile: viewModel.userProfile
-            )
         } else if showEditProfile {
             EditProfileView(
                 onBackTapped: {
@@ -69,6 +63,12 @@ struct MyPageView: View {
                 initialBirthDate: viewModel.userProfile?.birthDate,
                 initialGender: viewModel.userProfile?.gender,
                 viewModel: viewModel
+            )
+        } else if showProfileInfo {
+            ProfileInfoView(
+                onBackTapped: { showProfileInfo = false },
+                onEditTapped: { showEditProfile = true },
+                userProfile: viewModel.userProfile
             )
         } else if showSettings {
             SettingsView(
@@ -178,7 +178,7 @@ struct MyPageView: View {
                     Spacer().frame(height: 16)
 
                     // Menu items (white background)
-                    MenuItemRow(icon: "IconActivity", title: "활동이력") { showActivityHistory = true }
+                    MenuItemRow(icon: "icon_activity", title: "활동이력") { showActivityHistory = true }
                     menuDivider
                     MenuItemRow(icon: "IconSettings", title: "설정") { showSettings = true }
                     menuDivider
@@ -220,7 +220,7 @@ struct MyPageView: View {
                         Spacer().frame(minHeight: 40)
 
                         // App Version
-                        Text("디지털 페스티벌 앱 v1.0.0")
+                        Text("올리모아 앱 v1.0.0")
                             .font(AppFont.regular(12))
                             .foregroundColor(Color(hex: "8F8F8F"))
                             .frame(maxWidth: .infinity)
@@ -271,7 +271,7 @@ struct ProfileInfoView: View {
         case "male": return "남성"
         case "female": return "여성"
         case "other": return "기타"
-        default: return "-"
+        default: return ""
         }
     }
 
@@ -284,7 +284,7 @@ struct ProfileInfoView: View {
             if !result.isEmpty { result += " " }
             result += detail
         }
-        return result.isEmpty ? "-" : result
+        return result
     }
 
     var body: some View {
@@ -315,13 +315,13 @@ struct ProfileInfoView: View {
                     Spacer().frame(height: 24)
 
                     VStack(spacing: 20) {
-                        ProfileInfoRow(label: "이름", value: userProfile?.name ?? "-")
-                        ProfileInfoRow(label: "닉네임", value: userProfile?.nickname ?? "-")
-                        ProfileInfoRow(label: "이메일", value: userProfile?.email ?? "-")
-                        ProfileInfoRow(label: "휴대폰", value: userProfile?.phone ?? "-")
-                        ProfileInfoRow(label: "주소", value: addressText)
-                        ProfileInfoRow(label: "생년월일", value: userProfile?.birthDate ?? "-")
-                        ProfileInfoRow(label: "성별", value: genderText)
+                        ProfileInfoRow(label: "이름", value: userProfile?.name ?? "", placeholder: "이름을 입력해주세요.")
+                        ProfileInfoRow(label: "닉네임", value: userProfile?.nickname ?? "", placeholder: "닉네임을 입력해주세요.")
+                        ProfileInfoRow(label: "이메일", value: userProfile?.email ?? "", placeholder: "이메일을 입력해주세요.")
+                        ProfileInfoRow(label: "휴대폰", value: userProfile?.phone ?? "", placeholder: "휴대폰 번호를 입력해주세요.")
+                        ProfileInfoRow(label: "주소", value: addressText, placeholder: "주소를 입력해주세요.")
+                        ProfileInfoRow(label: "생년월일", value: userProfile?.birthDate ?? "", placeholder: "생년월일을 입력해주세요.")
+                        ProfileInfoRow(label: "성별", value: genderText, placeholder: "성별을 선택해주세요.")
                     }
                     .padding(.horizontal, 20)
 
@@ -360,15 +360,19 @@ struct ProfileInfoView: View {
 private struct ProfileInfoRow: View {
     let label: String
     let value: String
+    var placeholder: String = "-"
+
+    private var isEmpty: Bool { value.trimmingCharacters(in: .whitespaces).isEmpty }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(AppFont.medium(14))
                 .foregroundColor(Color(hex: "8F8F8F"))
-            Text(value)
+            // 값이 없으면 입력 안내 멘트를 회색으로 표시
+            Text(isEmpty ? placeholder : value)
                 .font(AppFont.regular(16))
-                .foregroundColor(Color(hex: "121212"))
+                .foregroundColor(isEmpty ? Color(hex: "BFBFBF") : Color(hex: "121212"))
             Spacer().frame(height: 6)
             Divider()
                 .background(Color(hex: "EDEDED"))

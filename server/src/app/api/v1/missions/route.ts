@@ -17,7 +17,27 @@ export async function GET(request: NextRequest) {
       include: { place: { select: { name: true, latitude: true, longitude: true } } },
       orderBy: { createdAt: 'desc' },
     });
-    return successResponse(missions);
+
+    const result = missions.map(mission => {
+      const rest = mission as typeof mission & { options?: string | null };
+      let parsedOptions: string[] | null = null;
+      if (rest.options) {
+        try { parsedOptions = JSON.parse(rest.options); } catch { /* ignore */ }
+      }
+      return {
+        ...rest,
+        options: parsedOptions,
+        place: rest.place
+          ? {
+              name: rest.place.name,
+              latitude: rest.place.latitude != null ? Number(rest.place.latitude) : null,
+              longitude: rest.place.longitude != null ? Number(rest.place.longitude) : null,
+            }
+          : null,
+      };
+    });
+
+    return successResponse(result);
   } catch {
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }

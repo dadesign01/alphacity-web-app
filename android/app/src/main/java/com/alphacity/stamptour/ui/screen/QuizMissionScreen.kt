@@ -3,6 +3,7 @@ package com.alphacity.stamptour.ui.screen
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.runtime.*
@@ -22,13 +22,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.alphacity.stamptour.R
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.ui.component.StampEarnedDialog
 import com.alphacity.stamptour.ui.theme.Pretendard
@@ -115,13 +118,13 @@ fun QuizMissionScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "닫기",
+            Image(
+                painter = painterResource(id = R.drawable.icon_back_arrow),
+                contentDescription = "뒤로",
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(13.dp, 26.dp)
                     .clickable { onDismiss() },
-                tint = Color(0xFF121212),
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(

@@ -298,7 +298,7 @@ fun SettingsScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "디지털 페스티벌 앱은 안전한 사용자 경험을 위해\n최신 보안 기술을 적용하고 있습니다.",
+                    text = "올리모아 앱은 안전한 사용자 경험을 위해\n최신 보안 기술을 적용하고 있습니다.",
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Normal,
                     fontSize = 10.sp,
@@ -316,7 +316,7 @@ fun SettingsScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "\u00A9 2026 Alpha Stamp. All rights reserved.",
+                    text = "2026 OLLYMOA. All rights reserved.",
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Normal,
                     fontSize = 10.sp,

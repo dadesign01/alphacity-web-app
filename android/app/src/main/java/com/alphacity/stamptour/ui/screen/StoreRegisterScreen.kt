@@ -4,10 +4,15 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
@@ -17,7 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
@@ -66,8 +74,8 @@ fun StoreRegisterScreen(
     var phoneNumber by remember { mutableStateOf("") }
     var ownerName by remember { mutableStateOf("") }
     var selectedDays by remember { mutableStateOf(setOf<String>()) }
-    var openTime by remember { mutableStateOf("09 : 00") }
-    var closeTime by remember { mutableStateOf("20 : 00") }
+    var openTime by remember { mutableStateOf("09:00") }
+    var closeTime by remember { mutableStateOf("20:00") }
     var storeCode by remember { mutableStateOf("") }
     var storeDescription by remember { mutableStateOf("") }
     var imageUrl by remember { mutableStateOf<String?>(null) }
@@ -75,6 +83,7 @@ fun StoreRegisterScreen(
     var isUploading by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
@@ -97,6 +106,11 @@ fun StoreRegisterScreen(
                 viewModel.clearResult()
             }
             is StoreRegisterViewModel.SubmitResult.Error -> {
+                Toast.makeText(
+                    context,
+                    (submitResult as StoreRegisterViewModel.SubmitResult.Error).message,
+                    Toast.LENGTH_LONG,
+                ).show()
                 viewModel.clearResult()
             }
             null -> {}
@@ -107,7 +121,11 @@ fun StoreRegisterScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .imePadding()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { focusManager.clearFocus() })
+            },
     ) {
         // === Header ===
         Row(
@@ -163,10 +181,17 @@ fun StoreRegisterScreen(
             1 -> StoreRegisterStep1(
                 selectedCategory = selectedCategory,
                 onCategorySelect = { selectedCategory = it },
-                onNext = { if (selectedCategory != null) currentStep = 2 },
+                onNext = {
+                    if (selectedCategory != null) {
+                        currentStep = 2
+                    } else {
+                        Toast.makeText(context, "상점 카테고리를 선택해주세요", Toast.LENGTH_SHORT).show()
+                    }
+                },
             )
             2 -> StoreRegisterStep2(
                 categoryLabel = selectedCategory?.label ?: "",
+                categoryIconRes = selectedCategory?.let { storeCategoryIcon(it) },
                 storeName = storeName,
                 onStoreNameChange = { storeName = it },
                 storeAddress = storeAddress,
@@ -200,20 +225,29 @@ fun StoreRegisterScreen(
                 onImagePick = { imagePicker.launch("image/*") },
                 onSubmit = {
                     if (!isSubmitting) {
-                        viewModel.registerStore(
-                            name = storeName,
-                            category = selectedCategory?.name?.lowercase() ?: "",
-                            ownerName = ownerName,
-                            phone = phoneNumber,
-                            address = storeAddress,
-                            addressDetail = storeAddressDetail,
-                            description = storeDescription,
-                            storeCode = storeCode,
-                            operatingDays = selectedDays.joinToString(","),
-                            openTime = openTime.replace(" ", ""),
-                            closeTime = closeTime.replace(" ", ""),
-                            imageUrl = imageUrl,
-                        )
+                        focusManager.clearFocus()
+                        if (storeName.isBlank() || ownerName.isBlank() || phoneNumber.isBlank()) {
+                            Toast.makeText(
+                                context,
+                                "상점명, 운영자명, 연락처를 입력해주세요",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        } else {
+                            viewModel.registerStore(
+                                name = storeName,
+                                category = selectedCategory?.name?.lowercase() ?: "",
+                                ownerName = ownerName,
+                                phone = phoneNumber,
+                                address = storeAddress,
+                                addressDetail = storeAddressDetail,
+                                description = storeDescription,
+                                storeCode = storeCode,
+                                operatingDays = selectedDays.joinToString(","),
+                                openTime = openTime.replace(" ", ""),
+                                closeTime = closeTime.replace(" ", ""),
+                                imageUrl = imageUrl,
+                            )
+                        }
                     }
                 },
             )
@@ -237,7 +271,18 @@ private fun StoreRegisterStep1(
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        Spacer(modifier = Modifier.height(140.dp))
+        Spacer(modifier = Modifier.height(100.dp))
+
+        // 상점 일러스트 아이콘
+        Image(
+            painter = painterResource(id = R.drawable.icon_store_register),
+            contentDescription = null,
+            modifier = Modifier
+                .padding(horizontal = 20.dp)
+                .size(48.dp),
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Title
         Text(
@@ -290,13 +335,7 @@ private fun StoreCategoryItem(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
-    val iconRes = when (category) {
-        StoreCategory.CAFE -> R.drawable.icon_store_cafe
-        StoreCategory.RESTAURANT -> R.drawable.icon_store_restaurant
-        StoreCategory.SHOPPING -> R.drawable.icon_store_shopping
-        StoreCategory.HOTEL -> R.drawable.icon_store_hotel
-        StoreCategory.CONVENIENCE -> R.drawable.icon_store_convenience
-    }
+    val iconRes = storeCategoryIcon(category)
 
     Row(
         modifier = Modifier
@@ -337,11 +376,27 @@ private fun StoreCategoryItem(
     }
 }
 
+// 시간 입력 자동 포맷터: 숫자만 받아 'HH:MM' 형태로 자동 콜론 삽입
+private fun formatTimeInput(input: String): String {
+    val digits = input.filter { it.isDigit() }.take(4)
+    return if (digits.length <= 2) digits else digits.substring(0, 2) + ":" + digits.substring(2)
+}
+
+// 상점 카테고리별 아이콘 리소스
+private fun storeCategoryIcon(category: StoreCategory): Int = when (category) {
+    StoreCategory.CAFE -> R.drawable.icon_store_cafe
+    StoreCategory.RESTAURANT -> R.drawable.icon_store_restaurant
+    StoreCategory.SHOPPING -> R.drawable.icon_store_shopping
+    StoreCategory.HOTEL -> R.drawable.icon_store_hotel
+    StoreCategory.CONVENIENCE -> R.drawable.icon_store_convenience
+}
+
 // ===================== Step 2: Detail Form =====================
 
 @Composable
 private fun StoreRegisterStep2(
     categoryLabel: String,
+    categoryIconRes: Int? = null,
     storeName: String,
     onStoreNameChange: (String) -> Unit,
     storeAddress: String,
@@ -367,12 +422,34 @@ private fun StoreRegisterStep2(
     onImagePick: () -> Unit,
     onSubmit: () -> Unit,
 ) {
+    val focusManager = LocalFocusManager.current
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        Spacer(modifier = Modifier.height(140.dp))
+        Spacer(modifier = Modifier.height(40.dp))
+
+        // 선택한 카테고리 아이콘 미리보기
+        categoryIconRes?.let { iconRes ->
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 20.dp)
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color(0xFFEDF7FF)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = categoryLabel,
+                    modifier = Modifier.size(36.dp),
+                    contentScale = ContentScale.Fit,
+                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Primary),
+                )
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+        }
 
         // Title
         Text(
@@ -552,13 +629,15 @@ private fun StoreRegisterStep2(
             ) {
                 BasicTextField(
                     value = openTime,
-                    onValueChange = onOpenTimeChange,
+                    onValueChange = { onOpenTimeChange(formatTimeInput(it)) },
                     textStyle = TextStyle(
                         fontFamily = Pretendard,
                         fontWeight = FontWeight.Medium,
                         fontSize = 16.sp,
-                        color = Color(0xFFBFBFBF),
+                        color = Color(0xFF121212),
                     ),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp),
@@ -583,13 +662,15 @@ private fun StoreRegisterStep2(
             ) {
                 BasicTextField(
                     value = closeTime,
-                    onValueChange = onCloseTimeChange,
+                    onValueChange = { onCloseTimeChange(formatTimeInput(it)) },
                     textStyle = TextStyle(
                         fontFamily = Pretendard,
                         fontWeight = FontWeight.Medium,
                         fontSize = 16.sp,
-                        color = Color(0xFFBFBFBF),
+                        color = Color(0xFF121212),
                     ),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp),

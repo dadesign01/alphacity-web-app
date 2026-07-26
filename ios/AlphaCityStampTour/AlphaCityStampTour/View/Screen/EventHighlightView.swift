@@ -78,7 +78,7 @@ struct EventHighlightView: View {
 
                             // Footer
                             VStack {
-                                Text("© 2026 Alpha Stamp. All rights reserved.")
+                                Text("2026 OLLYMOA. All rights reserved.")
                                     .font(AppFont.regular(10))
                                     .foregroundColor(Color(hex: "8F8F8F"))
                                     .padding(.vertical, 20)
@@ -199,7 +199,7 @@ private struct RaffleEventCard: View {
                                 .resizable()
                                 .scaledToFill()
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 130)
+                                .frame(height: 165)
                                 .clipped()
                         default:
                             placeholderImage
@@ -217,7 +217,7 @@ private struct RaffleEventCard: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 240)
+            .frame(height: 165)
             .clipShape(RoundedRectangle(cornerRadius: 22))
 
             // 상태 배지 + 제목
@@ -306,7 +306,7 @@ private struct RaffleEventCard: View {
                 .foregroundColor(Color(hex: "B5B5B5"))
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 240)
+        .frame(height: 165)
     }
 }
 

@@ -173,12 +173,6 @@ struct StampExchangeView: View {
                             .padding(.top, 12)
                         }
 
-                        // Footer
-                        Text("© 2026 Alpha Stamp. All rights reserved.")
-                            .font(AppFont.regular(10))
-                            .foregroundColor(Color(hex: "AFBFCC"))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
                     }
                 }
             }

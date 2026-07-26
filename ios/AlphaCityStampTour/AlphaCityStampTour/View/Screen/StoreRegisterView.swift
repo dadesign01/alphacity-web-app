@@ -31,6 +31,12 @@ private enum StoreCategory: String, CaseIterable {
     }
 }
 
+private func hideKeyboard() {
+    UIApplication.shared.sendAction(
+        #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
+    )
+}
+
 struct StoreRegisterView: View {
     var onBackTapped: () -> Void
 
@@ -47,10 +53,20 @@ struct StoreRegisterView: View {
     @State private var phoneNumber = ""
     @State private var ownerName = ""
     @State private var selectedDays: Set<String> = []
-    @State private var openTime = "09 : 00"
-    @State private var closeTime = "20 : 00"
+    @State private var openTime = "09:00"
+    @State private var closeTime = "20:00"
     @State private var storeCode = ""
     @State private var storeDescription = ""
+    @State private var errorMessage: String? = nil
+    @State private var showError = false
+
+    // 시간 입력 자동 포맷터: 숫자만 받아 'HH:MM' 형태로 자동 콜론 삽입
+    private func formatTimeInput(_ input: String) -> String {
+        let digits = String(input.filter { $0.isNumber }.prefix(4))
+        if digits.count <= 2 { return digits }
+        let idx = digits.index(digits.startIndex, offsetBy: 2)
+        return String(digits[..<idx]) + ":" + String(digits[idx...])
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -100,6 +116,11 @@ struct StoreRegisterView: View {
             }
         }
         .background(Color.white)
+        .alert("등록 실패", isPresented: $showError) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "등록에 실패했습니다")
+        }
     }
 
     // ===================== Step 1: Category Selection =====================
@@ -107,7 +128,17 @@ struct StoreRegisterView: View {
     private var step1CategorySelection: some View {
         ScrollView {
             VStack(spacing: 0) {
-                Spacer().frame(height: 140)
+                Spacer().frame(height: 100)
+
+                // 상점 일러스트 아이콘
+                Image("IconStoreRegister")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 48, height: 48)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+
+                Spacer().frame(height: 16)
 
                 // Title
                 Text("상점 카테고리를 선택하세요.")
@@ -166,7 +197,12 @@ struct StoreRegisterView: View {
 
                 // Next button
                 GradientActionButton(title: "다음 단계가기") {
-                    if selectedCategory != nil { currentStep = 2 }
+                    if selectedCategory != nil {
+                        currentStep = 2
+                    } else {
+                        errorMessage = "상점 카테고리를 선택해주세요"
+                        showError = true
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -179,7 +215,26 @@ struct StoreRegisterView: View {
     private var step2DetailForm: some View {
         ScrollView {
             VStack(spacing: 0) {
-                Spacer().frame(height: 140)
+                Spacer().frame(height: 40)
+
+                // 선택한 카테고리 아이콘 미리보기
+                if let category = selectedCategory {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(Color(hex: "EDF7FF"))
+                            .frame(width: 72, height: 72)
+                        Image(category.iconName)
+                            .resizable()
+                            .renderingMode(.template)
+                            .scaledToFit()
+                            .frame(width: 36, height: 36)
+                            .foregroundColor(AppColor.primary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+
+                    Spacer().frame(height: 20)
+                }
 
                 // Title
                 Text("선택하신 \(selectedCategory?.label ?? "")의 정보를 입력하세요.")
@@ -321,9 +376,11 @@ struct StoreRegisterView: View {
                 formLabel("운영 시간", required: true)
                 Spacer().frame(height: 8)
                 HStack(spacing: 0) {
-                    TextField("09 : 00", text: $openTime)
+                    TextField("09:00", text: $openTime)
                         .font(AppFont.medium(16))
-                        .foregroundColor(Color(hex: "BFBFBF"))
+                        .foregroundColor(Color(hex: "121212"))
+                        .keyboardType(.numberPad)
+                        .onChange(of: openTime) { _, v in openTime = formatTimeInput(v) }
                         .padding(.horizontal, 10)
                         .frame(height: 48)
                         .background(
@@ -336,9 +393,11 @@ struct StoreRegisterView: View {
                         .foregroundColor(Color(hex: "121212"))
                         .padding(.horizontal, 12)
 
-                    TextField("20 : 00", text: $closeTime)
+                    TextField("20:00", text: $closeTime)
                         .font(AppFont.medium(16))
-                        .foregroundColor(Color(hex: "BFBFBF"))
+                        .foregroundColor(Color(hex: "121212"))
+                        .keyboardType(.numberPad)
+                        .onChange(of: closeTime) { _, v in closeTime = formatTimeInput(v) }
                         .padding(.horizontal, 10)
                         .frame(height: 48)
                         .background(
@@ -442,6 +501,12 @@ struct StoreRegisterView: View {
                 // Submit button
                 GradientActionButton(title: viewModel.isSubmitting ? "등록 중..." : "등록 신청하기") {
                     guard !viewModel.isSubmitting else { return }
+                    hideKeyboard()
+                    if storeName.isEmpty || ownerName.isEmpty || phoneNumber.isEmpty {
+                        errorMessage = "상점명, 운영자명, 연락처를 입력해주세요"
+                        showError = true
+                        return
+                    }
                     viewModel.registerStore(
                         name: storeName,
                         category: selectedCategory?.rawValue ?? "",
@@ -463,12 +528,23 @@ struct StoreRegisterView: View {
                     case .success:
                         currentStep = 3
                         viewModel.clearResult()
-                    case .error:
+                    case .error(let message):
+                        errorMessage = message
+                        showError = true
                         viewModel.clearResult()
                     }
                 }
 
                 Spacer().frame(height: 30)
+            }
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .simultaneousGesture(TapGesture().onEnded { hideKeyboard() })
+        .toolbar {
+            // 숫자패드(운영시간) 등 리턴키 없는 키보드도 닫을 수 있도록 키보드 상단에 완료 버튼 제공
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("완료") { hideKeyboard() }
             }
         }
     }

@@ -11,6 +11,8 @@ struct BannerData: Decodable, Identifiable {
     let id: Int
     let title: String
     let imageUrl: String
+    let linkType: String?
+    let linkId: Int?
 }
 
 // MARK: - 축제
