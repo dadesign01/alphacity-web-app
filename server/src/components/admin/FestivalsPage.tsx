@@ -113,16 +113,27 @@ export default function FestivalsPage() {
     setForm(initialForm);
   };
 
-  const uploadImage = async (file: File): Promise<string | null> => {
-    const fd = new FormData();
-    fd.append('file', file);
-    try {
-      const res = await fetch('/api/v1/upload', { method: 'POST', body: fd });
-      const json = await res.json();
-      if (json.success && json.data?.url) return json.data.url as string;
-    } catch {}
-    return null;
-  };
+const uploadImage = async (file: File): Promise<string | null> => {
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try {
+    const res = await fetch('/api/v1/upload', {
+      method: 'POST',
+      body: fd,
+    });
+
+    const json = await res.json();
+
+    if (json.success && json.data?.imageUrl) {
+      return json.data.imageUrl as string;
+    }
+  } catch (error) {
+    console.error('이미지 업로드 오류:', error);
+  }
+
+  return null;
+};
 
   const handleImageUpload = async (kind: 'imageUrl' | 'bannerUrl', e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

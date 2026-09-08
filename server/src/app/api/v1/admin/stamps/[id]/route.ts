@@ -13,25 +13,66 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const { id } = await params;
     const body = await request.json();
+
     const stamp = await prisma.stamp.update({
       where: { id: Number(id) },
       data: {
-        ...(body.festivalId && { festivalId: Number(body.festivalId) }),
-        ...(body.name && { name: body.name }),
-        ...(body.conditionType && { conditionType: body.conditionType }),
-        ...(body.conditionDetail !== undefined && { conditionDetail: body.conditionDetail }),
-        ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
-        ...(body.programId !== undefined && { programId: body.programId || null }),
-        ...(body.placeId !== undefined && { placeId: body.placeId || null }),
+        ...(body.festivalId && {
+          festivalId: Number(body.festivalId),
+        }),
+
+        ...(body.name && {
+          name: body.name,
+        }),
+
+        ...(body.conditionType && {
+          conditionType: body.conditionType,
+        }),
+
+        ...(body.conditionDetail !== undefined && {
+          conditionDetail: body.conditionDetail,
+        }),
+
+        ...(body.imageUrl !== undefined && {
+          imageUrl: body.imageUrl,
+        }),
+
+        ...(body.programId !== undefined && {
+          programId: body.programId || null,
+        }),
+
+        ...(body.placeId !== undefined && {
+          placeId: body.placeId || null,
+        }),
+
+        ...(body.description !== undefined && {
+          description: body.description || null,
+        }),
+
+        ...(body.operatingHours !== undefined && {
+          operatingHours: body.operatingHours || null,
+        }),
+
+        ...(body.isActive !== undefined && {
+          isActive: Boolean(body.isActive),
+        }),
       },
     });
+
     return successResponse(stamp, '스탬프가 수정되었습니다');
   } catch {
-    return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
+    return errorResponse(
+      'SERVER_ERROR',
+      '서버 오류가 발생했습니다',
+      500,
+    );
   }
 }
 

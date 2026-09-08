@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     saveCode(phone, code);
 
     // NCP SENS SMS 발송
-    const sent = await sendSMS(phone, `[알파스탬프] 인증번호: ${code}`);
+    const sent = await sendSMS(phone, `[올리모아 모바일스탬프투어] 인증번호: ${code}`);
     if (!sent) {
       return errorResponse('SMS_FAILED', 'SMS 발송에 실패했습니다. 잠시 후 다시 시도해주세요.', 500);
     }
@@ -55,4 +55,15 @@ export async function POST(request: NextRequest) {
     console.error('[auth/send-code] failed', e);
     return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
   }
+}
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 }

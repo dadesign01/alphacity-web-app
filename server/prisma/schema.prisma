@@ -36,25 +36,18 @@ model Festival {
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
 
-  programs Program[]
-  events   Event[]
-  missions Mission[]
-  stamps   Stamp[]
-  coupons  Coupon[]
-  stores   Store[]
+  coupons     Coupon[]
+  events      Event[]
+  missions    Mission[]
+  programs    Program[]
+  stamps      Stamp[]
+  stores      Store[]
 
   @@map("festivals")
 }
 
-enum FestivalStatus {
-  scheduled
-  in_progress
-  ended
-}
-
 model Program {
   id               Int             @id @default(autoincrement())
-  festivalId       Int             @map("festival_id")
   name             String          @db.VarChar(255)
   description      String?         @db.Text
   category         ProgramCategory @default(exhibition)
@@ -74,16 +67,368 @@ model Program {
   collectStats     Boolean         @default(true) @map("collect_stats")
   createdAt        DateTime        @default(now()) @map("created_at")
   updatedAt        DateTime        @updatedAt @map("updated_at")
+  festivalId       Int             @map("festival_id")
 
-  festival      Festival       @relation(fields: [festivalId], references: [id], onDelete: Cascade)
-  events        Event[]
-  missions      Mission[]
-  stamps        Stamp[]
-  coupons       Coupon[]
-  stores        Store[]
-  programPlaces ProgramPlace[]
+  coupons          Coupon[]
+  events           Event[]
+  festival         Festival        @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  missions         Mission[]
+  programPlaces    ProgramPlace[]
+  stamps           Stamp[]
+  stores           Store[]
 
+  @@index([festivalId], map: "programs_festival_id_fkey")
   @@map("programs")
+}
+
+model User {
+  id                  Int                 @id @default(autoincrement())
+  email               String              @unique @db.VarChar(255)
+  passwordHash        String?             @map("password_hash") @db.VarChar(255)
+  nickname            String              @db.VarChar(100)
+  profileImage        String?             @map("profile_image") @db.VarChar(500)
+  provider             String?             @db.VarChar(20)
+  socialId            String?             @map("social_id") @db.VarChar(255)
+  fcmToken            String?             @map("fcm_token") @db.VarChar(500)
+  isActive             Boolean             @default(true) @map("is_active")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  phone                String?             @unique @db.VarChar(20)
+  address              String?             @db.VarChar(500)
+  addressDetail        String?             @map("address_detail") @db.VarChar(500)
+  name                 String?             @db.VarChar(100)
+  birthDate            DateTime?           @map("birth_date") @db.Date
+  gender               String?             @db.VarChar(10)
+
+  firstComeCoupon      Boolean             @default(false) @map("first_come_coupon")
+  firstComePopupShown  Boolean             @default(false) @map("first_come_popup_shown")
+
+  eventParticipants    EventParticipant[]
+  missionCompletions   MissionCompletion[]
+  userCoupons          UserCoupon[]
+  userStamps           UserStamp[]
+
+  @@unique([provider, socialId])
+  @@map("users")
+}
+
+model FirstComeCouponEvent {
+  id           Int      @id @default(autoincrement())
+  couponId     Int      @map("coupon_id")
+  maxCount     Int      @default(100) @map("max_count")
+  currentCount Int      @default(0) @map("current_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId])
+  @@map("first_come_coupon_events")
+}
+
+model Event {
+  id               Int                @id @default(autoincrement())
+  programId        Int                @map("program_id")
+  name             String             @db.VarChar(255)
+  description      String?            @db.Text
+  imageUrl         String?            @map("image_url") @db.VarChar(500)
+  type             EventType
+  startDate        DateTime           @map("start_date") @db.Date
+  endDate          DateTime           @map("end_date") @db.Date
+  reward           String?            @db.VarChar(255)
+  winnerCount      Int                @default(0) @map("winner_count")
+  participantLimit Int                @default(0) @map("participant_limit")
+  status            EventStatus        @default(scheduled)
+  price             Int?
+  duration          Int?
+  capacity          Int?
+  location          String?            @db.VarChar(500)
+  createdAt         DateTime           @default(now()) @map("created_at")
+  festivalId       Int                 @map("festival_id")
+  isVisible         Boolean            @default(true) @map("is_visible")
+  sortOrder         Int                @default(0) @map("sort_order")
+
+  participants     EventParticipant[]
+  festival         Festival           @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  program          Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([festivalId], map: "events_festival_id_fkey")
+  @@index([programId], map: "events_program_id_fkey")
+  @@map("events")
+}
+
+model EventParticipant {
+  id           Int      @id @default(autoincrement())
+  eventId      Int      @map("event_id")
+  userId       Int      @map("user_id")
+  raffleNumber Int?     @map("raffle_number")
+  joinedAt     DateTime @default(now()) @map("joined_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId], map: "event_participants_user_id_fkey")
+  @@map("event_participants")
+}
+
+model Place {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(255)
+  category      PlaceCategory
+  latitude      Decimal  @db.Decimal(10, 7)
+  longitude     Decimal  @db.Decimal(10, 7)
+  address       String?  @db.VarChar(500)
+  description   String?  @db.Text
+  imageUrl      String?  @map("image_url") @db.VarChar(500)
+  ttsText       String?  @map("tts_text") @db.Text
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  missions      Mission[]
+  programPlaces ProgramPlace[]
+  stamps        Stamp[]
+
+  @@map("places")
+}
+
+model ProgramPlace {
+  id        Int      @id @default(autoincrement())
+  programId Int      @map("program_id")
+  placeId   Int      @map("place_id")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  place   Place   @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, placeId])
+  @@index([placeId], map: "program_places_place_id_fkey")
+  @@map("program_places")
+}
+
+model Mission {
+  id          Int                 @id @default(autoincrement())
+  name        String              @db.VarChar(255)
+  type        MissionType
+  placeId     Int?                @map("place_id")
+  programId   Int?                @map("program_id")
+  stampId     Int?                @map("stamp_id")
+  question    String?             @db.Text
+  answer      String?             @db.VarChar(500)
+  options     String?             @db.Text
+  stayMinutes Int?                @map("stay_minutes")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  festivalId  Int                 @map("festival_id")
+
+  completions MissionCompletion[]
+  festival    Festival            @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  place       Place?              @relation(fields: [placeId], references: [id])
+  program     Program?            @relation(fields: [programId], references: [id])
+  stamp       Stamp?              @relation(fields: [stampId], references: [id])
+  stores      Store[]
+
+  @@index([festivalId], map: "missions_festival_id_fkey")
+  @@index([placeId], map: "missions_place_id_fkey")
+  @@index([programId], map: "missions_program_id_fkey")
+  @@index([stampId], map: "missions_stamp_id_fkey")
+  @@map("missions")
+}
+
+model MissionCompletion {
+  id          Int      @id @default(autoincrement())
+  missionId   Int      @map("mission_id")
+  userId      Int      @map("user_id")
+  completedAt DateTime @default(now()) @map("completed_at")
+
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([missionId, userId])
+  @@index([userId], map: "mission_completions_user_id_fkey")
+  @@map("mission_completions")
+}
+
+model Stamp {
+  id              Int             @id @default(autoincrement())
+  name            String          @db.VarChar(255)
+  conditionType   StampCondition   @map("condition_type")
+  conditionDetail String?         @map("condition_detail") @db.Text
+  imageUrl        String?         @map("image_url") @db.VarChar(500)
+  programId       Int?            @map("program_id")
+  placeId         Int?            @map("place_id")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  festivalId      Int             @map("festival_id")
+  description     String?         @db.Text
+  operatingHours  String?         @map("operating_hours") @db.VarChar(100)
+  qrCode          String?         @unique @map("qr_code") @db.VarChar(100)
+  isActive        Boolean         @default(true) @map("is_active")
+
+  missions   Mission[]
+  festival   Festival       @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  place      Place?         @relation(fields: [placeId], references: [id])
+  program    Program?       @relation(fields: [programId], references: [id])
+  userStamps UserStamp[]
+
+  @@unique([programId])
+  @@index([festivalId], map: "stamps_festival_id_fkey")
+  @@index([placeId], map: "stamps_place_id_fkey")
+  @@index([programId], map: "stamps_program_id_fkey")
+  @@map("stamps")
+}
+
+model UserStamp {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  stampId     Int       @map("stamp_id")
+  collectedAt DateTime  @default(now()) @map("collected_at")
+  latitude    Decimal?  @db.Decimal(10, 7)
+  longitude   Decimal?  @db.Decimal(10, 7)
+
+  stamp Stamp @relation(fields: [stampId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, stampId])
+  @@index([stampId], map: "user_stamps_stamp_id_fkey")
+  @@map("user_stamps")
+}
+
+model Coupon {
+  id             Int           @id @default(autoincrement())
+  name           String        @db.VarChar(255)
+  description    String?       @db.Text
+  requiredStamps Int           @default(0) @map("required_stamps")
+  validUntil     DateTime      @map("valid_until") @db.Date
+  imageUrl       String?       @map("image_url") @db.VarChar(500)
+  programId      Int?          @map("program_id")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  festivalId     Int           @map("festival_id")
+
+  festival             Festival              @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  program              Program?              @relation(fields: [programId], references: [id])
+  storeCoupons         StoreCoupon[]
+  userCoupons          UserCoupon[]
+  firstComeCouponEvent FirstComeCouponEvent?
+
+  @@index([festivalId], map: "coupons_festival_id_fkey")
+  @@index([programId], map: "coupons_program_id_fkey")
+  @@map("coupons")
+}
+
+model UserCoupon {
+  id          Int              @id @default(autoincrement())
+  userId      Int              @map("user_id")
+  couponId    Int              @map("coupon_id")
+  code        String           @unique @db.VarChar(50)
+  status      UserCouponStatus @default(issued)
+  storeId     Int?             @map("store_id")
+  requestedAt DateTime?        @map("requested_at")
+  usedAt      DateTime?        @map("used_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  store  Store? @relation(fields: [storeId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([couponId], map: "user_coupons_coupon_id_fkey")
+  @@index([storeId], map: "user_coupons_store_id_fkey")
+  @@index([userId], map: "user_coupons_user_id_fkey")
+  @@map("user_coupons")
+}
+
+model Store {
+  id            Int           @id @default(autoincrement())
+  name          String        @db.VarChar(255)
+  category      StoreCategory
+  ownerName     String        @map("owner_name") @db.VarChar(100)
+  phone         String        @db.VarChar(20)
+  address       String?       @db.VarChar(500)
+  addressDetail String?       @map("address_detail") @db.VarChar(500)
+  description   String?       @db.Text
+  imageUrl      String?       @map("image_url") @db.VarChar(500)
+  storeCode     String?       @unique @map("store_code") @db.VarChar(50)
+  operatingDays String?       @map("operating_days") @db.VarChar(50)
+  openTime      String?       @map("open_time") @db.VarChar(10)
+  closeTime     String?       @map("close_time") @db.VarChar(10)
+  userId        Int?          @map("user_id")
+  programId     Int?          @map("program_id")
+  status        StoreStatus   @default(pending)
+  requestDate   DateTime      @map("request_date") @db.Date
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  missionId     Int?          @map("mission_id")
+  latitude      Decimal?      @db.Decimal(10, 7)
+  longitude     Decimal?      @db.Decimal(10, 7)
+  festivalId    Int           @map("festival_id")
+
+  storeCoupons StoreCoupon[]
+  festival     Festival      @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  mission      Mission?      @relation(fields: [missionId], references: [id])
+  program      Program?      @relation(fields: [programId], references: [id])
+  userCoupons  UserCoupon[]
+
+  @@index([festivalId], map: "stores_festival_id_fkey")
+  @@index([missionId], map: "stores_mission_id_fkey")
+  @@index([programId], map: "stores_program_id_fkey")
+  @@map("stores")
+}
+
+model StoreCoupon {
+  id       Int    @id @default(autoincrement())
+  storeId  Int    @map("store_id")
+  couponId Int    @map("coupon_id")
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  store  Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, couponId])
+  @@index([couponId], map: "store_coupons_coupon_id_fkey")
+  @@map("store_coupons")
+}
+
+model Banner {
+  id        Int      @id @default(autoincrement())
+  title     String   @db.VarChar(255)
+  imageUrl  String   @map("image_url") @db.VarChar(500)
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  linkId    Int?     @map("link_id")
+  linkType  String?  @map("link_type") @db.VarChar(20)
+
+  @@map("banners")
+}
+
+model Notification {
+  id             Int                @id @default(autoincrement())
+  title          String             @db.VarChar(255)
+  message        String              @db.Text
+  target         NotificationTarget @default(all)
+  sentAt         DateTime           @default(now()) @map("sent_at")
+  recipientCount Int                @default(0) @map("recipient_count")
+  scheduledAt    DateTime?          @map("scheduled_at")
+  status         NotificationStatus @default(sent)
+
+  @@map("notifications")
+}
+
+model Term {
+  id        Int      @id @default(autoincrement())
+  type      String   @db.VarChar(50)
+  title     String   @db.VarChar(255)
+  content   String   @db.Text
+  version   String   @default("1.0") @db.VarChar(20)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("terms")
+}
+
+enum FestivalStatus {
+  scheduled
+  in_progress
+  ended
 }
 
 enum ProgramCategory {
@@ -100,63 +445,6 @@ enum ProgramStatus {
   ended
 }
 
-model User {
-  id            Int       @id @default(autoincrement())
-  email         String    @unique @db.VarChar(255)
-  passwordHash  String?   @map("password_hash") @db.VarChar(255)
-  nickname      String    @db.VarChar(100)
-  name          String?   @db.VarChar(100)
-  phone         String?   @unique @db.VarChar(20)
-  address       String?   @db.VarChar(500)
-  addressDetail String?   @map("address_detail") @db.VarChar(500)
-  profileImage  String?   @map("profile_image") @db.VarChar(500)
-  provider      String?   @db.VarChar(20)
-  socialId      String?   @map("social_id") @db.VarChar(255)
-  birthDate     DateTime? @map("birth_date") @db.Date
-  gender        String?   @db.VarChar(10)
-  fcmToken      String?   @map("fcm_token") @db.VarChar(500)
-  isActive      Boolean   @default(true) @map("is_active")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-
-  eventParticipants  EventParticipant[]
-  missionCompletions MissionCompletion[]
-  userStamps         UserStamp[]
-  userCoupons        UserCoupon[]
-
-  @@unique([provider, socialId])
-  @@map("users")
-}
-
-model Event {
-  id               Int         @id @default(autoincrement())
-  festivalId       Int         @map("festival_id")
-  programId        Int         @map("program_id")
-  name             String      @db.VarChar(255)
-  description      String?     @db.Text
-  imageUrl         String?     @map("image_url") @db.VarChar(500)
-  type             EventType
-  startDate        DateTime    @map("start_date") @db.Date
-  endDate          DateTime    @map("end_date") @db.Date
-  reward           String?     @db.VarChar(255)
-  winnerCount      Int         @default(0) @map("winner_count")
-  participantLimit Int         @default(0) @map("participant_limit")
-  status           EventStatus @default(scheduled)
-  price            Int?
-  duration         Int?
-  capacity         Int?
-  location         String?     @db.VarChar(500)
-  sortOrder        Int         @default(0) @map("sort_order")
-  isVisible        Boolean     @default(true) @map("is_visible")
-  createdAt        DateTime    @default(now()) @map("created_at")
-
-  festival     Festival           @relation(fields: [festivalId], references: [id], onDelete: Cascade)
-  program      Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
-  participants EventParticipant[]
-
-  @@map("events")
-}
-
 enum EventType {
   raffle
   first_come
@@ -169,54 +457,6 @@ enum EventStatus {
   ended
 }
 
-model EventParticipant {
-  id           Int      @id @default(autoincrement())
-  eventId      Int      @map("event_id")
-  userId       Int      @map("user_id")
-  raffleNumber Int?     @map("raffle_number")
-  joinedAt     DateTime @default(now()) @map("joined_at")
-
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([eventId, userId])
-  @@map("event_participants")
-}
-
-model Place {
-  id          Int           @id @default(autoincrement())
-  name        String        @db.VarChar(255)
-  category    PlaceCategory
-  latitude    Decimal       @db.Decimal(10, 7)
-  longitude   Decimal       @db.Decimal(10, 7)
-  address     String?       @db.VarChar(500)
-  description String?       @db.Text
-  imageUrl    String?       @map("image_url") @db.VarChar(500)
-  ttsText     String?       @map("tts_text") @db.Text
-  isActive    Boolean       @default(true) @map("is_active")
-  createdAt   DateTime      @default(now()) @map("created_at")
-
-  missions      Mission[]
-  stamps        Stamp[]
-  programPlaces ProgramPlace[]
-
-  @@map("places")
-}
-
-model ProgramPlace {
-  id        Int      @id @default(autoincrement())
-  programId Int      @map("program_id")
-  placeId   Int      @map("place_id")
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
-  place   Place   @relation(fields: [placeId], references: [id], onDelete: Cascade)
-
-  @@unique([programId, placeId])
-  @@map("program_places")
-}
-
 enum PlaceCategory {
   food
   exhibition
@@ -224,67 +464,10 @@ enum PlaceCategory {
   event
 }
 
-model Mission {
-  id          Int         @id @default(autoincrement())
-  festivalId  Int         @map("festival_id")
-  name        String      @db.VarChar(255)
-  type        MissionType
-  placeId     Int?        @map("place_id")
-  programId   Int?        @map("program_id")
-  stampId     Int?        @map("stamp_id")
-  question    String?     @db.Text
-  answer      String?     @db.VarChar(500)
-  options     String?     @db.Text
-  stayMinutes Int?        @map("stay_minutes")
-  createdAt   DateTime    @default(now()) @map("created_at")
-
-  festival    Festival            @relation(fields: [festivalId], references: [id], onDelete: Cascade)
-  place       Place?              @relation(fields: [placeId], references: [id], onDelete: SetNull)
-  program     Program?            @relation(fields: [programId], references: [id], onDelete: SetNull)
-  stamp       Stamp?              @relation(fields: [stampId], references: [id], onDelete: SetNull)
-  completions MissionCompletion[]
-  stores      Store[]
-
-  @@map("missions")
-}
-
 enum MissionType {
   quiz
   location_auth
   stay_time
-}
-
-model MissionCompletion {
-  id          Int      @id @default(autoincrement())
-  missionId   Int      @map("mission_id")
-  userId      Int      @map("user_id")
-  completedAt DateTime @default(now()) @map("completed_at")
-
-  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([missionId, userId])
-  @@map("mission_completions")
-}
-
-model Stamp {
-  id              Int            @id @default(autoincrement())
-  festivalId      Int            @map("festival_id")
-  name            String         @db.VarChar(255)
-  conditionType   StampCondition @map("condition_type")
-  conditionDetail String?        @map("condition_detail") @db.Text
-  imageUrl        String?        @map("image_url") @db.VarChar(500)
-  programId       Int?           @map("program_id")
-  placeId         Int?           @map("place_id")
-  createdAt       DateTime       @default(now()) @map("created_at")
-
-  festival   Festival    @relation(fields: [festivalId], references: [id], onDelete: Cascade)
-  program    Program?    @relation(fields: [programId], references: [id], onDelete: SetNull)
-  place      Place?      @relation(fields: [placeId], references: [id], onDelete: SetNull)
-  userStamps UserStamp[]
-  missions   Mission[]
-
-  @@map("stamps")
 }
 
 enum StampCondition {
@@ -294,109 +477,11 @@ enum StampCondition {
   quiz_correct
 }
 
-model UserStamp {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @map("user_id")
-  stampId     Int      @map("stamp_id")
-  collectedAt DateTime @default(now()) @map("collected_at")
-  latitude    Decimal? @db.Decimal(10, 7)
-  longitude   Decimal? @db.Decimal(10, 7)
-
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stamp Stamp @relation(fields: [stampId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, stampId])
-  @@map("user_stamps")
-}
-
-model Coupon {
-  id             Int      @id @default(autoincrement())
-  festivalId     Int      @map("festival_id")
-  name           String   @db.VarChar(255)
-  description    String?  @db.Text
-  requiredStamps Int      @default(0) @map("required_stamps")
-  validUntil     DateTime @map("valid_until") @db.Date
-  imageUrl       String?  @map("image_url") @db.VarChar(500)
-  programId      Int?     @map("program_id")
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  festival     Festival      @relation(fields: [festivalId], references: [id], onDelete: Cascade)
-  program      Program?      @relation(fields: [programId], references: [id], onDelete: SetNull)
-  userCoupons  UserCoupon[]
-  storeCoupons StoreCoupon[]
-
-  @@map("coupons")
-}
-
-model UserCoupon {
-  id          Int              @id @default(autoincrement())
-  userId      Int              @map("user_id")
-  couponId    Int              @map("coupon_id")
-  code        String           @unique @db.VarChar(50)
-  status      UserCouponStatus @default(issued)
-  storeId     Int?             @map("store_id")
-  requestedAt DateTime?        @map("requested_at")
-  usedAt      DateTime?        @map("used_at")
-  createdAt   DateTime         @default(now()) @map("created_at")
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
-  store  Store? @relation(fields: [storeId], references: [id], onDelete: SetNull)
-
-  @@map("user_coupons")
-}
-
 enum UserCouponStatus {
   issued
   pending
   used
   rejected
-}
-
-model Store {
-  id            Int           @id @default(autoincrement())
-  festivalId    Int           @map("festival_id")
-  name          String        @db.VarChar(255)
-  category      StoreCategory
-  ownerName     String        @map("owner_name") @db.VarChar(100)
-  phone         String        @db.VarChar(20)
-  address       String?       @db.VarChar(500)
-  addressDetail String?       @map("address_detail") @db.VarChar(500)
-  description   String?       @db.Text
-  imageUrl      String?       @map("image_url") @db.VarChar(500)
-  storeCode     String?       @unique @map("store_code") @db.VarChar(50)
-  operatingDays String?       @map("operating_days") @db.VarChar(50)
-  openTime      String?       @map("open_time") @db.VarChar(10)
-  closeTime     String?       @map("close_time") @db.VarChar(10)
-  latitude      Decimal?      @db.Decimal(10, 7)
-  longitude     Decimal?      @db.Decimal(10, 7)
-  userId        Int?          @map("user_id")
-  programId     Int?          @map("program_id")
-  missionId     Int?          @map("mission_id")
-  status        StoreStatus   @default(pending)
-  requestDate   DateTime      @map("request_date") @db.Date
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-
-  festival     Festival      @relation(fields: [festivalId], references: [id], onDelete: Cascade)
-  program      Program?      @relation(fields: [programId], references: [id], onDelete: SetNull)
-  mission      Mission?      @relation(fields: [missionId], references: [id], onDelete: SetNull)
-  userCoupons  UserCoupon[]
-  storeCoupons StoreCoupon[]
-
-  @@map("stores")
-}
-
-model StoreCoupon {
-  id       Int @id @default(autoincrement())
-  storeId  Int @map("store_id")
-  couponId Int @map("coupon_id")
-
-  store  Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
-
-  @@unique([storeId, couponId])
-  @@map("store_coupons")
 }
 
 enum StoreCategory {
@@ -413,32 +498,6 @@ enum StoreStatus {
   rejected
 }
 
-model Banner {
-  id        Int      @id @default(autoincrement())
-  title     String   @db.VarChar(255)
-  imageUrl  String   @map("image_url") @db.VarChar(500)
-  linkType  String?  @map("link_type") @db.VarChar(20) // festival | program | event | null
-  linkId    Int?     @map("link_id")                   // 연결 대상 id
-  sortOrder Int      @default(0) @map("sort_order")
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@map("banners")
-}
-
-model Notification {
-  id             Int                @id @default(autoincrement())
-  title          String             @db.VarChar(255)
-  message        String             @db.Text
-  target         NotificationTarget @default(all)
-  status         NotificationStatus @default(sent)
-  scheduledAt    DateTime?          @map("scheduled_at")
-  sentAt         DateTime           @default(now()) @map("sent_at")
-  recipientCount Int                @default(0) @map("recipient_count")
-
-  @@map("notifications")
-}
-
 enum NotificationTarget {
   all
   active
@@ -449,17 +508,4 @@ enum NotificationStatus {
   scheduled
   sent
   failed
-}
-
-model Term {
-  id        Int      @id @default(autoincrement())
-  type      String   @db.VarChar(50)
-  title     String   @db.VarChar(255)
-  content   String   @db.Text
-  version   String   @default("1.0") @db.VarChar(20)
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
-
-  @@map("terms")
 }

@@ -44,3 +44,15 @@ next-env.d.ts
 
 # firebase
 firebase-service-account.json
+
+
+# Kotlin Multiplatform / WASM
+../compose-web-test/.gradle/
+../compose-web-test/build/
+../compose-web-test/kotlin-js-store/
+../compose-web-test/local.properties
+
+# backup / temporary files
+../compose-web-test/backup_*/
+../compose-web-test/*.py
+../compose-web-test/*.ps1
