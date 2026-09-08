@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
       refreshToken,
       user: { id: user.id, email: user.email, nickname: user.nickname, profileImage: user.profileImage },
     });
-  } catch {
-    return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
-  }
+} catch (error) {
+  console.error('[Admin Login Error]', error);
+  return errorResponse('SERVER_ERROR', '서버 오류가 발생했습니다', 500);
+}
 }
