@@ -63,6 +63,7 @@ fun StayTimeMissionScreen(
     mission: MissionItem,
     programLat: Double? = null,
     programLng: Double? = null,
+    skipLocationVerification: Boolean = false,
     onDismiss: () -> Unit = {},
     onCompleted: () -> Unit = {},
 ) {
@@ -108,8 +109,8 @@ fun StayTimeMissionScreen(
     /*
      * GPS 위치 인증 완료 여부
      */
-    var locationVerified by remember(mission.id) {
-        mutableStateOf(false)
+    var locationVerified by remember {
+        mutableStateOf(skipLocationVerification)
     }
 
     /*

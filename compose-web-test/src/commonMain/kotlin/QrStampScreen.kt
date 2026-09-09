@@ -18,8 +18,11 @@ import androidx.compose.ui.Modifier
 import com.alphacity.stamptour.network.ApiService
 import com.alphacity.stamptour.network.dto.CollectStampRequest
 import com.alphacity.stamptour.network.dto.CollectStampResponse
+import com.alphacity.stamptour.network.dto.MissionItem
+import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.ValidateStampResponse
 import com.alphacity.stamptour.repository.ProgramDetailRepository
+import com.alphacity.stamptour.repository.StampRepository
 import com.alphacity.stamptour.web.WebTokenManager
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -35,7 +38,7 @@ import kotlinx.browser.window
 import web.QrTarget
 
 private const val API_BASE_URL =
-    "https://ollymoa-server.vercel.app"
+    "https://ollymoa-server.vercel.app/api/v1"
 
 private val httpClient = HttpClient {
     install(ContentNegotiation) {
@@ -69,12 +72,6 @@ fun QrStampScreen(
 
     /*
      * QR 유효성 검증 완료 여부
-     *
-     * false
-     * → 아직 QR 검증 전
-     *
-     * true
-     * → QR 검증 성공
      */
     var qrValidated by remember(target) {
         mutableStateOf(false)
@@ -82,15 +79,14 @@ fun QrStampScreen(
 
     /*
      * 행사 정보
-     *
-     * QR validate가 성공한 뒤
-     * 위치 인증에 사용할 행사 좌표를 가져온다.
      */
     var program by remember(target) {
-        mutableStateOf<com.alphacity.stamptour.network.dto.ProgramItem?>(null)
+        mutableStateOf<ProgramItem?>(null)
     }
 
-    // 로그인 확인 완료 여부
+    /*
+     * 로그인 확인 완료 여부
+     */
     var loginVerified by remember(target) {
         mutableStateOf(false)
     }
@@ -103,9 +99,7 @@ fun QrStampScreen(
     }
 
     /*
-     * 위치 인증 당시의 실제 좌표
-     *
-     * collect API에 그대로 전달한다.
+     * 위치 인증 당시 실제 좌표
      */
     var verifiedLatitude by remember(target) {
         mutableStateOf<Double?>(null)
@@ -113,6 +107,36 @@ fun QrStampScreen(
 
     var verifiedLongitude by remember(target) {
         mutableStateOf<Double?>(null)
+    }
+
+    /*
+     * 세미나 체류 미션
+     *
+     * 세미나인 경우 위치 인증 후
+     * 이 미션을 조회해서 StayTimeMissionScreen으로 넘긴다.
+     */
+    var stayMission by remember(target) {
+        mutableStateOf<MissionItem?>(null)
+    }
+
+    /*
+     * 세미나 미션 조회 중 여부
+     */
+    var missionLoading by remember(target) {
+        mutableStateOf(false)
+    }
+
+    /*
+     * 실제 스탬프 적립을 시작할 수 있는 상태
+     *
+     * 일반 행사:
+     * 위치 인증 완료 → true
+     *
+     * 세미나:
+     * 체류 미션 완료 → true
+     */
+    var collectReady by remember(target) {
+        mutableStateOf(false)
     }
 
     // =============================================================
@@ -133,11 +157,6 @@ fun QrStampScreen(
 
         // =========================================================
         // 1. QR 유효성 검증
-        //
-        // 제일 먼저 실행
-        //
-        // 실패하면 여기서 종료.
-        // GPS / 로그인 / 전화번호 인증 절대 실행하지 않음.
         // =========================================================
 
         LaunchedEffect(target) {
@@ -191,8 +210,6 @@ fun QrStampScreen(
 
                 // =================================================
                 // QR 검증 실패
-                //
-                // 여기서 바로 탈락
                 // =================================================
 
                 if (
@@ -238,8 +255,6 @@ fun QrStampScreen(
 
         // =========================================================
         // 2. QR 검증 성공 후 행사 정보 조회
-        //
-        // 위치 인증에 사용할 program 좌표를 가져온다.
         // =========================================================
 
         LaunchedEffect(
@@ -251,9 +266,6 @@ fun QrStampScreen(
                 return@LaunchedEffect
             }
 
-            /*
-             * 이미 조회했으면 다시 조회하지 않는다.
-             */
             if (program != null) {
                 return@LaunchedEffect
             }
@@ -295,6 +307,7 @@ fun QrStampScreen(
                 println("=== PROGRAM LOAD SUCCESS ===")
                 println("program id = ${loadedProgram.id}")
                 println("program name = ${loadedProgram.name}")
+                println("program category = ${loadedProgram.category}")
                 println("program location = ${loadedProgram.location}")
                 println("program latitude = ${loadedProgram.latitude}")
                 println("program longitude = ${loadedProgram.longitude}")
@@ -338,11 +351,7 @@ fun QrStampScreen(
         }
 
         // =========================================================
-        // 3. QR 검증 성공 + 행사 정보 확인 후 로그인 확인
-        //
-        // 로그인되어 있지 않으면 기존 전화번호 인증 페이지로 이동
-        //
-        // 로그인되어 있으면 위치 인증으로 바로 진행
+        // 3. QR 검증 + 행사 정보 확인 후 로그인 확인
         // =========================================================
 
         LaunchedEffect(
@@ -364,10 +373,9 @@ fun QrStampScreen(
             }
 
             /*
-             * 이미 위치 인증이 끝났다면
-             * 다시 로그인 확인하지 않는다.
+             * 이미 로그인 확인이 끝났으면 다시 확인하지 않는다.
              */
-            if (locationVerified) {
+            if (loginVerified) {
                 return@LaunchedEffect
             }
 
@@ -381,8 +389,6 @@ fun QrStampScreen(
 
             // =====================================================
             // 비로그인
-            //
-            // 기존 전화번호 인증 페이지로 이동
             // =====================================================
 
             if (accessToken.isNullOrBlank()) {
@@ -396,29 +402,199 @@ fun QrStampScreen(
 
             // =====================================================
             // 로그인 상태
-            //
-            // QrLocationVerificationScreen은
-            // 아래 UI 영역에서 표시된다.
             // =====================================================
 
             println("=== LOGIN VERIFIED ===")
+
             loginVerified = true
         }
 
         // =========================================================
-        // 4. 위치 인증 성공 후 기존 스탬프 적립 로직
+        // 4. 위치 인증 완료 후 처리
         //
-        // 여기부터는 기존 collect 로직 그대로
+        // 일반 행사:
+        //   바로 collectReady = true
+        //
+        // 세미나:
+        //   프로그램 미션 조회
+        //   → stayMission 설정
+        //   → StayTimeMissionScreen 표시
         // =========================================================
 
         LaunchedEffect(
             target,
             locationVerified,
+            program,
+        ) {
+
+            if (!locationVerified) {
+                return@LaunchedEffect
+            }
+
+            val loadedProgram =
+                program
+                    ?: return@LaunchedEffect
+
+            /*
+             * 이미 미션을 띄웠거나
+             * 적립 준비가 끝났다면 다시 실행하지 않는다.
+             */
+            if (
+                stayMission != null ||
+                collectReady ||
+                missionLoading
+            ) {
+                return@LaunchedEffect
+            }
+
+            // =====================================================
+            // 세미나
+            // =====================================================
+
+            if (loadedProgram.category == "세미나") {
+
+                println("================================")
+                println("=== SEMINAR DETECTED ===")
+                println("programId = ${loadedProgram.id}")
+                println("================================")
+
+                missionLoading = true
+
+                message =
+                    "체류 미션을 확인하고 있습니다."
+
+                try {
+
+                    val repository =
+                        StampRepository(
+                            ApiService
+                        )
+
+                    val missionResult =
+                        repository.getProgramMissions(
+                            programId = loadedProgram.id
+                        )
+
+                    missionResult
+                        .onSuccess { missions ->
+
+                            println("=== PROGRAM MISSIONS ===")
+                            println("count = ${missions.size}")
+
+                            missions.forEach { mission ->
+                                println(
+                                    "mission id = ${mission.id}, " +
+                                            "type = ${mission.type}, " +
+                                            "stayMinutes = ${mission.stayMinutes}, " +
+                                            "programId = ${mission.programId}"
+                                )
+                            }
+
+                            /*
+                             * 체류시간 미션은 stayMinutes가 존재하는
+                             * 미션으로 판단한다.
+                             */
+                            val mission =
+                                missions.firstOrNull {
+                                    it.stayMinutes != null
+                                }
+
+                            if (mission == null) {
+
+                                println(
+                                    "=== STAY MISSION NOT FOUND ==="
+                                )
+
+                                message =
+                                    "체류시간 미션을 찾을 수 없습니다."
+
+                                showAlert = true
+
+                                return@onSuccess
+                            }
+
+                            println(
+                                "=== STAY MISSION FOUND ==="
+                            )
+
+                            println(
+                                "mission id = ${mission.id}"
+                            )
+
+                            println(
+                                "stayMinutes = ${mission.stayMinutes}"
+                            )
+
+                            stayMission = mission
+                        }
+                        .onFailure { error ->
+
+                            println(
+                                "=== PROGRAM MISSION LOAD FAILED ==="
+                            )
+
+                            println(
+                                "error = ${error.message}"
+                            )
+
+                            message =
+                                "체류 미션을 불러오지 못했습니다."
+
+                            showAlert = true
+                        }
+
+                } catch (e: Exception) {
+
+                    println("================================")
+                    println("=== MISSION LOAD EXCEPTION ===")
+                    println("exception = $e")
+                    println("message = ${e.message}")
+                    println(e.stackTraceToString())
+                    println("================================")
+
+                    message =
+                        "체류 미션을 확인하는 중 오류가 발생했습니다."
+
+                    showAlert = true
+
+                } finally {
+
+                    missionLoading = false
+                }
+
+            } else {
+
+                // =================================================
+                // 일반 행사
+                // =================================================
+
+                println("=== NORMAL PROGRAM ===")
+                println("→ 바로 스탬프 적립")
+
+                collectReady = true
+            }
+        }
+
+        // =========================================================
+        // 5. 스탬프 적립
+        //
+        // 일반 행사:
+        //   위치 인증 → 여기 진입
+        //
+        // 세미나:
+        //   StayTimeMissionScreen 완료
+        //   → collectReady = true
+        //   → 여기 진입
+        // =========================================================
+
+        LaunchedEffect(
+            target,
+            collectReady,
             verifiedLatitude,
             verifiedLongitude,
         ) {
 
-            if (!locationVerified) {
+            if (!collectReady) {
                 return@LaunchedEffect
             }
 
@@ -448,8 +624,6 @@ fun QrStampScreen(
                 /*
                  * 위치 인증이 끝났는데
                  * 토큰이 없다면 정상적인 흐름이 아니다.
-                 *
-                 * 기존 로그인 페이지로 돌린다.
                  */
                 if (accessToken.isNullOrBlank()) {
 
@@ -570,13 +744,64 @@ fun QrStampScreen(
     // 화면
     // =============================================================
 
-    if (
-        target != null &&
-        qrValidated &&
-        program != null &&
-        loginVerified &&
-        !locationVerified &&
-        !showAlert
+    /*
+     * 세미나 체류 미션
+     *
+     * QR 화면에서 이미 위치 인증을 완료했기 때문에
+     * skipLocationVerification = true
+     *
+     * 따라서 여기서 위치 인증을 다시 하지 않는다.
+     */
+    stayMission?.let { mission ->
+
+        StayTimeMissionScreen(
+            mission = mission,
+
+            programLat =
+                program?.latitude,
+
+            programLng =
+                program?.longitude,
+
+            skipLocationVerification = true,
+
+            onCompleted = {
+
+                println("================================")
+                println("=== STAY MISSION COMPLETED ===")
+                println("→ STAMP COLLECT READY")
+                println("================================")
+
+                /*
+                 * 미션 완료 후에만
+                 * 스탬프 적립을 시작한다.
+                 */
+                collectReady = true
+            },
+
+            onDismiss = {
+
+                println(
+                    "=== STAY MISSION DISMISSED ==="
+                )
+
+                stayMission = null
+
+                /*
+                 * 미션 화면을 닫은 경우
+                 * QR 화면으로 돌아온다.
+                 */
+                exitQrPage()
+            },
+        )
+
+    } else if (
+    target != null &&
+            qrValidated &&
+            program != null &&
+            loginVerified &&
+            !locationVerified &&
+            !showAlert
     ) {
 
         val targetLatitude =
@@ -593,15 +818,18 @@ fun QrStampScreen(
             QrLocationVerificationScreen(
                 targetLatitude = targetLatitude,
                 targetLongitude = targetLongitude,
+
                 placeName =
                     program!!.location
                         ?: program!!.name,
+
                 onVerified = { latitude, longitude ->
 
                     println("================================")
                     println("=== QR LOCATION VERIFIED ===")
                     println("latitude = $latitude")
                     println("longitude = $longitude")
+                    println("category = ${program?.category}")
                     println("================================")
 
                     verifiedLatitude = latitude
@@ -609,6 +837,7 @@ fun QrStampScreen(
 
                     locationVerified = true
                 },
+
                 onExit = {
                     exitQrPage()
                 },
