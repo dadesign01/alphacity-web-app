@@ -53,6 +53,8 @@ import com.alphacity.stamptour.network.dto.FestivalItem
 import com.alphacity.stamptour.repository.HomeRepository
 import kotlinx.browser.document
 import kotlinx.browser.window
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.w3c.dom.HTMLImageElement
 
 private val Primary = Color(0xFF02CDF8)
@@ -153,149 +155,180 @@ fun HomeScreen(
         mutableStateOf(false)
     }
 
+    // ========================================================
+    // 홈 기본 데이터 로딩
+    //
+    // First Come Coupon API는 여기서 호출하지 않는다.
+    // 홈 화면에 필요한 기본 API만 동시에 요청한다.
+    // ========================================================
+
     LaunchedEffect(Unit) {
         isLoading = true
 
-        // ============================================
-        // 배너 조회
-        // ============================================
+        coroutineScope {
 
-        ApiService.getBanners()
-            .let { response ->
-                if (response.success) {
-                    banners = response.data.orEmpty()
+            // ------------------------------------------------
+            // 기본 홈 API 요청을 먼저 전부 시작한다.
+            // ------------------------------------------------
 
-                    println(
-                        "[HomeScreen] banners size = ${banners.size}"
-                    )
+            val bannersDeferred = async {
+                try {
+                    ApiService.getBanners()
+                } catch (_: Exception) {
+                    null
+                }
+            }
 
-                    println(
-                        "[HomeScreen] banners = $banners"
-                    )
+            val festivalsDeferred = async {
+                repository.getFestivals()
+            }
+
+            val programsDeferred = async {
+                repository.getPrograms()
+            }
+
+            val stampsDeferred = async {
+                repository.getStamps()
+            }
+
+            val userStampsDeferred = async {
+                if (!isGuest) {
+                    repository.getUserStamps()
                 } else {
-                    println(
-                        "[HomeScreen] 배너 조회 실패"
-                    )
+                    null
                 }
             }
 
-        // ============================================
-        // 축제 조회
-        // ============================================
+            // ------------------------------------------------
+            // Banners
+            // ------------------------------------------------
 
-        repository.getFestivals()
-            .onSuccess { result ->
-                println(
-                    "[HomeScreen] festivals size = ${result.size}"
-                )
+            val bannersResponse = bannersDeferred.await()
 
-                println(
-                    "[HomeScreen] festivals = $result"
-                )
-
-                festivals = result
-            }
-            .onFailure { error ->
-                println(
-                    "[HomeScreen] 축제 조회 실패: ${error.message}"
-                )
+            if (
+                bannersResponse != null &&
+                bannersResponse.success
+            ) {
+                banners = bannersResponse.data.orEmpty()
+            } else {
+                banners = emptyList()
             }
 
-        // ============================================
-        // 프로그램 / 이벤트 조회
-        // ============================================
+            // ------------------------------------------------
+            // Festivals
+            // ------------------------------------------------
 
-        repository.getPrograms()
-            .onSuccess { programs ->
-                events = programs
-                    .flatMap { program ->
-                        program.events.orEmpty()
+            festivalsDeferred
+                .await()
+                .onSuccess { result ->
+                    festivals = result
+                }
+                .onFailure {
+                    festivals = emptyList()
+                }
+
+            // ------------------------------------------------
+            // Programs / Events
+            // ------------------------------------------------
+
+            programsDeferred
+                .await()
+                .onSuccess { programs ->
+                    events = programs
+                        .flatMap { program ->
+                            program.events.orEmpty()
+                        }
+                        .distinctBy { event ->
+                            event.id
+                        }
+                        .sortedBy { event ->
+                            event.startDate
+                        }
+                }
+                .onFailure {
+                    events = emptyList()
+                }
+
+            // ------------------------------------------------
+            // All Stamps
+            // ------------------------------------------------
+
+            stampsDeferred
+                .await()
+                .onSuccess { stamps ->
+                    totalStamps = stamps.size
+                }
+                .onFailure {
+                    totalStamps = 0
+                }
+
+            // ------------------------------------------------
+            // User Stamps
+            // ------------------------------------------------
+
+            if (!isGuest) {
+                userStampsDeferred
+                    .await()
+                    ?.onSuccess { userStamps ->
+                        stampCount = userStamps
+                            .distinctBy { it.stampId }
+                            .size
                     }
-                    .distinctBy { event ->
-                        event.id
+                    ?.onFailure {
+                        stampCount = 0
                     }
-                    .sortedBy { event ->
-                        event.startDate
-                    }
+            } else {
+                stampCount = 0
             }
-            .onFailure { error ->
-                println(
-                    "[HomeScreen] 이벤트 조회 실패: ${error.message}"
-                )
-            }
-
-        // ============================================
-        // 전체 스탬프 조회
-        // ============================================
-
-        repository.getStamps()
-            .onSuccess { stamps ->
-                totalStamps = stamps.size
-
-                println(
-                    "[HomeScreen] total stamps = ${stamps.size}"
-                )
-            }
-            .onFailure { error ->
-                println(
-                    "[HomeScreen] 전체 스탬프 조회 실패: ${error.message}"
-                )
-
-                totalStamps = 0
-            }
-
-        // ============================================
-        // 사용자 스탬프 / 선착순 쿠폰 팝업
-        // ============================================
-
-        if (!isGuest) {
-            repository.getUserStamps()
-                .onSuccess { userStamps ->
-                    stampCount = userStamps
-                        .distinctBy { it.stampId }
-                        .size
-
-                    println(
-                        "[HomeScreen] my stamps = ${userStamps.size}"
-                    )
-
-                    println(
-                        "[HomeScreen] distinct my stamps = $stampCount"
-                    )
-                }
-                .onFailure { error ->
-                    println(
-                        "[HomeScreen] 내 스탬프 조회 실패: ${error.message}"
-                    )
-
-                    stampCount = 0
-                }
-
-            try {
-                val popupResponse =
-                    ApiService.checkFirstComeCouponPopup()
-
-                if (
-                    popupResponse.success &&
-                    popupResponse.data == true
-                ) {
-                    showFirstComeCouponPopup = true
-                }
-
-                println(
-                    "[HomeScreen] first come popup = ${popupResponse.data}"
-                )
-            } catch (error: Exception) {
-                println(
-                    "[HomeScreen] 선착순 쿠폰 팝업 확인 실패: ${error.message}"
-                )
-            }
-        } else {
-            stampCount = 0
         }
+
+        // ====================================================
+        // 중요:
+        // First Come Coupon API와 관계없이
+        // 홈 기본 화면은 여기서 바로 로딩 완료 처리한다.
+        // ====================================================
 
         isLoading = false
     }
+
+    // ========================================================
+    // First Come Coupon Popup API
+    //
+    // 홈 기본 데이터 로딩과 완전히 분리한다.
+    //
+    // 현재는 로그인 사용자에게만 호출한다.
+    // 추후 신규 사용자 조건을 찾으면 이 if 조건에 추가한다.
+    // ========================================================
+
+    LaunchedEffect(isGuest) {
+
+        // 게스트는 First Come Coupon API 자체를 호출하지 않는다.
+        if (isGuest) {
+            showFirstComeCouponPopup = false
+            return@LaunchedEffect
+        }
+
+        try {
+            val popupResponse =
+                ApiService.checkFirstComeCouponPopup()
+
+            if (
+                popupResponse.success &&
+                popupResponse.data == true
+            ) {
+                showFirstComeCouponPopup = true
+            } else {
+                showFirstComeCouponPopup = false
+            }
+
+        } catch (_: Exception) {
+            showFirstComeCouponPopup = false
+        }
+    }
+
+    // ========================================================
+    // UI
+    // ========================================================
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
@@ -410,7 +443,7 @@ fun HomeScreen(
             // 선착순 5,000원 쿠폰 팝업
             // ============================================
 
-            if (showFirstComeCouponPopup) {
+            if (showFirstComeCouponPopup && !isGuest) {
                 FirstComeCouponPopup(
                     viewportHeight = viewportHeight,
                     onMapClick = {
@@ -440,19 +473,45 @@ private fun FirstComeCouponPopup(
     val popupWidth = 308.dp
     val popupHeight = vh(viewportHeight, 350f)
 
+    // ========================================================
+    // 전체 화면 Overlay
+    //
+    // 바깥 영역을 클릭하면 팝업이 닫힌다.
+    // ========================================================
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Color.Black.copy(alpha = 0.55f)
-            ),
+            )
+            .clickable {
+                onCloseClick()
+            },
         contentAlignment = Alignment.Center,
     ) {
+
+        // ====================================================
+        // 팝업 영역
+        //
+        // 팝업 이미지 자체를 눌러도 닫힌다.
+        // 단, 아래의 지도 버튼 / X 버튼은
+        // 각각 자신의 click 이벤트를 처리한다.
+        // ====================================================
+
         Box(
             modifier = Modifier
                 .width(popupWidth)
-                .height(popupHeight),
+                .height(popupHeight)
+                .clickable {
+                    onCloseClick()
+                },
         ) {
+
+            // =================================================
+            // Popup Image
+            // =================================================
+
             WebElementView(
                 factory = {
                     (document.createElement("img") as HTMLImageElement).apply {
@@ -483,15 +542,30 @@ private fun FirstComeCouponPopup(
                 },
             )
 
+            // =================================================
+            // 하단 지도 이동 영역
+            //
+            // 클릭하면 팝업을 닫고 지도 화면으로 이동한다.
+            // =================================================
+
             Box(
                 modifier = Modifier
                     .width(popupWidth)
-                    .height(vh(viewportHeight, 70f))
+                    .height(
+                        vh(
+                            viewportHeight,
+                            70f
+                        )
+                    )
                     .align(Alignment.BottomCenter)
                     .clickable {
                         onMapClick()
                     },
             )
+
+            // =================================================
+            // X 닫기 버튼
+            // =================================================
 
             Box(
                 modifier = Modifier
@@ -499,7 +573,10 @@ private fun FirstComeCouponPopup(
                     .align(Alignment.TopEnd)
                     .offset(
                         x = (-45).dp,
-                        y = vh(viewportHeight, 18f),
+                        y = vh(
+                            viewportHeight,
+                            18f
+                        ),
                     )
                     .clickable {
                         onCloseClick()

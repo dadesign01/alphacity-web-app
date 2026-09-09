@@ -40,6 +40,24 @@ import web.QrTarget
 private const val API_BASE_URL =
     "https://ollymoa-server.vercel.app/api/v1"
 
+/*
+ * =============================================================
+ * TEMP TEST
+ *
+ * 오늘 세미나 행사 테스트용
+ *
+ * 세미나:
+ *   QR 위치 인증 X
+ *   체류 미션 위치 인증 X
+ *
+ * 일반 행사:
+ *   기존 위치 인증 그대로
+ *
+ * 테스트 끝나면 이 부분을 원래 로직으로 되돌리면 됨.
+ * =============================================================
+ */
+private const val TEMP_SKIP_SEMINAR_LOCATION = true
+
 private val httpClient = HttpClient {
     install(ContentNegotiation) {
         json()
@@ -292,16 +310,26 @@ fun QrStampScreen(
                 println("program latitude = ${loadedProgram.latitude}")
                 println("program longitude = ${loadedProgram.longitude}")
 
+                /*
+                 * =================================================
+                 * 세미나 여부
+                 *
+                 * DB에 혹시 "세미나 "처럼 공백이 들어가 있어도
+                 * 정상적으로 세미나로 인식하도록 trim().
+                 * =================================================
+                 */
+
+                val isSeminar = loadedProgram.category?.trim() == "세미나"
+
                 // =================================================
-                // 일반 행사만 위치 좌표 확인
+                // 일반 행사만 위치 좌표 필수
                 //
-                // 세미나는 오늘 임시 테스트를 위해
-                // 위치 인증을 하지 않으므로 여기서 좌표가 없어도
-                // QR 흐름을 막지 않는다.
+                // 세미나는 오늘 임시 테스트이므로
+                // 프로그램 좌표가 없어도 QR 흐름을 막지 않는다.
                 // =================================================
 
                 if (
-                    loadedProgram.category != "세미나" &&
+                    !isSeminar &&
                     (
                             loadedProgram.latitude == null ||
                                     loadedProgram.longitude == null
@@ -320,6 +348,29 @@ fun QrStampScreen(
                 }
 
                 program = loadedProgram
+
+                // =================================================
+                // TEMP
+                //
+                // 세미나는 위치 인증 자체를 완료 처리한다.
+                //
+                // 실제 위치를 확인한 것은 아니고,
+                // 이후 일반 행사 위치 인증 화면으로 들어가지
+                // 않도록 상태만 true로 만든다.
+                // =================================================
+
+                if (
+                    TEMP_SKIP_SEMINAR_LOCATION &&
+                    isSeminar
+                ) {
+
+                    println("================================")
+                    println("=== TEMP SEMINAR LOCATION SKIP ===")
+                    println("locationVerified = true")
+                    println("================================")
+
+                    locationVerified = true
+                }
 
             } catch (e: Exception) {
 
@@ -401,9 +452,8 @@ fun QrStampScreen(
         //   → collectReady = true
         //
         // 세미나:
-        //   오늘 임시 테스트
-        //   → 위치 인증 SKIP
-        //   → 바로 미션 조회
+        //   위치 인증 완전 생략
+        //   → 체류 미션 조회
         //   → stayMission 표시
         // =========================================================
 
@@ -422,14 +472,19 @@ fun QrStampScreen(
                 return@LaunchedEffect
             }
 
-            val isSeminar =
-                loadedProgram.category == "세미나"
+            val isSeminar = loadedProgram.category?.trim() == "세미나"
 
             // =====================================================
-            // 일반 행사는 기존대로 위치 인증 완료 후 진행
+            // 일반 행사
+            //
+            // 기존대로 위치 인증 완료 후 진행
             // =====================================================
 
-            if (!isSeminar && !locationVerified) {
+            if (
+                !isSeminar &&
+                !locationVerified
+            ) {
+
                 return@LaunchedEffect
             }
 
@@ -438,22 +493,25 @@ fun QrStampScreen(
                 collectReady ||
                 missionLoading
             ) {
+
                 return@LaunchedEffect
             }
 
             // =====================================================
             // 세미나
             //
-            // 오늘 임시:
-            // 위치 인증을 완전히 건너뛰고
-            // 바로 체류 미션을 조회한다.
+            // TEMP:
+            // 위치 인증 없이 바로 체류 미션 조회
             // =====================================================
 
-            if (isSeminar) {
+            if (
+                TEMP_SKIP_SEMINAR_LOCATION &&
+                isSeminar
+            ) {
 
                 println("================================")
                 println("=== SEMINAR DETECTED ===")
-                println("=== TEMP: SKIP LOCATION ===")
+                println("=== TEMP: LOCATION SKIP ===")
                 println("programId = ${loadedProgram.id}")
                 println("================================")
 
@@ -477,10 +535,16 @@ fun QrStampScreen(
                     missionResult
                         .onSuccess { missions ->
 
-                            println("=== PROGRAM MISSIONS ===")
-                            println("count = ${missions.size}")
+                            println(
+                                "=== PROGRAM MISSIONS ==="
+                            )
+
+                            println(
+                                "count = ${missions.size}"
+                            )
 
                             missions.forEach { mission ->
+
                                 println(
                                     "mission id = ${mission.id}, " +
                                             "type = ${mission.type}, " +
@@ -493,6 +557,7 @@ fun QrStampScreen(
                              * 체류시간 미션은
                              * stayMinutes가 존재하는 미션으로 판단
                              */
+
                             val mission =
                                 missions.firstOrNull {
                                     it.stayMinutes != null
@@ -578,11 +643,10 @@ fun QrStampScreen(
         // 5. 스탬프 적립
         //
         // 일반 행사:
-        //   위치 인증 좌표 사용
+        //   실제 위치 인증 좌표 사용
         //
         // 세미나:
-        //   오늘 임시 테스트
-        //   위치 인증을 하지 않았으므로
+        //   TEMP
         //   프로그램에 등록된 행사 좌표 사용
         // =========================================================
 
@@ -602,30 +666,30 @@ fun QrStampScreen(
                 program
                     ?: return@LaunchedEffect
 
-            val isSeminar =
-                loadedProgram.category == "세미나"
-
+            val isSeminar = loadedProgram.category?.trim() == "세미나"
             // =====================================================
-            // 일반 행사
-            //
-            // 실제 위치 인증 좌표가 반드시 있어야 한다.
+            // 좌표 결정
             // =====================================================
 
             val currentLatitude: Double
             val currentLongitude: Double
 
-            if (isSeminar) {
+            if (
+                TEMP_SKIP_SEMINAR_LOCATION &&
+                isSeminar
+            ) {
 
                 // =================================================
-                // 오늘 임시 테스트
+                // TEMP
                 //
-                // 세미나는 위치 인증을 하지 않았으므로
-                // 프로그램에 등록된 좌표를 사용한다.
+                // 세미나는 실제 위치 인증을 하지 않았으므로
+                // 행사에 등록된 좌표를 사용한다.
                 // =================================================
 
                 currentLatitude =
                     loadedProgram.latitude
                         ?: run {
+
                             message =
                                 "행사 위치 정보가 없습니다."
 
@@ -637,6 +701,7 @@ fun QrStampScreen(
                 currentLongitude =
                     loadedProgram.longitude
                         ?: run {
+
                             message =
                                 "행사 위치 정보가 없습니다."
 
@@ -653,6 +718,12 @@ fun QrStampScreen(
                 println("================================")
 
             } else {
+
+                // =================================================
+                // 일반 행사
+                //
+                // 실제 위치 인증 좌표가 반드시 있어야 한다.
+                // =================================================
 
                 currentLatitude =
                     verifiedLatitude
@@ -796,6 +867,7 @@ fun QrStampScreen(
     /*
      * 1. Alert
      */
+
     if (showAlert) {
 
         AlertDialog(
@@ -812,11 +884,13 @@ fun QrStampScreen(
             },
 
             confirmButton = {
+
                 TextButton(
                     onClick = {
                         exitQrPage()
                     }
                 ) {
+
                     Text("확인")
                 }
             },
@@ -826,12 +900,13 @@ fun QrStampScreen(
     /*
      * 2. 세미나 체류 미션
      *
-     * 오늘 임시:
+     * TEMP:
      * skipLocationVerification = true
      *
      * 따라서 체류 미션 내부에서도
      * 위치 인증을 하지 않는다.
      */
+
     else if (stayMission != null) {
 
         StayTimeMissionScreen(
@@ -843,6 +918,11 @@ fun QrStampScreen(
             programLng =
                 program?.longitude,
 
+            /*
+             * TEMP
+             *
+             * 체류 미션 내부 위치 인증 완전 생략
+             */
             skipLocationVerification = true,
 
             onCompleted = {
@@ -850,11 +930,11 @@ fun QrStampScreen(
                 println("================================")
                 println("=== STAY MISSION COMPLETED ===")
                 println("=== TEMP LOCATION SKIPPED ===")
-                println("→ STAMP COLLECT READY")
+                println("=== STAMP COLLECT READY ===")
                 println("================================")
 
                 /*
-                 * 미션 화면 종료
+                 * 체류 미션 화면 종료
                  */
                 stayMission = null
 
@@ -880,9 +960,11 @@ fun QrStampScreen(
     /*
      * 3. 일반 행사 위치 인증
      *
-     * 세미나는 여기로 절대 들어오지 않는다.
+     * 세미나는 절대 여기로 들어오지 않는다.
      */
+
     else if (
+
         target != null &&
         qrValidated &&
         program != null &&
@@ -903,26 +985,38 @@ fun QrStampScreen(
         ) {
 
             QrLocationVerificationScreen(
-                targetLatitude = targetLatitude,
-                targetLongitude = targetLongitude,
+                targetLatitude =
+                    targetLatitude,
+
+                targetLongitude =
+                    targetLongitude,
 
                 placeName =
                     program!!.location
                         ?: program!!.name,
 
-                onVerified = { latitude, longitude ->
+                onVerified = {
+                        latitude,
+                        longitude ->
 
                     println("================================")
                     println("=== QR LOCATION VERIFIED ===")
                     println("latitude = $latitude")
                     println("longitude = $longitude")
-                    println("category = ${program?.category}")
+                    println(
+                        "category = " +
+                                program?.category
+                    )
                     println("================================")
 
-                    verifiedLatitude = latitude
-                    verifiedLongitude = longitude
+                    verifiedLatitude =
+                        latitude
 
-                    locationVerified = true
+                    verifiedLongitude =
+                        longitude
+
+                    locationVerified =
+                        true
                 },
 
                 onExit = {
@@ -933,15 +1027,21 @@ fun QrStampScreen(
         } else {
 
             Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+                modifier =
+                    Modifier.fillMaxSize(),
+
+                horizontalAlignment =
+                    Alignment.CenterHorizontally,
+
+                verticalArrangement =
+                    Arrangement.Center,
             ) {
 
                 CircularProgressIndicator()
 
                 Text(
-                    text = "행사 위치를 확인하고 있습니다."
+                    text =
+                        "행사 위치를 확인하고 있습니다."
                 )
             }
         }
@@ -950,15 +1050,21 @@ fun QrStampScreen(
     /*
      * 4. 스탬프 적립 중
      */
+
     else if (
         collectReady &&
         !showAlert
     ) {
 
         Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            modifier =
+                Modifier.fillMaxSize(),
+
+            horizontalAlignment =
+                Alignment.CenterHorizontally,
+
+            verticalArrangement =
+                Arrangement.Center,
         ) {
 
             CircularProgressIndicator()
@@ -970,12 +1076,18 @@ fun QrStampScreen(
     /*
      * 5. 기타 로딩
      */
+
     else if (!showAlert) {
 
         Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            modifier =
+                Modifier.fillMaxSize(),
+
+            horizontalAlignment =
+                Alignment.CenterHorizontally,
+
+            verticalArrangement =
+                Arrangement.Center,
         ) {
 
             CircularProgressIndicator()

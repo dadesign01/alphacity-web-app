@@ -52,180 +52,6 @@ var DEFAULT_LEVEL = 4;
 
 
 /* =========================================================
- * DEBUG
- * ========================================================= */
-
-function getMapDebugState() {
-
-    if (!map) {
-
-        return {
-            exists: false
-        };
-    }
-
-    var center = null;
-
-    try {
-
-        center =
-            map.getCenter();
-
-    } catch (e) {
-
-        center = null;
-    }
-
-    var bounds = null;
-
-    try {
-
-        bounds =
-            map.getBounds();
-
-    } catch (e) {
-
-        bounds = null;
-    }
-
-    var result = {
-        exists: true,
-
-        level:
-            map.getLevel(),
-
-        lastZoom:
-            lastZoom,
-
-        center: center
-            ? {
-                lat: center.getLat(),
-                lng: center.getLng()
-            }
-            : null,
-
-        bounds: null
-    };
-
-    if (bounds) {
-
-        try {
-
-            var sw =
-                bounds.getSouthWest();
-
-            var ne =
-                bounds.getNorthEast();
-
-            result.bounds = {
-
-                sw: {
-                    lat: sw.getLat(),
-                    lng: sw.getLng()
-                },
-
-                ne: {
-                    lat: ne.getLat(),
-                    lng: ne.getLng()
-                }
-            };
-
-        } catch (e) {
-
-            result.bounds = null;
-        }
-    }
-
-    return result;
-}
-
-
-function logMapState(
-    label
-) {
-
-    var state =
-        getMapDebugState();
-
-    console.log(
-        "[KakaoMap][STATE]",
-        label,
-        state
-    );
-}
-
-
-function logContainerState(
-    label
-) {
-
-    var container =
-        document.getElementById(
-            "kakao-map-root"
-        );
-
-    if (!container) {
-
-        console.warn(
-            "[KakaoMap][CONTAINER][STATE]",
-            label,
-            "container 없음"
-        );
-
-        return;
-    }
-
-    var rect =
-        container.getBoundingClientRect();
-
-    console.log(
-        "[KakaoMap][CONTAINER][STATE]",
-        label,
-        {
-            rect: {
-                left: rect.left,
-                top: rect.top,
-                right: rect.right,
-                bottom: rect.bottom,
-                width: rect.width,
-                height: rect.height
-            },
-
-            clientWidth:
-                container.clientWidth,
-
-            clientHeight:
-                container.clientHeight,
-
-            offsetWidth:
-                container.offsetWidth,
-
-            offsetHeight:
-                container.offsetHeight,
-
-            scrollWidth:
-                container.scrollWidth,
-
-            scrollHeight:
-                container.scrollHeight,
-
-            styleWidth:
-                container.style.width,
-
-            styleHeight:
-                container.style.height,
-
-            styleTop:
-                container.style.top,
-
-            stylePosition:
-                container.style.position
-        }
-    );
-}
-
-
-/* =========================================================
  * MARKER IMAGE
  * ========================================================= */
 
@@ -271,19 +97,10 @@ var CLUSTER_MARKER_HEIGHT = 50;
 
 function updateMapContainerBounds() {
 
-    console.log(
-        "[KakaoMap][CONTAINER] ===== updateMapContainerBounds START ====="
-    );
-
     var container =
         document.getElementById("kakao-map-root");
 
     if (!container) {
-
-        console.error(
-            "[KakaoMap] #kakao-map-root 없음"
-        );
-
         return;
     }
 
@@ -316,26 +133,6 @@ function updateMapContainerBounds() {
     if (mapHeight < 0) {
         mapHeight = viewportHeight;
     }
-
-    console.log(
-        "[KakaoMap][CONTAINER] 계산:",
-        {
-            viewportWidth:
-                viewportWidth,
-
-            viewportHeight:
-                viewportHeight,
-
-            headerHeight:
-                headerHeight,
-
-            bottomNavHeight:
-                bottomNavHeight,
-
-            calculatedMapHeight:
-                mapHeight
-        }
-    );
 
     container.style.position =
         "fixed";
@@ -375,31 +172,6 @@ function updateMapContainerBounds() {
 
     container.style.pointerEvents =
         "auto";
-
-    console.log(
-        "[KakaoMap][CONTAINER] bounds:",
-        {
-            width:
-                viewportWidth,
-
-            height:
-                mapHeight,
-
-            top:
-                headerHeight,
-
-            bottom:
-                bottomNavHeight
-        }
-    );
-
-    logContainerState(
-        "updateMapContainerBounds AFTER"
-    );
-
-    console.log(
-        "[KakaoMap][CONTAINER] ===== updateMapContainerBounds END ====="
-    );
 }
 
 
@@ -409,23 +181,7 @@ function updateMapContainerBounds() {
 
 function relayoutMap() {
 
-    console.log(
-        "[KakaoMap][RELAYOUT] 호출"
-    );
-
-    logMapState(
-        "relayoutMap BEFORE"
-    );
-
-    logContainerState(
-        "relayoutMap BEFORE"
-    );
-
     if (!map) {
-
-        console.warn(
-            "[KakaoMap][RELAYOUT] map 없음 -> container만 업데이트"
-        );
 
         updateMapContainerBounds();
 
@@ -434,35 +190,14 @@ function relayoutMap() {
 
     updateMapContainerBounds();
 
-    console.log(
-        "[KakaoMap][RELAYOUT] map.relayout() 실행"
-    );
-
     setTimeout(
         function() {
 
             if (!map) {
-
-                console.warn(
-                    "[KakaoMap][RELAYOUT] setTimeout 내부 map 없음"
-                );
-
                 return;
             }
 
-            logMapState(
-                "relayoutMap setTimeout BEFORE relayout"
-            );
-
             map.relayout();
-
-            logMapState(
-                "relayoutMap AFTER relayout"
-            );
-
-            logContainerState(
-                "relayoutMap AFTER relayout"
-            );
 
         },
         0
@@ -476,22 +211,9 @@ function relayoutMap() {
 
 function applyDefaultCamera() {
 
-    console.log(
-        "[KakaoMap][CAMERA] ===== applyDefaultCamera START ====="
-    );
-
     if (!map) {
-
-        console.warn(
-            "[KakaoMap][CAMERA] map 없음"
-        );
-
         return;
     }
-
-    logMapState(
-        "applyDefaultCamera BEFORE"
-    );
 
     var center =
         new kakao.maps.LatLng(
@@ -499,39 +221,12 @@ function applyDefaultCamera() {
             DEFAULT_LNG
         );
 
-    console.log(
-        "[KakaoMap][CAMERA] DEFAULT:",
-        {
-            lat:
-                DEFAULT_LAT,
-
-            lng:
-                DEFAULT_LNG,
-
-            level:
-                DEFAULT_LEVEL
-        }
-    );
-
-
     /*
      * 첫 번째 setCenter
      */
 
-    console.log(
-        "[KakaoMap][CAMERA] map.setCenter() 실행 직전"
-    );
-
-    logMapState(
-        "setCenter BEFORE"
-    );
-
     map.setCenter(
         center
-    );
-
-    logMapState(
-        "setCenter AFTER"
     );
 
 
@@ -539,21 +234,8 @@ function applyDefaultCamera() {
      * setLevel
      */
 
-    console.log(
-        "[KakaoMap][CAMERA] map.setLevel() 실행:",
-        DEFAULT_LEVEL
-    );
-
-    logMapState(
-        "setLevel BEFORE"
-    );
-
     map.setLevel(
         DEFAULT_LEVEL
-    );
-
-    logMapState(
-        "setLevel AFTER"
     );
 
 
@@ -561,44 +243,8 @@ function applyDefaultCamera() {
      * 두 번째 setCenter
      */
 
-    console.log(
-        "[KakaoMap][CAMERA] 두 번째 map.setCenter() 실행 직전"
-    );
-
-    logMapState(
-        "second setCenter BEFORE"
-    );
-
     map.setCenter(
         center
-    );
-
-    logMapState(
-        "second setCenter AFTER"
-    );
-
-
-    console.log(
-        "[KakaoMap][CAMERA] DEFAULT와 실제 상태 비교:",
-        {
-            expected: {
-                lat:
-                    DEFAULT_LAT,
-
-                lng:
-                    DEFAULT_LNG,
-
-                level:
-                    DEFAULT_LEVEL
-            },
-
-            actual:
-                getMapDebugState()
-        }
-    );
-
-    console.log(
-        "[KakaoMap][CAMERA] ===== applyDefaultCamera END ====="
     );
 }
 
@@ -614,20 +260,6 @@ function notifyCameraChanged() {
 
     var level =
         map.getLevel();
-
-    console.log(
-        "[KakaoMap][CAMERA][NOTIFY]",
-        {
-            lat:
-                center.getLat(),
-
-            lng:
-                center.getLng(),
-
-            level:
-                level
-        }
-    );
 
     if (
         typeof window.kakaoMapOnCameraChanged ===
@@ -650,87 +282,27 @@ function notifyCameraChanged() {
 window.kakaoMapInitialize =
     function() {
 
-        console.log(
-            "[KakaoMap][INIT] ========================================"
-        );
-
-        console.log(
-            "[KakaoMap][INIT] initialize 시작"
-        );
-
-        console.log(
-            "[KakaoMap][INIT] DEFAULT CAMERA:",
-            {
-                lat:
-                    DEFAULT_LAT,
-
-                lng:
-                    DEFAULT_LNG,
-
-                level:
-                    DEFAULT_LEVEL
-            }
-        );
-
         var container =
             document.getElementById(
                 "kakao-map-root"
             );
 
         if (!container) {
-
-            console.error(
-                "[KakaoMap] #kakao-map-root 없음"
-            );
-
             return;
         }
-
-        console.log(
-            "[KakaoMap][INIT] container 발견"
-        );
-
-        logContainerState(
-            "INIT 시작"
-        );
 
         if (
             typeof kakao === "undefined" ||
             !kakao.maps
         ) {
-
-            console.error(
-                "[KakaoMap] Kakao Maps SDK가 로드되지 않았습니다."
-            );
-
             return;
         }
 
-        console.log(
-            "[KakaoMap][INIT] Kakao Maps SDK 확인 완료"
-        );
-
         if (map) {
-
-            console.log(
-                "[KakaoMap][INIT] 기존 map 존재"
-            );
-
-            logMapState(
-                "기존 map"
-            );
 
             updateMapContainerBounds();
 
-            console.log(
-                "[KakaoMap][INIT] 기존 map.relayout() 실행"
-            );
-
             map.relayout();
-
-            logMapState(
-                "기존 map.relayout AFTER"
-            );
 
             /*
              * 기존 지도 재초기화 시에도
@@ -739,15 +311,7 @@ window.kakaoMapInitialize =
              * 단, 일반적인 줌 변경에서는
              * 이 코드가 호출되지 않는다.
              */
-            console.log(
-                "[KakaoMap][INIT] 기존 map -> applyDefaultCamera()"
-            );
-
             applyDefaultCamera();
-
-            logMapState(
-                "기존 map applyDefaultCamera AFTER"
-            );
 
             rebuildMarkers();
 
@@ -762,24 +326,6 @@ window.kakaoMapInitialize =
                 DEFAULT_LNG
             );
 
-        console.log(
-            "[KakaoMap][INIT] 지도 생성 직전:",
-            {
-                centerLat:
-                    DEFAULT_LAT,
-
-                centerLng:
-                    DEFAULT_LNG,
-
-                level:
-                    DEFAULT_LEVEL
-            }
-        );
-
-        logContainerState(
-            "지도 생성 직전"
-        );
-
         map =
             new kakao.maps.Map(
                 container,
@@ -788,31 +334,6 @@ window.kakaoMapInitialize =
                     level: DEFAULT_LEVEL
                 }
             );
-
-        console.log(
-            "[KakaoMap][INIT] 지도 생성 완료:",
-            {
-                level:
-                    map.getLevel(),
-
-                expectedLevel:
-                    DEFAULT_LEVEL,
-
-                lat:
-                    map.getCenter().getLat(),
-
-                lng:
-                    map.getCenter().getLng()
-            }
-        );
-
-        logMapState(
-            "지도 생성 직후"
-        );
-
-        logContainerState(
-            "지도 생성 직후"
-        );
 
 
         /* =====================================================
@@ -824,10 +345,6 @@ window.kakaoMapInitialize =
             "zoom_changed",
             function() {
 
-                console.log(
-                    "[KakaoMap][ZOOM] ===== zoom_changed ====="
-                );
-
                 if (!map) {
                     return;
                 }
@@ -837,24 +354,6 @@ window.kakaoMapInitialize =
 
                 lastZoom =
                     currentZoom;
-
-                console.log(
-                    "[KakaoMap][ZOOM] 변경 감지:",
-                    {
-                        currentZoom:
-                            currentZoom,
-
-                        expectedDefaultLevel:
-                            DEFAULT_LEVEL,
-
-                        lastZoom:
-                            lastZoom
-                    }
-                );
-
-                logMapState(
-                    "zoom_changed"
-                );
 
                 /*
                  * 줌 변경 시
@@ -884,10 +383,6 @@ window.kakaoMapInitialize =
 
                 if (zoomRebuildTimer) {
 
-                    console.log(
-                        "[KakaoMap][ZOOM] 기존 rebuild timer 제거"
-                    );
-
                     clearTimeout(
                         zoomRebuildTimer
                     );
@@ -900,10 +395,6 @@ window.kakaoMapInitialize =
                     setTimeout(
                         function() {
 
-                            console.log(
-                                "[KakaoMap][ZOOM] debounce 200ms 완료"
-                            );
-
                             zoomRebuildTimer =
                                 null;
 
@@ -911,15 +402,7 @@ window.kakaoMapInitialize =
                                 return;
                             }
 
-                            logMapState(
-                                "ZOOM debounce BEFORE rebuild"
-                            );
-
                             rebuildMarkers();
-
-                            logMapState(
-                                "ZOOM debounce AFTER rebuild"
-                            );
 
                         },
                         200
@@ -937,17 +420,9 @@ window.kakaoMapInitialize =
             "center_changed",
             function() {
 
-                console.log(
-                    "[KakaoMap][CENTER] ===== center_changed ====="
-                );
-
                 if (!map) {
                     return;
                 }
-
-                logMapState(
-                    "center_changed"
-                );
 
                 /*
                  * 이동할 때 마커를 다시 만들지 않는다.
@@ -966,51 +441,19 @@ window.kakaoMapInitialize =
         resizeHandler =
             function() {
 
-                console.log(
-                    "[KakaoMap][RESIZE] ===== resize ====="
-                );
-
                 if (!map) {
                     return;
                 }
 
-                console.log(
-                    "[KakaoMap][RESIZE] BEFORE"
-                );
-
-                logMapState(
-                    "resize BEFORE"
-                );
-
-                logContainerState(
-                    "resize BEFORE"
-                );
-
                 updateMapContainerBounds();
 
-                console.log(
-                    "[KakaoMap][RESIZE] map.relayout() 실행"
-                );
-
                 map.relayout();
-
-                logMapState(
-                    "resize AFTER relayout"
-                );
-
-                logContainerState(
-                    "resize AFTER relayout"
-                );
 
                 /*
                  * 리사이즈 때만
                  * 클러스터 위치를 다시 계산한다.
                  */
                 rebuildMarkers();
-
-                logMapState(
-                    "resize AFTER rebuild"
-                );
 
             };
 
@@ -1036,67 +479,17 @@ window.kakaoMapInitialize =
         setTimeout(
             function() {
 
-                console.log(
-                    "[KakaoMap][INIT][100ms] =================="
-                );
-
                 if (!map) {
-
-                    console.warn(
-                        "[KakaoMap][INIT][100ms] map 없음"
-                    );
-
                     return;
                 }
 
-                console.log(
-                    "[KakaoMap][INIT][100ms] BEFORE"
-                );
-
-                logMapState(
-                    "INIT 100ms BEFORE"
-                );
-
-                logContainerState(
-                    "INIT 100ms BEFORE"
-                );
-
                 updateMapContainerBounds();
-
-                console.log(
-                    "[KakaoMap][INIT][100ms] map.relayout() 실행"
-                );
 
                 map.relayout();
 
-                logMapState(
-                    "INIT 100ms relayout AFTER"
-                );
-
-                logContainerState(
-                    "INIT 100ms relayout AFTER"
-                );
-
-                console.log(
-                    "[KakaoMap][INIT][100ms] applyDefaultCamera() 실행"
-                );
-
                 applyDefaultCamera();
 
-                logMapState(
-                    "INIT 100ms applyDefaultCamera AFTER"
-                );
-
                 rebuildMarkers();
-
-                logMapState(
-                    "INIT 100ms rebuild AFTER"
-                );
-
-                console.log(
-                    "[KakaoMap][INIT][100ms] END:",
-                    getMapDebugState()
-                );
 
             },
             100
@@ -1118,57 +511,15 @@ window.kakaoMapInitialize =
         setTimeout(
             function() {
 
-                console.log(
-                    "[KakaoMap][INIT][500ms] =================="
-                );
-
                 if (!map) {
-
-                    console.warn(
-                        "[KakaoMap][INIT][500ms] map 없음"
-                    );
-
                     return;
                 }
 
-                console.log(
-                    "[KakaoMap][INIT][500ms] BEFORE"
-                );
-
-                logMapState(
-                    "INIT 500ms BEFORE"
-                );
-
-                logContainerState(
-                    "INIT 500ms BEFORE"
-                );
-
                 updateMapContainerBounds();
-
-                console.log(
-                    "[KakaoMap][INIT][500ms] map.relayout() 실행"
-                );
 
                 map.relayout();
 
-                logMapState(
-                    "INIT 500ms AFTER relayout"
-                );
-
-                logContainerState(
-                    "INIT 500ms AFTER relayout"
-                );
-
                 rebuildMarkers();
-
-                logMapState(
-                    "INIT 500ms AFTER rebuild"
-                );
-
-                console.log(
-                    "[KakaoMap][INIT][500ms] END:",
-                    getMapDebugState()
-                );
 
             },
             500
@@ -1185,57 +536,15 @@ window.kakaoMapInitialize =
         setTimeout(
             function() {
 
-                console.log(
-                    "[KakaoMap][INIT][1000ms] =================="
-                );
-
                 if (!map) {
-
-                    console.warn(
-                        "[KakaoMap][INIT][1000ms] map 없음"
-                    );
-
                     return;
                 }
 
-                console.log(
-                    "[KakaoMap][INIT][1000ms] BEFORE"
-                );
-
-                logMapState(
-                    "INIT 1000ms BEFORE"
-                );
-
-                logContainerState(
-                    "INIT 1000ms BEFORE"
-                );
-
                 updateMapContainerBounds();
-
-                console.log(
-                    "[KakaoMap][INIT][1000ms] map.relayout() 실행"
-                );
 
                 map.relayout();
 
-                logMapState(
-                    "INIT 1000ms AFTER relayout"
-                );
-
-                logContainerState(
-                    "INIT 1000ms AFTER relayout"
-                );
-
                 rebuildMarkers();
-
-                logMapState(
-                    "INIT 1000ms AFTER rebuild"
-                );
-
-                console.log(
-                    "[KakaoMap][INIT][1000ms] END:",
-                    getMapDebugState()
-                );
 
             },
             1000
@@ -1250,27 +559,10 @@ window.kakaoMapInitialize =
 window.kakaoMapSetItems =
     function(json) {
 
-        console.log(
-            "[KakaoMap][SET_ITEMS] 호출"
-        );
-
         try {
 
             var parsed =
                 JSON.parse(json);
-
-            console.log(
-                "[KakaoMap][SET_ITEMS] JSON 파싱 완료:",
-                {
-                    isArray:
-                        Array.isArray(parsed),
-
-                    length:
-                        Array.isArray(parsed)
-                            ? parsed.length
-                            : 0
-                }
-            );
 
             if (!Array.isArray(parsed)) {
 
@@ -1302,41 +594,11 @@ window.kakaoMapSetItems =
 
         } catch (e) {
 
-            console.error(
-                "[KakaoMap] 지도 데이터 파싱 실패:",
-                e
-            );
-
             currentItems =
                 [];
         }
 
-        console.log(
-            "[KakaoMap][SET_ITEMS] 지도 데이터:",
-            currentItems.length,
-            "개"
-        );
-
-        if (map) {
-
-            console.log(
-                "[KakaoMap][SET_ITEMS] 현재 지도 level:",
-                map.getLevel()
-            );
-
-            logMapState(
-                "SET_ITEMS BEFORE rebuild"
-            );
-        }
-
         rebuildMarkers();
-
-        if (map) {
-
-            logMapState(
-                "SET_ITEMS AFTER rebuild"
-            );
-        }
     };
 
 
@@ -1351,32 +613,9 @@ window.kakaoMapMoveTo =
         level
     ) {
 
-        console.log(
-            "[KakaoMap][MOVE_TO] 호출:",
-            {
-                latitude:
-                    latitude,
-
-                longitude:
-                    longitude,
-
-                level:
-                    level
-            }
-        );
-
         if (!map) {
-
-            console.warn(
-                "[KakaoMap][MOVE_TO] map 없음"
-            );
-
             return;
         }
-
-        logMapState(
-            "MOVE_TO BEFORE"
-        );
 
         var lat =
             Number(latitude);
@@ -1388,32 +627,12 @@ window.kakaoMapMoveTo =
             !Number.isFinite(lat) ||
             !Number.isFinite(lng)
         ) {
-
-            console.error(
-                "[KakaoMap][MOVE_TO] 잘못된 좌표:",
-                {
-                    lat:
-                        lat,
-
-                    lng:
-                        lng
-                }
-            );
-
             return;
         }
 
         updateMapContainerBounds();
 
-        console.log(
-            "[KakaoMap][MOVE_TO] relayout 실행"
-        );
-
         map.relayout();
-
-        logMapState(
-            "MOVE_TO AFTER relayout"
-        );
 
         var position =
             new kakao.maps.LatLng(
@@ -1447,61 +666,12 @@ window.kakaoMapMoveTo =
             targetLevel = 1;
         }
 
-        console.log(
-            "[KakaoMap][MOVE_TO] 실제 적용값:",
-            {
-                targetLat:
-                    lat,
-
-                targetLng:
-                    lng,
-
-                targetLevel:
-                    targetLevel
-            }
-        );
-
-        console.log(
-            "[KakaoMap][MOVE_TO] map.setLevel() 실행 직전"
-        );
-
         map.setLevel(
             targetLevel
         );
 
-        logMapState(
-            "MOVE_TO AFTER setLevel"
-        );
-
-        console.log(
-            "[KakaoMap][MOVE_TO] map.setCenter() 실행 직전"
-        );
-
         map.setCenter(
             position
-        );
-
-        logMapState(
-            "MOVE_TO AFTER setCenter"
-        );
-
-        console.log(
-            "[KakaoMap][MOVE_TO] 실제 CAMERA:",
-            {
-                requested: {
-                    lat:
-                        lat,
-
-                    lng:
-                        lng,
-
-                    level:
-                        targetLevel
-                },
-
-                actual:
-                    getMapDebugState()
-            }
         );
     };
 
@@ -1513,15 +683,7 @@ window.kakaoMapMoveTo =
 window.kakaoMapRequestLocation =
     function() {
 
-        console.log(
-            "[KakaoMap][LOCATION] 위치 요청"
-        );
-
         if (!navigator.geolocation) {
-
-            console.error(
-                "[KakaoMap] GPS를 사용할 수 없습니다."
-            );
 
             if (
                 typeof window.kakaoMapOnLocationError ===
@@ -1552,12 +714,6 @@ window.kakaoMapRequestLocation =
                 currentLocationLng =
                     lng;
 
-                console.log(
-                    "[KakaoMap][LOCATION] GPS 위치:",
-                    lat,
-                    lng
-                );
-
                 updateUserLocationMarker(
                     lat,
                     lng
@@ -1577,11 +733,6 @@ window.kakaoMapRequestLocation =
             },
 
             function(error) {
-
-                console.error(
-                    "[KakaoMap][LOCATION] GPS 오류:",
-                    error
-                );
 
                 if (
                     typeof window.kakaoMapOnLocationError ===
@@ -1611,17 +762,6 @@ function updateUserLocationMarker(
     latitude,
     longitude
 ) {
-
-    console.log(
-        "[KakaoMap][LOCATION_MARKER] 생성:",
-        {
-            latitude:
-                latitude,
-
-            longitude:
-                longitude
-        }
-    );
 
     if (!map) {
         return;
@@ -1785,10 +925,6 @@ function hideClusterList() {
 
     if (clusterListOverlay) {
 
-        console.log(
-            "[KakaoMap][CLUSTER] 목록 닫기"
-        );
-
         clusterListOverlay.setMap(
             null
         );
@@ -1848,13 +984,6 @@ function handleItemClick(
         targetId =
             item.id;
     }
-
-    console.log(
-        "[KakaoMap] ITEM CLICK:",
-        item.type,
-        item.id,
-        targetId
-    );
 
     window.kakaoMapOnItemClick(
         String(item.type || ""),
@@ -2084,24 +1213,6 @@ function createSingleMarkerContent(
     image.draggable =
         false;
 
-    image.onload =
-        function() {
-
-            console.log(
-                "[KakaoMap] single_marker.png 로딩 완료:",
-                image.src
-            );
-        };
-
-    image.onerror =
-        function() {
-
-            console.error(
-                "[KakaoMap] single_marker.png 로딩 실패:",
-                image.src
-            );
-        };
-
     wrapper.appendChild(
         image
     );
@@ -2217,12 +1328,6 @@ function createSingleMarker(
 
             event.stopPropagation();
 
-            console.log(
-                "[KakaoMap] MARKER CLICK:",
-                item.name,
-                item.id
-            );
-
             handleItemClick(
                 item
             );
@@ -2337,24 +1442,6 @@ function createClusterContent(
 
     image.draggable =
         false;
-
-    image.onload =
-        function() {
-
-            console.log(
-                "[KakaoMap] cluster_marker.png 로딩 완료:",
-                image.src
-            );
-        };
-
-    image.onerror =
-        function() {
-
-            console.error(
-                "[KakaoMap] cluster_marker.png 로딩 실패:",
-                image.src
-            );
-        };
 
     wrapper.appendChild(
         image
@@ -2492,20 +1579,6 @@ function showClusterList(
     ) {
         return;
     }
-
-    console.log(
-        "[KakaoMap][CLUSTER] 목록 표시:",
-        {
-            count:
-                items.length,
-
-            centerLat:
-                center.getLat(),
-
-            centerLng:
-                center.getLng()
-        }
-    );
 
     hideClusterList();
 
@@ -2692,12 +1765,6 @@ function showClusterList(
 
                     event.stopPropagation();
 
-                    console.log(
-                        "[KakaoMap] CLUSTER ITEM CLICK:",
-                        item.name,
-                        item.id
-                    );
-
                     hideClusterList();
 
                     handleItemClick(
@@ -2747,13 +1814,6 @@ function showClusterList(
 
     clusterListOverlay.setMap(
         map
-    );
-
-
-    console.log(
-        "[KakaoMap] CLUSTER LIST 표시:",
-        items.length,
-        "개"
     );
 }
 
@@ -2829,12 +1889,6 @@ function createCluster(
                 return;
             }
 
-            console.log(
-                "[KakaoMap] CLUSTER CLICK:",
-                items.length,
-                "개"
-            );
-
             /*
              * 기존처럼 바로 줌인하지 않는다.
              *
@@ -2886,26 +1940,6 @@ function clearMarkerArray(
 
 function clearAllMarkers() {
 
-    console.log(
-        "[KakaoMap][MARKER] clearAllMarkers:",
-        {
-            program:
-                programMarkers.length,
-
-            mission:
-                missionMarkers.length,
-
-            store:
-                storeMarkers.length,
-
-            cluster:
-                clusterMarkers.length,
-
-            info:
-                infoOverlays.length
-        }
-    );
-
     clearInfoOverlays();
 
     hideClusterList();
@@ -2945,26 +1979,10 @@ function buildClusters(
         return [];
     }
 
-    console.log(
-        "[KakaoMap][CLUSTER_BUILD] 시작:",
-        {
-            itemCount:
-                items.length,
-
-            level:
-                map.getLevel()
-        }
-    );
-
     var projection =
         map.getProjection();
 
     if (!projection) {
-
-        console.warn(
-            "[KakaoMap][CLUSTER_BUILD] projection 없음"
-        );
-
         return [];
     }
 
@@ -3107,21 +2125,6 @@ function buildClusters(
         );
     }
 
-    console.log(
-        "[KakaoMap][CLUSTER_BUILD] 완료:",
-        {
-            groupCount:
-                groups.length,
-
-            groups:
-                groups.map(
-                    function(group) {
-                        return group.length;
-                    }
-                )
-        }
-    );
-
     return groups;
 }
 
@@ -3179,28 +2182,8 @@ function addSingleMarkerToCategory(
 function rebuildMarkers() {
 
     if (!map) {
-
-        console.warn(
-            "[KakaoMap][REBUILD] map 없음"
-        );
-
         return;
     }
-
-    console.log(
-        "[KakaoMap][REBUILD] 시작:",
-        {
-            level:
-                map.getLevel(),
-
-            itemCount:
-                currentItems.length
-        }
-    );
-
-    logMapState(
-        "REBUILD BEFORE clear"
-    );
 
     /*
      * 기존 marker + info + cluster list 전부 제거
@@ -3212,10 +2195,6 @@ function rebuildMarkers() {
         currentItems.length === 0
     ) {
 
-        console.log(
-            "[KakaoMap] 표시할 마커 없음"
-        );
-
         return;
     }
 
@@ -3223,12 +2202,6 @@ function rebuildMarkers() {
         buildClusters(
             currentItems
         );
-
-    var singleCount =
-        0;
-
-    var clusterCount =
-        0;
 
     for (
         var i = 0;
@@ -3264,8 +2237,6 @@ function rebuildMarkers() {
                 item
             );
 
-            singleCount++;
-
         } else {
 
             var cluster =
@@ -3278,41 +2249,9 @@ function rebuildMarkers() {
                 clusterMarkers.push(
                     cluster
                 );
-
-                clusterCount++;
             }
         }
     }
-
-    console.log(
-        "[KakaoMap][REBUILD] 완료:",
-        {
-            level:
-                map.getLevel(),
-
-            single:
-                singleCount,
-
-            cluster:
-                clusterCount,
-
-            program:
-                programMarkers.length,
-
-            mission:
-                missionMarkers.length,
-
-            store:
-                storeMarkers.length,
-
-            info:
-                infoOverlays.length
-        }
-    );
-
-    logMapState(
-        "REBUILD AFTER"
-    );
 }
 
 
@@ -3352,25 +2291,10 @@ function getMarkerColor(
 window.kakaoMapDestroy =
     function() {
 
-        console.log(
-            "[KakaoMap][DESTROY] ===== START ====="
-        );
-
-        if (map) {
-
-            logMapState(
-                "DESTROY BEFORE"
-            );
-        }
-
         /*
          * 예약되어 있는 줌 debounce 제거
          */
         if (zoomRebuildTimer) {
-
-            console.log(
-                "[KakaoMap][DESTROY] zoom timer 제거"
-            );
 
             clearTimeout(
                 zoomRebuildTimer
@@ -3450,18 +2374,5 @@ window.kakaoMapDestroy =
 
             container.style.visibility =
                 "hidden";
-
-            logContainerState(
-                "DESTROY AFTER"
-            );
         }
-
-
-        console.log(
-            "[KakaoMap] 지도 제거 완료"
-        );
-
-        console.log(
-            "[KakaoMap][DESTROY] ===== END ====="
-        );
     };

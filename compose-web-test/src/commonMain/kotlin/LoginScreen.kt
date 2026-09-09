@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private val Primary = Color(0xFF02CDF8)
-private val Pretendard = FontFamily.SansSerif
+private val Pretendard = FontFamily.SansSerif략
 
 @Composable
 fun LoginScreen(
@@ -218,7 +218,7 @@ fun LoginScreen(
                     .height(48.dp),
             ) {
                 Text(
-                    text = "비회원으로 계속하기",
+                    text = "비회원 둘러보기",
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 16.sp,
