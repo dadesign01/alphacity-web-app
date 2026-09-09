@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private val Primary = Color(0xFF02CDF8)
-private val Pretendard = FontFamily.SansSerif략
+private val Pretendard = FontFamily.SansSerif
 
 @Composable
 fun LoginScreen(
