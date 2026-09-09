@@ -1,22 +1,19 @@
-
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { signToken } from '@/lib/auth';
-import { successResponse, errorResponse } from '@/lib/api-response';
+import { errorResponse } from '@/lib/api-response';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('[LOGIN] 1. request start');
 
-    const body = await request.json();
+    const { email, password } = await request.json();
 
     console.log('[LOGIN] 2. body received:', {
-      email: body?.email,
-      hasPassword: !!body?.password,
+      email,
+      hasPassword: !!password,
     });
-
-    const { email, password } = body;
 
     if (!email || !password) {
       console.log('[LOGIN] 3. invalid input');
@@ -33,20 +30,20 @@ export async function POST(request: NextRequest) {
 
     console.log('[LOGIN] 5. database connection OK');
 
-    console.log('[LOGIN] 6. find user:', email);
+    console.log('[LOGIN] 6. find admin:', email);
 
-    const user = await prisma.user.findUnique({
+    const admin = await prisma.admin.findUnique({
       where: { email },
     });
 
-    console.log('[LOGIN] 7. find user result:', {
-      found: !!user,
-      userId: user?.id,
-      hasPasswordHash: !!user?.passwordHash,
+    console.log('[LOGIN] 7. find admin result:', {
+      found: !!admin,
+      adminId: admin?.id,
+      hasPassword: !!admin?.password,
     });
 
-    if (!user) {
-      console.log('[LOGIN] 8. user not found');
+    if (!admin) {
+      console.log('[LOGIN] 8. admin not found');
 
       return errorResponse(
         'INVALID_CREDENTIALS',
@@ -55,27 +52,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!user.passwordHash) {
-      console.log('[LOGIN] 9. social account');
-
-      return errorResponse(
-        'SOCIAL_ACCOUNT',
-        '소셜 로그인으로 가입한 계정입니다',
-        401
-      );
-    }
-
-    console.log('[LOGIN] 10. bcrypt compare start');
+    console.log('[LOGIN] 9. bcrypt compare start');
 
     const isValid = await bcrypt.compare(
       password,
-      user.passwordHash
+      admin.password
     );
 
-    console.log('[LOGIN] 11. bcrypt compare result:', isValid);
+    console.log('[LOGIN] 10. bcrypt compare result:', isValid);
 
     if (!isValid) {
-      console.log('[LOGIN] 12. invalid password');
+      console.log('[LOGIN] 11. invalid password');
 
       return errorResponse(
         'INVALID_CREDENTIALS',
@@ -84,43 +71,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[LOGIN] 13. sign access token');
+    console.log('[LOGIN] 12. sign token');
 
     const token = await signToken({
-      userId: user.id,
-      email: user.email,
+      adminId: admin.id,
+      email: admin.email,
     });
 
-    console.log('[LOGIN] 14. access token OK');
+    console.log('[LOGIN] 13. token created');
 
-    console.log('[LOGIN] 15. sign refresh token');
-
-    const refreshToken = await signToken(
-      {
-        userId: user.id,
-        type: 'refresh',
+    const response = NextResponse.json({
+      success: true,
+      data: {
+        token,
+        admin: {
+          id: admin.id,
+          email: admin.email,
+          name: admin.name,
+        },
       },
-      '30d'
+    });
+
+    const isHttps = request.nextUrl.protocol === 'https:';
+
+    response.cookies.set('admin_token', token, {
+      httpOnly: true,
+      secure: isHttps,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
+
+    console.log(
+      `[LOGIN] 14. login success: ${admin.email} (secure=${isHttps})`
     );
 
-    console.log('[LOGIN] 16. refresh token OK');
-
-    console.log('[LOGIN] 17. login success');
-
-    return successResponse({
-      token,
-      refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        nickname: user.nickname,
-        profileImage: user.profileImage,
-      },
-    });
+    return response;
   } catch (error) {
     console.error('[LOGIN ERROR]', error);
 
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         debug: true,
@@ -137,4 +127,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
