@@ -55,7 +55,6 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.launch
-import kotlinx.browser.window
 import org.jetbrains.compose.resources.painterResource
 import web.QrTarget
 
@@ -66,6 +65,7 @@ fun PhoneLogin(
     onGuestClick: () -> Unit = {},
     onBackClick: () -> Unit = {},
 ) {
+    var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var verificationCode by remember { mutableStateOf("") }
 
@@ -74,6 +74,10 @@ fun PhoneLogin(
     var isLoading by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
+
+    val nameFocusRequester = remember {
+        FocusRequester()
+    }
 
     val phoneFocusRequester = remember {
         FocusRequester()
@@ -111,8 +115,9 @@ fun PhoneLogin(
                         containerColor = Color.Transparent,
                         contentColor = Color(0xFF121212),
                     ),
-                    contentPadding = androidx.compose.foundation.layout
-                        .PaddingValues(0.dp),
+                    contentPadding =
+                        androidx.compose.foundation.layout
+                            .PaddingValues(0.dp),
                     modifier = Modifier.size(28.dp),
                 ) {
                     Image(
@@ -181,8 +186,43 @@ fun PhoneLogin(
                 )
 
                 // ========================================
+                // 이름
+                // ========================================
+
+                Text(
+                    text = "이름",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black,
+                )
+
+                Spacer(
+                    modifier = Modifier.height(14.dp)
+                )
+
+                AuthTextField(
+                    value = name,
+                    onValueChange = { input ->
+                        // 숫자는 입력되지 않도록 제거
+                        name = input.filter {
+                            !it.isDigit()
+                        }
+                    },
+                    placeholder = "이름을 입력해주세요.",
+                    keyboardType = KeyboardType.Text,
+                    focusRequester = nameFocusRequester,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                )
+
+                // ========================================
                 // 전화번호
                 // ========================================
+
+                Spacer(
+                    modifier = Modifier.height(40.dp)
+                )
 
                 Text(
                     text = "전화번호",
@@ -363,7 +403,7 @@ fun PhoneLogin(
             if (isCodeSent) {
 
                 Spacer(
-                    modifier = Modifier.height(20.dp)
+                    modifier = Modifier.height(8.dp)
                 )
 
                 Button(
@@ -385,6 +425,9 @@ fun PhoneLogin(
                                     "[PhoneLogin] code = $verificationCode"
                                 )
                                 println(
+                                    "[PhoneLogin] name = $name"
+                                )
+                                println(
                                     "================================"
                                 )
 
@@ -399,6 +442,7 @@ fun PhoneLogin(
                                         setBody(
                                             PhoneLoginRequest(
                                                 phone = phone,
+                                                name = name,
                                                 code = verificationCode,
                                             )
                                         )
@@ -519,7 +563,8 @@ fun PhoneLogin(
                             .PaddingValues(0.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
+                        .height(52.dp)
+                        .padding(bottom = 20.dp),
                 ) {
                     Box(
                         modifier = Modifier

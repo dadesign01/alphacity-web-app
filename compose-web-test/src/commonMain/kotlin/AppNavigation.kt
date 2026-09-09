@@ -63,31 +63,14 @@ fun AppNavigation(
             if (response.success && response.data != null) {
                 isLoggedIn = true
                 showSplash = false
-
-                println("=== AUTH CHECK ===")
-                println("accessToken = EXISTS")
-                println("GET /users/me = SUCCESS")
-                println("userId = ${response.data.id}")
-                println("==================")
             } else {
                 WebTokenManager.clear()
                 isLoggedIn = false
                 showSplash = true
-
-                println("=== AUTH CHECK ===")
-                println("accessToken = EXISTS")
-                println("GET /users/me = FAILED")
-                println("token cleared")
-                println("==================")
             }
         } catch (e: Exception) {
             isLoggedIn = true
             showSplash = false
-
-            println("=== AUTH CHECK ===")
-            println("GET /users/me ERROR")
-            println("message = ${e.message}")
-            println("==================")
         }
     }
 
@@ -97,12 +80,6 @@ fun AppNavigation(
         isLoggedIn == false -> Routes.LOGIN
         else -> Routes.LOGIN
     }
-
-    println("=== APP NAVIGATION ===")
-    println("qrTarget = $qrTarget")
-    println("isLoggedIn = $isLoggedIn")
-    println("startDestination = $startDestination")
-    println("======================")
 
     Box(
         modifier = Modifier.fillMaxSize()

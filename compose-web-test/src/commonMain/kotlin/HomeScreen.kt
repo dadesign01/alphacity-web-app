@@ -1,5 +1,6 @@
 package com.alphacity.stamptour.ui.screen
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,7 +34,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -45,17 +45,23 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.WebElementView
+import coil3.compose.AsyncImage
 import com.alphacity.stamptour.network.ApiService
 import com.alphacity.stamptour.network.dto.BannerItem
 import com.alphacity.stamptour.network.dto.EventItem
 import com.alphacity.stamptour.network.dto.FestivalItem
 import com.alphacity.stamptour.repository.HomeRepository
-import kotlinx.browser.document
-import kotlinx.browser.window
+import composewebtest.generated.resources.Res
+import composewebtest.generated.resources.header_left_arrow
+import composewebtest.generated.resources.header_logo
+import composewebtest.generated.resources.icon_coupon
+import composewebtest.generated.resources.icon_mapview
+import composewebtest.generated.resources.icon_profile
+import composewebtest.generated.resources.join_event_popup
+import org.jetbrains.compose.resources.painterResource
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import org.w3c.dom.HTMLImageElement
+import androidx.compose.ui.layout.ContentScale
 
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
@@ -156,20 +162,13 @@ fun HomeScreen(
     }
 
     // ========================================================
-    // 홈 기본 데이터 로딩
-    //
-    // First Come Coupon API는 여기서 호출하지 않는다.
-    // 홈 화면에 필요한 기본 API만 동시에 요청한다.
+    // 모든 API를 동시에 요청
     // ========================================================
 
     LaunchedEffect(Unit) {
         isLoading = true
 
         coroutineScope {
-
-            // ------------------------------------------------
-            // 기본 홈 API 요청을 먼저 전부 시작한다.
-            // ------------------------------------------------
 
             val bannersDeferred = async {
                 try {
@@ -194,6 +193,18 @@ fun HomeScreen(
             val userStampsDeferred = async {
                 if (!isGuest) {
                     repository.getUserStamps()
+                } else {
+                    null
+                }
+            }
+
+            val popupDeferred = async {
+                if (!isGuest) {
+                    try {
+                        ApiService.checkFirstComeCouponPopup()
+                    } catch (_: Exception) {
+                        null
+                    }
                 } else {
                     null
                 }
@@ -280,50 +291,25 @@ fun HomeScreen(
             } else {
                 stampCount = 0
             }
-        }
 
-        // ====================================================
-        // 중요:
-        // First Come Coupon API와 관계없이
-        // 홈 기본 화면은 여기서 바로 로딩 완료 처리한다.
-        // ====================================================
+            // ------------------------------------------------
+            // First Come Coupon Popup
+            // ------------------------------------------------
+
+            if (!isGuest) {
+                val popupResponse = popupDeferred.await()
+
+                if (
+                    popupResponse != null &&
+                    popupResponse.success &&
+                    popupResponse.data == true
+                ) {
+                    showFirstComeCouponPopup = true
+                }
+            }
+        }
 
         isLoading = false
-    }
-
-    // ========================================================
-    // First Come Coupon Popup API
-    //
-    // 홈 기본 데이터 로딩과 완전히 분리한다.
-    //
-    // 현재는 로그인 사용자에게만 호출한다.
-    // 추후 신규 사용자 조건을 찾으면 이 if 조건에 추가한다.
-    // ========================================================
-
-    LaunchedEffect(isGuest) {
-
-        // 게스트는 First Come Coupon API 자체를 호출하지 않는다.
-        if (isGuest) {
-            showFirstComeCouponPopup = false
-            return@LaunchedEffect
-        }
-
-        try {
-            val popupResponse =
-                ApiService.checkFirstComeCouponPopup()
-
-            if (
-                popupResponse.success &&
-                popupResponse.data == true
-            ) {
-                showFirstComeCouponPopup = true
-            } else {
-                showFirstComeCouponPopup = false
-            }
-
-        } catch (_: Exception) {
-            showFirstComeCouponPopup = false
-        }
     }
 
     // ========================================================
@@ -363,10 +349,6 @@ fun HomeScreen(
                             rememberScrollState()
                         ),
                 ) {
-
-                    // ========================================
-                    // 일반 콘텐츠
-                    // ========================================
 
                     Column(
                         modifier = Modifier
@@ -415,10 +397,6 @@ fun HomeScreen(
                         )
                     }
 
-                    // ========================================
-                    // Quick Menu
-                    // ========================================
-
                     QuickMenuSection(
                         viewportHeight = viewportHeight,
                         onMapClick = {
@@ -443,7 +421,7 @@ fun HomeScreen(
             // 선착순 5,000원 쿠폰 팝업
             // ============================================
 
-            if (showFirstComeCouponPopup && !isGuest) {
+            if (showFirstComeCouponPopup) {
                 FirstComeCouponPopup(
                     viewportHeight = viewportHeight,
                     onMapClick = {
@@ -463,7 +441,6 @@ fun HomeScreen(
 // First Come Coupon Popup
 // ============================================================
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun FirstComeCouponPopup(
     viewportHeight: Dp,
@@ -473,99 +450,51 @@ private fun FirstComeCouponPopup(
     val popupWidth = 308.dp
     val popupHeight = vh(viewportHeight, 350f)
 
-    // ========================================================
-    // 전체 화면 Overlay
-    //
-    // 바깥 영역을 클릭하면 팝업이 닫힌다.
-    // ========================================================
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Color.Black.copy(alpha = 0.55f)
-            )
-            .clickable {
-                onCloseClick()
-            },
+            ),
         contentAlignment = Alignment.Center,
     ) {
-
-        // ====================================================
-        // 팝업 영역
-        //
-        // 팝업 이미지 자체를 눌러도 닫힌다.
-        // 단, 아래의 지도 버튼 / X 버튼은
-        // 각각 자신의 click 이벤트를 처리한다.
-        // ====================================================
-
         Box(
             modifier = Modifier
                 .width(popupWidth)
-                .height(popupHeight)
-                .clickable {
-                    onCloseClick()
-                },
+                .height(popupHeight),
         ) {
 
-            // =================================================
-            // Popup Image
-            // =================================================
+            // ============================================
+            // 팝업 이미지
+            // Compose Image로 처리
+            // ============================================
 
-            WebElementView(
-                factory = {
-                    (document.createElement("img") as HTMLImageElement).apply {
-                        src =
-                            "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/join_event_popup.png"
-
-                        alt = ""
-
-                        style.width = "${popupWidth.value}px"
-                        style.height = "${popupHeight.value}px"
-                        style.objectFit = "fill"
-                        style.display = "block"
-                    }
-                },
+            Image(
+                painter = painterResource(Res.drawable.join_event_popup),
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
                 modifier = Modifier
                     .width(popupWidth)
                     .height(popupHeight),
-                update = { image ->
-                    image.src =
-                        "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/join_event_popup.png"
-
-                    image.alt = ""
-
-                    image.style.width = "${popupWidth.value}px"
-                    image.style.height = "${popupHeight.value}px"
-                    image.style.objectFit = "fill"
-                    image.style.display = "block"
-                },
             )
 
-            // =================================================
-            // 하단 지도 이동 영역
-            //
-            // 클릭하면 팝업을 닫고 지도 화면으로 이동한다.
-            // =================================================
+            // ============================================
+            // 지도 이동 영역
+            // ============================================
 
             Box(
                 modifier = Modifier
                     .width(popupWidth)
-                    .height(
-                        vh(
-                            viewportHeight,
-                            70f
-                        )
-                    )
+                    .height(vh(viewportHeight, 70f))
                     .align(Alignment.BottomCenter)
                     .clickable {
                         onMapClick()
                     },
             )
 
-            // =================================================
-            // X 닫기 버튼
-            // =================================================
+            // ============================================
+            // 닫기 영역
+            // ============================================
 
             Box(
                 modifier = Modifier
@@ -573,10 +502,7 @@ private fun FirstComeCouponPopup(
                     .align(Alignment.TopEnd)
                     .offset(
                         x = (-45).dp,
-                        y = vh(
-                            viewportHeight,
-                            18f
-                        ),
+                        y = vh(viewportHeight, 18f),
                     )
                     .clickable {
                         onCloseClick()
@@ -590,7 +516,6 @@ private fun FirstComeCouponPopup(
 // Header
 // ============================================================
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun HomeHeader(
     onProfileTap: () -> Unit = {},
@@ -607,10 +532,16 @@ private fun HomeHeader(
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        WebHeaderImage(
-            resourceName = "header_logo.png",
-            width = 42.dp,
-            height = 42.dp,
+
+        // ============================================
+        // Header Logo
+        // ============================================
+
+        Image(
+            painter = painterResource(Res.drawable.header_logo),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(42.dp),
         )
 
         Spacer(
@@ -628,6 +559,10 @@ private fun HomeHeader(
             modifier = Modifier.weight(1f)
         )
 
+        // ============================================
+        // Profile
+        // ============================================
+
         Box(
             modifier = Modifier
                 .size(42.dp)
@@ -637,56 +572,14 @@ private fun HomeHeader(
                 },
             contentAlignment = Alignment.Center,
         ) {
-            WebHeaderImage(
-                resourceName = "icon_profile.png",
-                width = 42.dp,
-                height = 42.dp,
+            Image(
+                painter = painterResource(Res.drawable.icon_profile),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }
-}
-
-// ============================================================
-// Web Header Image
-// ============================================================
-
-@OptIn(ExperimentalComposeUiApi::class)
-@Composable
-private fun WebHeaderImage(
-    resourceName: String,
-    width: Dp,
-    height: Dp,
-) {
-    WebElementView(
-        factory = {
-            (document.createElement("img") as HTMLImageElement).apply {
-                src =
-                    "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/$resourceName"
-
-                alt = ""
-
-                style.width = "${width.value}px"
-                style.height = "${height.value}px"
-                style.objectFit = "contain"
-                style.display = "block"
-            }
-        },
-        modifier = Modifier.size(
-            width = width,
-            height = height,
-        ),
-        update = { image ->
-            image.src =
-                "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/$resourceName"
-
-            image.alt = ""
-
-            image.style.width = "${width.value}px"
-            image.style.height = "${height.value}px"
-            image.style.objectFit = "contain"
-            image.style.display = "block"
-        },
-    )
 }
 
 // ============================================================
@@ -789,6 +682,12 @@ private fun BannerCarousel(
                                 onBannerClick(banner.id)
                             },
                     ) {
+
+                        // ====================================
+                        // 서버 배너 이미지
+                        // WebElementView 제거
+                        // ====================================
+
                         WebImage(
                             path = banner.imageUrl,
                             contentDescription = banner.title,
@@ -951,36 +850,17 @@ private fun FestivalSection(
 // Header Right Arrow
 // ============================================================
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun HeaderRightArrow() {
-    WebElementView(
-        factory = {
-            (document.createElement("img") as HTMLImageElement).apply {
-                src =
-                    "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/header-left-arrow.png"
-
-                style.width = "8px"
-                style.height = "15px"
-                style.objectFit = "contain"
-                style.display = "block"
-                style.transform = "scaleX(-1)"
-            }
-        },
-        modifier = Modifier.size(
-            width = 8.dp,
-            height = 15.dp,
-        ),
-        update = { image ->
-            image.src =
-                "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/header-left-arrow.png"
-
-            image.style.width = "8px"
-            image.style.height = "15px"
-            image.style.objectFit = "contain"
-            image.style.display = "block"
-            image.style.transform = "scaleX(-1)"
-        },
+    Image(
+        painter = painterResource(Res.drawable.header_left_arrow),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
+            .size(
+                width = 8.dp,
+                height = 15.dp,
+            ),
     )
 }
 
@@ -1374,9 +1254,11 @@ private fun formatDate(
 
 // ============================================================
 // Web Image
+//
+// 서버 실제 데이터 이미지 전용
+// WebElementView 제거
 // ============================================================
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun WebImage(
     path: String?,
@@ -1390,30 +1272,11 @@ private fun WebImage(
         return
     }
 
-    WebElementView(
-        factory = {
-            (document.createElement("img") as HTMLImageElement).apply {
-                src = url
-                alt = contentDescription ?: ""
-
-                style.width = "100%"
-                style.height = "100%"
-                style.objectFit = "cover"
-                style.display = "block"
-                style.borderRadius = "15px"
-            }
-        },
+    AsyncImage(
+        model = url,
+        contentDescription = contentDescription,
         modifier = modifier.clip(shape),
-        update = { image ->
-            image.src = url
-            image.alt = contentDescription ?: ""
-
-            image.style.width = "100%"
-            image.style.height = "100%"
-            image.style.objectFit = "cover"
-            image.style.display = "block"
-            image.style.borderRadius = "15px"
-        },
+        contentScale = ContentScale.Crop,
     )
 }
 
@@ -1630,7 +1493,7 @@ private fun QuickMenuSection(
             ) {
                 QuickMenuCard(
                     title = "지도보기",
-                    resourceName = "icon_mapview.png",
+                    painter = painterResource(Res.drawable.icon_mapview),
                     modifier = Modifier.weight(1f),
                     viewportHeight = viewportHeight,
                     onClick = onMapClick,
@@ -1638,7 +1501,7 @@ private fun QuickMenuSection(
 
                 QuickMenuCard(
                     title = "쿠폰함",
-                    resourceName = "icon_coupon.png",
+                    painter = painterResource(Res.drawable.icon_coupon),
                     modifier = Modifier.weight(1f),
                     viewportHeight = viewportHeight,
                     onClick = onCouponClick,
@@ -1655,7 +1518,7 @@ private fun QuickMenuSection(
 @Composable
 private fun QuickMenuCard(
     title: String,
-    resourceName: String,
+    painter: androidx.compose.ui.graphics.painter.Painter,
     modifier: Modifier = Modifier,
     viewportHeight: Dp,
     onClick: () -> Unit = {},
@@ -1692,8 +1555,10 @@ private fun QuickMenuCard(
                 modifier = Modifier.weight(1f)
             )
 
-            QuickMenuImage(
-                resourceName = resourceName,
+            Image(
+                painter = painter,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .width(105.dp)
                     .height(
@@ -1707,43 +1572,4 @@ private fun QuickMenuCard(
             )
         }
     }
-}
-
-// ============================================================
-// Quick Menu Direct IMG
-// ============================================================
-
-@OptIn(ExperimentalComposeUiApi::class)
-@Composable
-private fun QuickMenuImage(
-    resourceName: String,
-    modifier: Modifier = Modifier,
-) {
-    WebElementView(
-        factory = {
-            (document.createElement("img") as HTMLImageElement).apply {
-                src =
-                    "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/$resourceName"
-
-                alt = ""
-
-                style.width = "100%"
-                style.height = "100%"
-                style.objectFit = "contain"
-                style.display = "block"
-            }
-        },
-        modifier = modifier,
-        update = { image ->
-            image.src =
-                "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/$resourceName"
-
-            image.alt = ""
-
-            image.style.width = "100%"
-            image.style.height = "100%"
-            image.style.objectFit = "contain"
-            image.style.display = "block"
-        },
-    )
 }

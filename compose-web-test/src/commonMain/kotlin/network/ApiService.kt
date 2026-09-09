@@ -94,10 +94,17 @@ object ApiService {
         return client.get("programs/$programId").body()
     }
 
+
     suspend fun getProgramMissions(
         programId: Int
     ): ApiResponse<List<MissionItem>> {
         return client.get("programs/$programId/missions").body()
+    }
+
+    suspend fun getProgramStampMissions(
+        stampId: Int
+    ): ApiResponse<List<MissionItem>> {
+        return client.get("programs/$stampId/missions").body()
     }
 
 // =========================

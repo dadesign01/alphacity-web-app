@@ -35,6 +35,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,8 +61,10 @@ import composewebtest.generated.resources.header_left_arrow
 import composewebtest.generated.resources.program_stamp_info
 import composewebtest.generated.resources.tts_sound
 import composewebtest.theme.MainGradient
+import kotlinx.browser.document
 import kotlinx.browser.window
 import org.jetbrains.compose.resources.painterResource
+import org.w3c.dom.HTMLAudioElement
 
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
@@ -129,8 +132,23 @@ fun ProgramDetailScreen(
         mutableStateOf<String?>(null)
     }
 
+    // TTS 재생 상태
     var isSpeaking by remember {
         mutableStateOf(false)
+    }
+
+    // 현재 재생 중인 HTML Audio
+    var ttsAudio by remember {
+        mutableStateOf<HTMLAudioElement?>(null)
+    }
+
+    // 화면을 벗어나면 TTS 정지
+    DisposableEffect(Unit) {
+        onDispose {
+            ttsAudio?.pause()
+            ttsAudio?.currentTime = 0.0
+            ttsAudio = null
+        }
     }
 
     LaunchedEffect(programId) {
@@ -262,7 +280,7 @@ fun ProgramDetailScreen(
                                 androidx.compose.ui.viewinterop.WebElementView(
                                     factory = {
                                         (
-                                                kotlinx.browser.document
+                                                document
                                                     .createElement("img")
                                                         as org.w3c.dom.HTMLImageElement
                                                 ).apply {
@@ -589,16 +607,109 @@ fun ProgramDetailScreen(
                                             Modifier.width(8.dp)
                                     )
 
+                                    val ttsUrl =
+                                        currentProgram.ttsUrl
+                                            ?.trim()
+                                            ?.takeIf {
+                                                it.isNotEmpty()
+                                            }
+                                            ?.let { url ->
+                                                if (
+                                                    url.startsWith(
+                                                        "http://"
+                                                    ) ||
+                                                    url.startsWith(
+                                                        "https://"
+                                                    )
+                                                ) {
+                                                    url
+                                                } else {
+                                                    "$API_BASE_URL${
+                                                        if (
+                                                            url.startsWith(
+                                                                "/"
+                                                            )
+                                                        ) {
+                                                            url
+                                                        } else {
+                                                            "/$url"
+                                                        }
+                                                    }"
+                                                }
+                                            }
+
+                                    val hasTts =
+                                        !ttsUrl.isNullOrBlank()
+
                                     Box(
                                         modifier = Modifier
                                             .width(15.dp)
                                             .aspectRatio(
                                                 15f / 14f
                                             )
-                                            .clickable {
-                                                isSpeaking =
-                                                    !isSpeaking
-                                            },
+                                            .then(
+                                                if (hasTts) {
+                                                    Modifier.clickable {
+                                                        if (
+                                                            isSpeaking
+                                                        ) {
+                                                            // 현재 재생 중이면 정지
+                                                            ttsAudio?.pause()
+                                                            ttsAudio?.currentTime =
+                                                                0.0
+                                                            isSpeaking =
+                                                                false
+                                                        } else {
+                                                            val url =
+                                                                ttsUrl
+                                                                    ?: return@clickable
+
+                                                            // 기존 오디오 정리
+                                                            ttsAudio?.pause()
+                                                            ttsAudio?.currentTime =
+                                                                0.0
+
+                                                            val audio =
+                                                                document
+                                                                    .createElement(
+                                                                        "audio"
+                                                                    )
+                                                                        as HTMLAudioElement
+
+                                                            audio.src =
+                                                                url
+
+                                                            audio.preload =
+                                                                "auto"
+                                                            audio.onended =
+                                                                {
+                                                                    isSpeaking = false
+                                                                }
+
+                                                            audio.onerror =
+                                                                {
+                                                                        _: JsAny?,
+                                                                        _: String,
+                                                                        _: Int,
+                                                                        _: Int,
+                                                                        _: JsAny? ->
+                                                                    isSpeaking = false
+                                                                    null
+                                                                }
+
+                                                            ttsAudio =
+                                                                audio
+
+                                                            isSpeaking =
+                                                                true
+
+                                                            audio.play()
+                                                        }
+                                                    }
+                                                } else {
+                                                    Modifier
+                                                }
+                                            ),
                                         contentAlignment =
                                             Alignment.Center,
                                     ) {
@@ -611,11 +722,23 @@ fun ProgramDetailScreen(
                                                         Res.drawable.tts_sound
                                                     ),
                                                 contentDescription =
-                                                    "TTS",
+                                                    if (
+                                                        hasTts
+                                                    ) {
+                                                        "TTS 재생"
+                                                    } else {
+                                                        "TTS 없음"
+                                                    },
                                                 modifier =
                                                     Modifier.fillMaxSize(),
                                                 contentScale =
                                                     ContentScale.Fit,
+                                                alpha =
+                                                    if (hasTts) {
+                                                        1f
+                                                    } else {
+                                                        0.35f
+                                                    },
                                             )
                                         }
                                     }

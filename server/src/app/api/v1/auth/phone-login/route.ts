@@ -18,12 +18,26 @@ export async function OPTIONS() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { phone, code } = await request.json();
+    const { phone, name, code } = await request.json();
 
-    if (!phone || !code) {
+    if (!name) {
       return errorResponse(
         'INVALID_INPUT',
-        '전화번호와 인증번호를 입력하세요',
+        '이름을 입력하세요',
+      );
+    }
+
+    if (!phone) {
+      return errorResponse(
+        'INVALID_INPUT',
+        '전화번호를 입력하세요',
+      );
+    }
+
+    if (!code) {
+      return errorResponse(
+        'INVALID_INPUT',
+        '인증번호를 입력하세요',
       );
     }
 
@@ -55,7 +69,7 @@ export async function POST(request: NextRequest) {
         const newUser = await tx.user.create({
           data: {
             email,
-            nickname: phone,
+            nickname: name,
             phone,
             passwordHash: null,
           },

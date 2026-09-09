@@ -23,6 +23,12 @@ private fun App() {
 
     val isValidPath =
         currentPath == "/" ||
+                currentPath == "/login" ||
+                currentPath == "/phone-login" ||
+                currentPath == "/stamp-earned" ||
+                currentPath == "/stamp-not-earned" ||
+                currentPath == "/terms" ||
+                currentPath == "/stamp" ||
                 currentPath.startsWith("/stamp/")
 
     if (!isValidPath) {

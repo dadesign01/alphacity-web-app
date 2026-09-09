@@ -58,10 +58,6 @@ fun MyPageScreen(
         mutableStateOf(0)
     }
 
-    var isLoading by remember {
-        mutableStateOf(true)
-    }
-
     var errorMessage by remember {
         mutableStateOf<String?>(null)
     }
@@ -94,7 +90,6 @@ fun MyPageScreen(
      * 실제 로그인 사용자 정보 조회
      */
     LaunchedEffect(reloadKey) {
-        isLoading = true
         errorMessage = null
 
         if (!WebTokenManager.isLoggedIn()) {
@@ -102,7 +97,6 @@ fun MyPageScreen(
             stampCount = 0
             couponCount = 0
             errorMessage = "로그인이 필요합니다."
-            isLoading = false
             return@LaunchedEffect
         }
 
@@ -149,7 +143,7 @@ fun MyPageScreen(
             errorMessage =
                 e.message ?: "사용자 정보를 불러오지 못했습니다."
         } finally {
-            isLoading = false
+
         }
     }
 
@@ -284,13 +278,7 @@ fun MyPageScreen(
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(
-                        text = userProfile
-                            ?.nickname
-                            ?: if (isLoading) {
-                                "불러오는 중..."
-                            } else {
-                                "사용자 정보 없음"
-                            },
+                        text = userProfile?.nickname ?: "사용자 정보 없음",
                         fontFamily = Pretendard,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
@@ -456,24 +444,6 @@ fun MyPageScreen(
                     .padding(
                         bottom = 40.dp,
                     ),
-            )
-        }
-    }
-
-    /*
-     * Loading
-     */
-    if (isLoading) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Color.Black.copy(alpha = 0.15f)
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            CircularProgressIndicator(
-                color = Primary,
             )
         }
     }

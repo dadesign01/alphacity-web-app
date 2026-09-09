@@ -12,6 +12,7 @@ data class SendCodeData(
 @Serializable
 data class PhoneLoginRequest(
     val phone: String,
+    val name: String,
     val code: String,
 )
 @Serializable

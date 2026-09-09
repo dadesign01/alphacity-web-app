@@ -319,7 +319,7 @@ fun QrStampScreen(
                  * =================================================
                  */
 
-                val isSeminar = loadedProgram.category?.trim() == "세미나"
+                val isSeminar = loadedProgram.category == "seminar"
 
                 // =================================================
                 // 일반 행사만 위치 좌표 필수
@@ -472,7 +472,7 @@ fun QrStampScreen(
                 return@LaunchedEffect
             }
 
-            val isSeminar = loadedProgram.category?.trim() == "세미나"
+            val isSeminar = loadedProgram.category == "seminar"
 
             // =====================================================
             // 일반 행사
@@ -528,8 +528,8 @@ fun QrStampScreen(
                         )
 
                     val missionResult =
-                        repository.getProgramMissions(
-                            programId = loadedProgram.id
+                        repository.getProgramStampMissions(
+                            stampId = target.stampId
                         )
 
                     missionResult
@@ -560,7 +560,7 @@ fun QrStampScreen(
 
                             val mission =
                                 missions.firstOrNull {
-                                    it.stayMinutes != null
+                                    it.type != "stay_time"
                                 }
 
                             if (mission == null) {
@@ -666,7 +666,7 @@ fun QrStampScreen(
                 program
                     ?: return@LaunchedEffect
 
-            val isSeminar = loadedProgram.category?.trim() == "세미나"
+            val isSeminar = loadedProgram.category == "seminar"
             // =====================================================
             // 좌표 결정
             // =====================================================
@@ -963,6 +963,8 @@ fun QrStampScreen(
      * 세미나는 절대 여기로 들어오지 않는다.
      */
 
+
+
     else if (
 
         target != null &&
@@ -970,7 +972,8 @@ fun QrStampScreen(
         program != null &&
         loginVerified &&
         !locationVerified &&
-        program!!.category != "세미나"
+        program!!.category != "seminar"
+
     ) {
 
         val targetLatitude =

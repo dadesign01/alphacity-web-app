@@ -29,16 +29,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.WebElementView
 import com.alphacity.stamptour.web.WebTokenManager
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.delay
 import org.w3c.dom.HTMLImageElement
-import androidx.compose.ui.viewinterop.WebElementView
 
 
 private val Primary = Color(0xFF02CDF8)
@@ -157,77 +156,114 @@ fun MainScreen(
     deepLinkProgramId?.let { }
 
     /*
-     * 비회원 제한 안내
+     * =========================================================
+     * MainScreen 전체 Root
+     *
+     * 이 Box가 LoadingOverlay의 기준 영역입니다.
+     *
+     * LoadingOverlay는 이 Box의 마지막 child이므로
+     * MainScreen 안의 모든 화면보다 위에 표시됩니다.
+     * =========================================================
      */
-    if (showGuestDialog) {
-        GuestRestrictionDialog(
-            onConfirm = {
-                showGuestDialog = false
+    Box(
+        modifier = Modifier.fillMaxSize(),
+    ) {
 
-                navigate {
-                    onNavigateToRegister()
-                }
-            },
-            onDismiss = {
-                showGuestDialog = false
-            },
-        )
-    }
+        /*
+         * =====================================================
+         * 비회원 제한 안내
+         * =====================================================
+         */
+        if (showGuestDialog) {
+            GuestRestrictionDialog(
+                onConfirm = {
+                    showGuestDialog = false
 
-    /*
-     * 프로그램 상세
-     */
-    if (showProgramDetail) {
-        val programId = selectedProgramId
-
-        if (programId != null) {
-            ProgramDetailScreen(
-                programId = programId,
-                onBackClick = {
                     navigate {
-                        showProgramDetail = false
-                        selectedProgramId = null
-                        showFestivalDetail = true
+                        onNavigateToRegister()
                     }
                 },
-                onNavigateToMap = { _, _ ->
-                    /*
-                     * 이 기능 자체가 회원 전용이므로
-                     * 여기까지 왔다면 회원 상태입니다.
-                     */
-                    navigate {
-                        showProgramDetail = false
-                        selectedProgramId = null
-                        showFestivalDetail = false
-                        selectedFestivalId = null
-
-                        mapBackTarget = MapBackTarget.Program
-                        selectedTab = BottomTab.MAP
-                    }
+                onDismiss = {
+                    showGuestDialog = false
                 },
             )
         }
 
-        if (isLoading) {
-            LoadingOverlay()
+        /*
+         * =====================================================
+         * 프로그램 상세
+         * =====================================================
+         */
+        if (showProgramDetail) {
+            val programId = selectedProgramId
+
+            if (programId != null) {
+                ProgramDetailScreen(
+                    programId = programId,
+                    onBackClick = {
+                        navigate {
+                            showProgramDetail = false
+                            selectedProgramId = null
+                            showFestivalDetail = true
+                        }
+                    },
+                    onNavigateToMap = { _, _ ->
+                        /*
+                         * 이 기능 자체가 회원 전용이므로
+                         * 여기까지 왔다면 회원 상태입니다.
+                         */
+                        navigate {
+                            showProgramDetail = false
+                            selectedProgramId = null
+                            showFestivalDetail = false
+                            selectedFestivalId = null
+
+                            mapBackTarget = MapBackTarget.Program
+                            selectedTab = BottomTab.MAP
+                        }
+                    },
+                )
+            }
         }
 
-        return
-    }
+        /*
+         * =====================================================
+         * 축제 상세
+         * =====================================================
+         */
+        else if (showFestivalDetail) {
+            val festivalId = selectedFestivalId
 
-    /*
-     * 축제 상세
-     */
-    if (showFestivalDetail) {
-        val festivalId = selectedFestivalId
+            if (festivalId != null) {
+                FestivalDetailScreen(
+                    festivalId = festivalId,
+                    onBackClick = {
+                        navigate {
+                            showFestivalDetail = false
+                            selectedFestivalId = null
+                        }
+                    },
+                    onProgramClick = { programId: Int ->
+                        navigate {
+                            showProgramList = false
+                            selectedProgramId = programId
+                            showProgramDetail = true
+                        }
+                    },
+                )
+            }
+        }
 
-        if (festivalId != null) {
-            FestivalDetailScreen(
-                festivalId = festivalId,
+        /*
+         * =====================================================
+         * 프로그램 목록
+         * =====================================================
+         */
+        else if (showProgramList) {
+            ProgramListScreen(
                 onBackClick = {
                     navigate {
-                        showFestivalDetail = false
-                        selectedFestivalId = null
+                        showProgramList = false
                     }
                 },
                 onProgramClick = { programId: Int ->
@@ -240,375 +276,327 @@ fun MainScreen(
             )
         }
 
-        if (isLoading) {
-            LoadingOverlay()
-        }
-
-        return
-    }
-
-    /*
-     * 프로그램 목록
-     */
-    if (showProgramList) {
-        ProgramListScreen(
-            onBackClick = {
-                navigate {
-                    showProgramList = false
-                }
-            },
-            onProgramClick = { programId: Int ->
-                navigate {
-                    showProgramList = false
-                    selectedProgramId = programId
-                    showProgramDetail = true
-                }
-            },
-        )
-
-        if (isLoading) {
-            LoadingOverlay()
-        }
-
-        return
-    }
-
-    /*
-     * 이벤트 하이라이트
-     */
-    if (showEventHighlight) {
-        EventHighlightScreen(
-            onBackClick = {
-                navigate {
-                    showEventHighlight = false
-                }
-            },
-        )
-
-        if (isLoading) {
-            LoadingOverlay()
-        }
-
-        return
-    }
-
-    /*
-     * 내 쿠폰
-     */
-    if (showMyCoupons) {
-        MyCouponsScreen(
-            onBackClick = {
-                navigate {
-                    showMyCoupons = false
-                }
-            },
-        )
-
-        if (isLoading) {
-            LoadingOverlay()
-        }
-
-        return
-    }
-
-    /*
-     * 스탬프 교환
-     */
-    if (showStampExchange) {
-        StampExchangeScreen(
-            onBackClick = {
-                navigate {
-                    showStampExchange = false
-                }
-            },
-            onNavigateToCoupons = {
-                navigate {
-                    showStampExchange = false
-                    showMyCoupons = true
-                }
-            },
-        )
-
-        if (isLoading) {
-            LoadingOverlay()
-        }
-
-        return
-    }
-
-    /*
-     * 메인
-     *
-     * 화면을
-     *
-     * 1. 콘텐츠 영역
-     * 2. 하단 탭 영역
-     *
-     * 으로 명확하게 분리합니다.
-     *
-     * 콘텐츠 영역만 weight(1f)를 사용하므로
-     * HomeScreen 내부의 verticalScroll 영역이
-     * 하단 탭 영역까지 밀어내지 않습니다.
-     */
-    Box(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White),
-        ) {
-
-            /*
-             * =================================================
-             * 콘텐츠 영역
-             * =================================================
-             *
-             * 하단 탭과 완전히 분리된 화면 영역입니다.
-             */
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-            ) {
-                when (selectedTab) {
-
-                    /*
-                     * HOME
-                     *
-                     * 비회원도 접근 가능
-                     */
-                    BottomTab.HOME -> {
-                        HomeScreen(
-                            onNavigateToMyPage = {
-                                if (isGuest) {
-                                    showGuestDialog = true
-                                } else {
-                                    navigate {
-                                        selectedTab = BottomTab.MYPAGE
-                                    }
-                                }
-                            },
-
-                            onNavigateToProgramList = {
-                                navigate {
-                                    showProgramList = true
-                                }
-                            },
-
-                            onNavigateToProgramListWithCategory = {
-                                navigate {
-                                    showProgramList = true
-                                }
-                            },
-
-                            onNavigateToEventHighlight = {
-                                navigate {
-                                    showEventHighlight = true
-                                }
-                            },
-
-                            onNavigateToMap = {
-                                if (isGuest) {
-                                    showGuestDialog = true
-                                } else {
-                                    navigate {
-                                        selectedTab = BottomTab.MAP
-                                    }
-                                }
-                            },
-
-                            onNavigateToStamp = {
-                                if (isGuest) {
-                                    showGuestDialog = true
-                                } else {
-                                    navigate {
-                                        selectedTab = BottomTab.STAMP
-                                    }
-                                }
-                            },
-
-                            onNavigateToCoupons = {
-                                if (isGuest) {
-                                    showGuestDialog = true
-                                } else {
-                                    navigate {
-                                        showMyCoupons = true
-                                    }
-                                }
-                            },
-
-                            onProgramClick = { programId: Int ->
-                                navigate {
-                                    selectedProgramId = programId
-                                    showProgramDetail = true
-                                }
-                            },
-
-                            onFestivalClick = { festivalId: Int ->
-                                navigate {
-                                    selectedFestivalId = festivalId
-                                    showFestivalDetail = true
-                                }
-                            },
-
-                            onBannerClick = {},
-
-                            onGuestRestricted = {
-                                showGuestDialog = true
-                            },
-
-                            isGuest = isGuest,
-                        )
-                    }
-
-                    /*
-                     * MAP
-                     *
-                     * 회원만 진입 가능
-                     */
-                    BottomTab.MAP -> {
-                        MapScreen(
-                            onProgramClick = {},
-                            onStoreClick = {},
-
-                            onNavigateToMyPage = {
-                                if (isGuest) {
-                                    showGuestDialog = true
-                                } else {
-                                    navigate {
-                                        selectedTab = BottomTab.MYPAGE
-                                    }
-                                }
-                            },
-
-                            showBack = mapBackTarget != null,
-
-                            onBack = {
-                                navigate {
-                                    mapBackTarget = null
-                                }
-                            },
-                        )
-                    }
-
-                    /*
-                     * STAMP
-                     *
-                     * 회원만 진입 가능
-                     */
-                    BottomTab.STAMP -> {
-                        StampScreen(
-                            onNavigateToMap = { _, _ ->
-                                if (isGuest) {
-                                    showGuestDialog = true
-                                } else {
-                                    navigate {
-                                        mapBackTarget =
-                                            MapBackTarget.Stamp
-
-                                        selectedTab =
-                                            BottomTab.MAP
-                                    }
-                                }
-                            },
-
-                            onNavigateToExchange = {
-                                if (isGuest) {
-                                    showGuestDialog = true
-                                } else {
-                                    navigate {
-                                        showStampExchange = true
-                                    }
-                                }
-                            },
-
-                            onNavigateToMyPage = {
-                                if (isGuest) {
-                                    showGuestDialog = true
-                                } else {
-                                    navigate {
-                                        selectedTab =
-                                            BottomTab.MYPAGE
-                                    }
-                                }
-                            },
-
-                            showBack = true,
-
-                            onBack = {
-                                navigate {
-                                    selectedTab =
-                                        BottomTab.HOME
-                                }
-                            },
-                        )
-                    }
-
-                    /*
-                     * MYPAGE
-                     *
-                     * 회원만 진입 가능
-                     */
-                    BottomTab.MYPAGE -> {
-                        MyPageScreen(
-                            onLogout = {
-                                navigate {
-                                    /*
-                                     * 실제 토큰 삭제는
-                                     * 상위 onLogout()에서 처리한다고
-                                     * 가정합니다.
-                                     */
-                                    isGuest = true
-                                    selectedTab =
-                                        BottomTab.HOME
-
-                                    onLogout()
-                                }
-                            },
-                        )
-                    }
-                }
-            }
-
-            /*
-             * =================================================
-             * 하단 탭 영역
-             * =================================================
-             *
-             * 콘텐츠 영역과 별도의 영역입니다.
-             *
-             * HomeScreen의 verticalScroll에 포함되지 않습니다.
-             */
-            HorizontalDivider(
-                color = Color(0xFFE5E7EB),
-                thickness = 1.dp,
-            )
-
-            BottomNavigationBar(
-                selectedTab = selectedTab,
-                isGuest = isGuest,
-
-                onTabSelected = { tab ->
-
-                    if (
-                        isGuest &&
-                        tab != BottomTab.HOME
-                    ) {
-                        showGuestDialog = true
-                        return@BottomNavigationBar
-                    }
-
+        /*
+         * =====================================================
+         * 이벤트 하이라이트
+         * =====================================================
+         */
+        else if (showEventHighlight) {
+            EventHighlightScreen(
+                onBackClick = {
                     navigate {
-                        mapBackTarget = null
-                        selectedTab = tab
+                        showEventHighlight = false
                     }
                 },
             )
         }
 
         /*
-         * 로딩 오버레이
+         * =====================================================
+         * 내 쿠폰
+         * =====================================================
+         */
+        else if (showMyCoupons) {
+            MyCouponsScreen(
+                onBackClick = {
+                    navigate {
+                        showMyCoupons = false
+                    }
+                },
+            )
+        }
+
+        /*
+         * =====================================================
+         * 스탬프 교환
+         * =====================================================
+         */
+        else if (showStampExchange) {
+            StampExchangeScreen(
+                onBackClick = {
+                    navigate {
+                        showStampExchange = false
+                    }
+                },
+                onNavigateToCoupons = {
+                    navigate {
+                        showStampExchange = false
+                        showMyCoupons = true
+                    }
+                },
+            )
+        }
+
+        /*
+         * =====================================================
+         * 메인 화면
+         *
+         * 위의 상세/서브 화면이 하나도 열려있지 않을 때만
+         * 메인 화면 + 하단 탭을 표시합니다.
+         * =====================================================
+         */
+        else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White),
+            ) {
+
+                /*
+                 * =================================================
+                 * 콘텐츠 영역
+                 * =================================================
+                 */
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                ) {
+                    when (selectedTab) {
+
+                        /*
+                         * HOME
+                         *
+                         * 비회원도 접근 가능
+                         */
+                        BottomTab.HOME -> {
+                            HomeScreen(
+                                onNavigateToMyPage = {
+                                    if (isGuest) {
+                                        showGuestDialog = true
+                                    } else {
+                                        navigate {
+                                            selectedTab = BottomTab.MYPAGE
+                                        }
+                                    }
+                                },
+
+                                onNavigateToProgramList = {
+                                    navigate {
+                                        showProgramList = true
+                                    }
+                                },
+
+                                onNavigateToProgramListWithCategory = {
+                                    navigate {
+                                        showProgramList = true
+                                    }
+                                },
+
+                                onNavigateToEventHighlight = {
+                                    navigate {
+                                        showEventHighlight = true
+                                    }
+                                },
+
+                                onNavigateToMap = {
+                                    if (isGuest) {
+                                        showGuestDialog = true
+                                    } else {
+                                        navigate {
+                                            selectedTab = BottomTab.MAP
+                                        }
+                                    }
+                                },
+
+                                onNavigateToStamp = {
+                                    if (isGuest) {
+                                        showGuestDialog = true
+                                    } else {
+                                        navigate {
+                                            selectedTab = BottomTab.STAMP
+                                        }
+                                    }
+                                },
+
+                                onNavigateToCoupons = {
+                                    if (isGuest) {
+                                        showGuestDialog = true
+                                    } else {
+                                        navigate {
+                                            showMyCoupons = true
+                                        }
+                                    }
+                                },
+
+                                onProgramClick = { programId: Int ->
+                                    navigate {
+                                        selectedProgramId = programId
+                                        showProgramDetail = true
+                                    }
+                                },
+
+                                onFestivalClick = { festivalId: Int ->
+                                    navigate {
+                                        selectedFestivalId = festivalId
+                                        showFestivalDetail = true
+                                    }
+                                },
+
+                                onBannerClick = {},
+
+                                onGuestRestricted = {
+                                    showGuestDialog = true
+                                },
+
+                                isGuest = isGuest,
+                            )
+                        }
+
+                        /*
+                         * MAP
+                         *
+                         * 회원만 진입 가능
+                         */
+                        BottomTab.MAP -> {
+                            MapScreen(
+                                onProgramClick = {},
+                                onStoreClick = {},
+
+                                onNavigateToMyPage = {
+                                    if (isGuest) {
+                                        showGuestDialog = true
+                                    } else {
+                                        navigate {
+                                            selectedTab = BottomTab.MYPAGE
+                                        }
+                                    }
+                                },
+
+                                showBack = mapBackTarget != null,
+
+                                onBack = {
+                                    navigate {
+                                        mapBackTarget = null
+                                    }
+                                },
+                            )
+                        }
+
+                        /*
+                         * STAMP
+                         *
+                         * 회원만 진입 가능
+                         */
+                        BottomTab.STAMP -> {
+                            StampScreen(
+                                onNavigateToMap = { _, _ ->
+                                    if (isGuest) {
+                                        showGuestDialog = true
+                                    } else {
+                                        navigate {
+                                            mapBackTarget =
+                                                MapBackTarget.Stamp
+
+                                            selectedTab =
+                                                BottomTab.MAP
+                                        }
+                                    }
+                                },
+
+                                onNavigateToExchange = {
+                                    if (isGuest) {
+                                        showGuestDialog = true
+                                    } else {
+                                        navigate {
+                                            showStampExchange = true
+                                        }
+                                    }
+                                },
+
+                                onNavigateToMyPage = {
+                                    if (isGuest) {
+                                        showGuestDialog = true
+                                    } else {
+                                        navigate {
+                                            selectedTab =
+                                                BottomTab.MYPAGE
+                                        }
+                                    }
+                                },
+
+                                showBack = true,
+
+                                onBack = {
+                                    navigate {
+                                        selectedTab =
+                                            BottomTab.HOME
+                                    }
+                                },
+                            )
+                        }
+
+                        /*
+                         * MYPAGE
+                         *
+                         * 회원만 진입 가능
+                         */
+                        BottomTab.MYPAGE -> {
+                            MyPageScreen(
+                                onLogout = {
+                                    navigate {
+                                        /*
+                                         * 실제 토큰 삭제는
+                                         * 상위 onLogout()에서 처리한다고
+                                         * 가정합니다.
+                                         */
+                                        isGuest = true
+                                        selectedTab =
+                                            BottomTab.HOME
+
+                                        onLogout()
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+
+                /*
+                 * =================================================
+                 * 하단 탭 영역
+                 * =================================================
+                 *
+                 * 서브 화면에서는 표시되지 않습니다.
+                 */
+                HorizontalDivider(
+                    color = Color(0xFFE5E7EB),
+                    thickness = 1.dp,
+                )
+
+                BottomNavigationBar(
+                    selectedTab = selectedTab,
+                    isGuest = isGuest,
+
+                    onTabSelected = { tab ->
+
+                        if (
+                            isGuest &&
+                            tab != BottomTab.HOME
+                        ) {
+                            showGuestDialog = true
+                            return@BottomNavigationBar
+                        }
+
+                        navigate {
+                            mapBackTarget = null
+                            selectedTab = tab
+                        }
+                    },
+                )
+            }
+        }
+
+        /*
+         * =========================================================
+         * ⭐ 최상위 Loading Overlay
+         * =========================================================
+         *
+         * 반드시 모든 화면보다 마지막에 위치합니다.
+         *
+         * MainScreen 내부의
+         * Header / Content / Footer / BottomNavigation /
+         * 상세 화면 / 스크롤 영역 등을 전부 덮습니다.
          */
         if (isLoading) {
             LoadingOverlay()
@@ -742,7 +730,7 @@ private fun LoadingOverlay() {
         modifier = Modifier
             .fillMaxSize()
             .background(
-                Color.Black.copy(alpha = 0.25f)
+                Color.White.copy(alpha = 0.9f)
             ),
         contentAlignment = Alignment.Center,
     ) {
@@ -795,4 +783,3 @@ private fun GuestRestrictionDialog(
         },
     )
 }
-

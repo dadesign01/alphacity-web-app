@@ -64,6 +64,7 @@ data class ProgramItem(
     val category: String? = null,
     val subcategory: String? = null,
     val hasCoupon: Boolean? = false,
+    val ttsUrl: String? = null,
     val imageUrl: String? = null,
     val operatingHours: String? = null,
     val location: String? = null,
