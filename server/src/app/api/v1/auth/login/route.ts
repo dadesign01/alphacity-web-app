@@ -6,6 +6,8 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
+        await prisma.$queryRaw`SELECT 1`;
+    console.log('[DB TEST] connection success');
     const { email, password } = await request.json();
 
     if (!email || !password) {
