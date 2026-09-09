@@ -1,3 +1,4 @@
+
 package com.alphacity.stamptour.ui.screen
 
 import androidx.compose.foundation.background
@@ -58,6 +59,23 @@ private val Pretendard = FontFamily.SansSerif
  */
 private const val LOCATION_THRESHOLD_METERS = 25.0
 
+/*
+ * =============================================================
+ * TEMP - 오늘 하루 테스트용
+ * =============================================================
+ *
+ * 오늘만 체류시간 미션에서 위치 인증을 완전히 우회한다.
+ *
+ * 테스트가 끝나면 이 값을 false로 변경하고
+ * 아래 TEMP 처리 부분을 원래대로 복구한다.
+ *
+ * 위치 인증 관련 기존 코드는 삭제하지 않고
+ * 주석으로 남겨둔다.
+ *
+ * =============================================================
+ */
+private const val TEMP_SKIP_LOCATION_TODAY = true
+
 @Composable
 fun StayTimeMissionScreen(
     mission: MissionItem,
@@ -107,14 +125,40 @@ fun StayTimeMissionScreen(
     }
 
     /*
+     * =============================================================
      * GPS 위치 인증 완료 여부
+     * =============================================================
+     *
+     * [오늘 임시 테스트]
+     *
+     * 위치 인증을 아예 사용하지 않는다.
+     *
+     * 기존 로직:
+     *
+     * var locationVerified by remember {
+     *     mutableStateOf(skipLocationVerification)
+     * }
+     *
+     * 오늘은 무조건 true로 설정해서
+     * 위치 인증 화면을 건너뛴다.
+     * =============================================================
      */
-    var locationVerified by remember {
-        mutableStateOf(skipLocationVerification)
+    var locationVerified by remember(mission.id) {
+
+        mutableStateOf(
+            if (TEMP_SKIP_LOCATION_TODAY) {
+                true
+            } else {
+                skipLocationVerification
+            }
+        )
     }
 
     /*
      * GPS 인증 당시 목표 장소까지의 거리
+     *
+     * 오늘 테스트에서는 사용하지 않지만
+     * 위치 인증 복구를 위해 유지한다.
      */
     var currentDistance by remember(mission.id) {
         mutableStateOf<Int?>(null)
@@ -173,8 +217,21 @@ fun StayTimeMissionScreen(
      * ─────────────────────────────
      * GPS 위치 인증
      * ─────────────────────────────
+     *
+     * 오늘 테스트에서는 호출되지 않는다.
+     *
+     * 위치 인증을 다시 사용할 때를 위해
+     * 기존 코드를 그대로 유지한다.
      */
     suspend fun verifyLocation() {
+
+        /*
+         * TEMP - 오늘 하루 위치 인증 완전 우회
+         */
+        if (TEMP_SKIP_LOCATION_TODAY) {
+            locationVerified = true
+            return
+        }
 
         if (isLoading) {
             return
@@ -269,6 +326,11 @@ fun StayTimeMissionScreen(
 
     /*
      * 위치 확인 버튼 요청 처리
+     *
+     * 오늘 테스트에서는 화면 자체가 표시되지 않으므로
+     * 실행될 일이 없다.
+     *
+     * 위치 인증 복구 시 기존대로 동작한다.
      */
     LaunchedEffect(locationCheckRequested) {
 
@@ -330,9 +392,21 @@ fun StayTimeMissionScreen(
              */
             isLoading = true
 
+            println("================================")
+            println("=== STAY MISSION TIMER COMPLETE ===")
+            println("missionId = ${mission.id}")
+            println("stayMinutes = $stayMinutes")
+            println("→ completeMission() 호출")
+            println("================================")
+
             repository.completeMission(
                 missionId = mission.id,
             ).onSuccess {
+
+                println("================================")
+                println("=== STAY MISSION COMPLETE API SUCCESS ===")
+                println("missionId = ${mission.id}")
+                println("================================")
 
                 isCompleted = true
 
@@ -341,6 +415,12 @@ fun StayTimeMissionScreen(
                 val message =
                     error.message
                         ?: "미션 완료에 실패했습니다."
+
+                println("================================")
+                println("=== STAY MISSION COMPLETE API FAILED ===")
+                println("missionId = ${mission.id}")
+                println("error = $message")
+                println("================================")
 
                 when {
 
@@ -387,9 +467,39 @@ fun StayTimeMissionScreen(
         }
 
         /*
-         * GPS 인증이 필요한 미션인데
-         * 아직 인증하지 않은 경우
+         * =========================================================
+         * TEMP - 오늘 하루 위치 인증 우회
+         * =========================================================
+         *
+         * 오늘은 위치 인증을 하지 않으므로
+         * 아래 기존 위치 인증 체크를 사용하지 않는다.
+         *
+         * 기존 코드:
+         *
+         * if (
+         *     hasLocation &&
+         *     !locationVerified
+         * ) {
+         *
+         *     alertMessage =
+         *         "먼저 지정 장소에서\n" +
+         *         "위치 확인을 완료해주세요."
+         *
+         *     showAlert = true
+         *
+         *     return
+         * }
+         *
+         * =========================================================
          */
+
+        /*
+         * 위치 인증이 필요한 미션인데
+         * 아직 인증하지 않은 경우
+         *
+         * 오늘 테스트에서는 실행하지 않는다.
+         */
+        /*
         if (
             hasLocation &&
             !locationVerified
@@ -403,6 +513,7 @@ fun StayTimeMissionScreen(
 
             return
         }
+        */
 
         /*
          * 처음 시작할 때만 전체 체류시간으로 초기화
@@ -420,6 +531,14 @@ fun StayTimeMissionScreen(
          * 여기서부터 실제 체류시간 카운트 시작
          */
         isTimerRunning = true
+
+        println("================================")
+        println("=== STAY TIMER START ===")
+        println("missionId = ${mission.id}")
+        println("stayMinutes = $stayMinutes")
+        println("TEMP_SKIP_LOCATION_TODAY = $TEMP_SKIP_LOCATION_TODAY")
+        println("locationVerified = $locationVerified")
+        println("================================")
     }
 
     /*
@@ -433,6 +552,10 @@ fun StayTimeMissionScreen(
     fun stopTimer() {
 
         isTimerRunning = false
+
+        println(
+            "=== STAY TIMER STOP ==="
+        )
     }
 
     /*
@@ -630,6 +753,10 @@ fun StayTimeMissionScreen(
                         .background(StayOrange)
                         .clickable {
 
+                            println(
+                                "=== STAY SCREEN CONFIRM ==="
+                            )
+
                             onCompleted()
                             onDismiss()
                         }
@@ -648,9 +775,22 @@ fun StayTimeMissionScreen(
                 }
             }
 
+            /*
+             * =========================================================
+             * GPS 위치 인증 화면
+             * =========================================================
+             *
+             * 오늘 TEMP_SKIP_LOCATION_TODAY = true 이므로
+             * locationVerified가 처음부터 true라서
+             * 이 화면은 표시되지 않는다.
+             *
+             * 위치 인증 복구 시 이 블록은 그대로 사용한다.
+             * =========================================================
+             */
         } else if (
             hasLocation &&
-            !locationVerified
+            !locationVerified &&
+            !TEMP_SKIP_LOCATION_TODAY
         ) {
 
             // ─────────────────────────────
@@ -861,14 +1001,19 @@ fun StayTimeMissionScreen(
                     Alignment.CenterHorizontally,
             ) {
 
-                Spacer(
-                    modifier = Modifier.weight(1f)
-                )
-
                 /*
                  * GPS 인증 완료 표시
+                 *
+                 * 오늘 테스트에서는 위치 인증을 하지 않았으므로
+                 * 이 표시도 보여주지 않는다.
+                 *
+                 * 위치 인증 복구 시 기존대로 표시된다.
                  */
-                if (hasLocation) {
+                if (
+                    hasLocation &&
+                    locationVerified &&
+                    !TEMP_SKIP_LOCATION_TODAY
+                ) {
 
                     Row(
                         verticalAlignment =
@@ -903,6 +1048,50 @@ fun StayTimeMissionScreen(
                             fontWeight = FontWeight.Medium,
                             fontSize = 12.sp,
                             color = Color(0xFF16A34A),
+                        )
+                    }
+
+                    Spacer(
+                        modifier = Modifier.height(16.dp)
+                    )
+                }
+
+                /*
+                 * 오늘 테스트 안내
+                 */
+                if (TEMP_SKIP_LOCATION_TODAY) {
+
+                    Row(
+                        verticalAlignment =
+                            Alignment.CenterVertically,
+                        horizontalArrangement =
+                            Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .clip(
+                                RoundedCornerShape(8.dp)
+                            )
+                            .background(
+                                Color(0xFFFFFBEB)
+                            )
+                            .padding(
+                                horizontal = 12.dp,
+                                vertical = 6.dp,
+                            ),
+                    ) {
+
+                        Text(
+                            text = "✓",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = StayOrange,
+                        )
+
+                        Text(
+                            text = "오늘 테스트: 위치 인증 생략",
+                            fontFamily = Pretendard,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.sp,
+                            color = StayOrange,
                         )
                     }
 
@@ -968,16 +1157,6 @@ fun StayTimeMissionScreen(
                  * ─────────────────────────
                  * 현재 체류시간
                  * ─────────────────────────
-                 *
-                 * 체류 시작 전:
-                 *
-                 * 00:00
-                 *
-                 * 체류 시작 후:
-                 *
-                 * 01:37
-                 *
-                 * 이런 식으로 증가한다.
                  */
                 Text(
                     text =
@@ -1191,6 +1370,9 @@ private fun formatTimer(
  * ─────────────────────────────
  *
  * 반환값: meter
+ *
+ * 오늘 테스트에서는 호출되지 않는다.
+ * 위치 인증 복구 시 기존대로 사용한다.
  */
 private fun calculateDistanceMeters(
     currentLat: Double,
