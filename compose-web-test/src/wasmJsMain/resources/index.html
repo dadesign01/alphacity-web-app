@@ -164,49 +164,36 @@
     };
 
 
-    window.loginWithKakao = function () {
-        if (!window.initKakaoLogin()) {
-            return;
-        }
+window.loginWithKakao = function () {
+    if (!window.initKakaoLogin()) return;
 
-        try {
-            const redirectUri =
-                window.location.origin +
-                window.location.pathname;
+    try {
+        console.log("[Social] Kakao 로그인 시작");
 
-            console.log(
-                "[Social] Kakao 로그인 시작"
-            );
+        Kakao.Auth.login({
+            success: function (authObj) {
+                console.log("[Social] Kakao 로그인 성공");
+                console.log("[Social] Kakao accessToken 획득");
 
-            console.log(
-                "[Social] Kakao redirectUri:",
-                redirectUri
-            );
-
-            /*
-             * Kakao.Auth.authorize()
-             *
-             * 로그인 성공 후
-             *
-             * 현재 페이지?code=xxxx
-             *
-             * 형태로 돌아옵니다.
-             *
-             * 여기서 받은 code는 서버의
-             * /auth/social에서 access token으로
-             * 교환합니다.
-             */
-            Kakao.Auth.authorize({
-                redirectUri: redirectUri
-            });
-
-        } catch (error) {
-            console.error(
-                "[Social] Kakao 로그인 시작 실패",
-                error
-            );
-        }
-    };
+                window.socialLoginSuccess(
+                    "kakao",
+                    authObj.access_token
+                );
+            },
+            fail: function (error) {
+                console.error(
+                    "[Social] Kakao 로그인 실패",
+                    error
+                );
+            }
+        });
+    } catch (error) {
+        console.error(
+            "[Social] Kakao 로그인 시작 실패",
+            error
+        );
+    }
+};
 
 
     /*
