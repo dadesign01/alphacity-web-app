@@ -12,7 +12,7 @@ import kotlinx.serialization.json.Json
 
 object ApiClient {
 
-    private const val BASE_URL = "http://192.168.0.12:1111/api/v1/"
+    private const val BASE_URL = "https://ollymoa-server.vercel.app/api/v1/"
 
     val client = HttpClient(Js) {
 

@@ -35,7 +35,7 @@ import kotlinx.browser.window
 import web.QrTarget
 
 private const val API_BASE_URL =
-    "http://192.168.0.12:1111/api/v1"
+    "https://ollymoa-server.vercel.app/api/v1"
 
 private val httpClient = HttpClient {
     install(ContentNegotiation) {

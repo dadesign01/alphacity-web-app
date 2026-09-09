@@ -51,7 +51,7 @@ import org.w3c.dom.HTMLImageElement
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
 
-private const val API_BASE_URL = "http://192.168.0.12:1111"
+private const val API_BASE_URL = "https://ollymoa-server.vercel.app"
 
 // ============================================================
 // Image URL
