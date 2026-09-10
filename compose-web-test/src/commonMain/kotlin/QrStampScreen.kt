@@ -35,7 +35,11 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.browser.window
+import kotlinx.coroutines.CancellationException
 import web.QrTarget
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.dp
 
 private const val API_BASE_URL =
     "https://ollymoa-server.vercel.app/api/v1"
@@ -235,6 +239,15 @@ fun QrStampScreen(
 
                 qrValidated = true
 
+            } catch (e: CancellationException) {
+
+                println("================================")
+                println("=== QR VALIDATION CANCELLED ===")
+                println("message = ${e.message}")
+                println("================================")
+
+                throw e
+
             } catch (e: Exception) {
 
                 println("================================")
@@ -319,7 +332,8 @@ fun QrStampScreen(
                  * =================================================
                  */
 
-                val isSeminar = loadedProgram.category == "seminar"
+                val isSeminar =
+                    loadedProgram.category == "seminar"
 
                 // =================================================
                 // 일반 행사만 위치 좌표 필수
@@ -371,6 +385,15 @@ fun QrStampScreen(
 
                     locationVerified = true
                 }
+
+            } catch (e: CancellationException) {
+
+                println("================================")
+                println("=== PROGRAM LOAD CANCELLED ===")
+                println("message = ${e.message}")
+                println("================================")
+
+                throw e
 
             } catch (e: Exception) {
 
@@ -472,7 +495,8 @@ fun QrStampScreen(
                 return@LaunchedEffect
             }
 
-            val isSeminar = loadedProgram.category == "seminar"
+            val isSeminar =
+                loadedProgram.category == "seminar"
 
             // =====================================================
             // 일반 행사
@@ -516,6 +540,9 @@ fun QrStampScreen(
                 println("================================")
 
                 missionLoading = true
+
+                // 이전 조회에서 남아있을 수 있는 Alert 제거
+                showAlert = false
 
                 message =
                     "체류 미션을 확인하고 있습니다."
@@ -589,6 +616,16 @@ fun QrStampScreen(
                                 "stayMinutes = ${mission.stayMinutes}"
                             )
 
+                            /*
+                             * 이전 미션 조회 과정에서 발생한
+                             * Alert가 남아있으면
+                             * StayTimeMissionScreen이 표시되지 않는다.
+                             *
+                             * 실제 미션을 정상적으로 찾았으므로
+                             * Alert를 닫고 미션 화면으로 전환한다.
+                             */
+                            showAlert = false
+
                             stayMission = mission
                         }
                         .onFailure { error ->
@@ -606,6 +643,21 @@ fun QrStampScreen(
 
                             showAlert = true
                         }
+
+                } catch (e: CancellationException) {
+
+                    println("================================")
+                    println("=== MISSION LOAD CANCELLED ===")
+                    println("message = ${e.message}")
+                    println("================================")
+
+                    /*
+                     * Compose에서 LaunchedEffect가 취소된 경우다.
+                     *
+                     * 실제 오류가 아니므로
+                     * Alert를 띄우지 않는다.
+                     */
+                    throw e
 
                 } catch (e: Exception) {
 
@@ -666,7 +718,9 @@ fun QrStampScreen(
                 program
                     ?: return@LaunchedEffect
 
-            val isSeminar = loadedProgram.category == "seminar"
+            val isSeminar =
+                loadedProgram.category == "seminar"
+
             // =====================================================
             // 좌표 결정
             // =====================================================
@@ -843,6 +897,15 @@ fun QrStampScreen(
 
                 showAlert = true
 
+            } catch (e: CancellationException) {
+
+                println("================================")
+                println("=== COLLECT CANCELLED ===")
+                println("message = ${e.message}")
+                println("================================")
+
+                throw e
+
             } catch (e: Exception) {
 
                 println("================================")
@@ -963,8 +1026,6 @@ fun QrStampScreen(
      * 세미나는 절대 여기로 들어오지 않는다.
      */
 
-
-
     else if (
 
         target != null &&
@@ -987,9 +1048,9 @@ fun QrStampScreen(
             targetLongitude != null
         ) {
 
-
             QrLocationVerificationScreen(
                 programId = target.programId,
+
                 targetLatitude =
                     targetLatitude,
 
@@ -1073,6 +1134,10 @@ fun QrStampScreen(
         ) {
 
             CircularProgressIndicator()
+
+            Spacer(
+                modifier = Modifier.height(15.dp)
+            )
 
             Text(message)
         }

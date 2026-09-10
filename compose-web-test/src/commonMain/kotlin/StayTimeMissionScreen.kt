@@ -1199,6 +1199,18 @@ fun StayTimeMissionScreen(
                     color = Color(0xFF828282),
                 )
 
+                Spacer(
+                    modifier = Modifier.height(8.dp)
+                )
+
+                Text(
+                    text =
+                        "※ 페이지를 벗어나면 체류시간이 초기화 되니 주의하시기 바랍니다.",
+                    fontFamily = Pretendard,
+                    fontSize = 13.sp,
+                    color = Color(0xFF828282),
+                )
+
                 /*
                  * 타이머 작동 중일 때
                  * 남은 시간 표시
