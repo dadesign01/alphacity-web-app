@@ -19,18 +19,22 @@ export default async function startQrScanner(video, callback) {
 
     const reader = new BrowserQRCodeReader();
 
-    const controls = await reader.decodeFromVideoDevice(
-        undefined,
+    await reader.decodeFromStream(
+        stream,
         video,
         function (result, error, controls) {
             if (result) {
-                callback(result.getText());
+                const text = result.getText();
+
+                console.log("=== QR CODE DETECTED ===");
+                console.log(text);
+
+                callback(text);
             }
         }
     );
 
     return {
-        controls,
-        stream
+        stream: stream
     };
 }

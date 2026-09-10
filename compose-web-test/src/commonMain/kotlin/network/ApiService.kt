@@ -104,7 +104,7 @@ object ApiService {
     suspend fun getProgramStampMissions(
         stampId: Int
     ): ApiResponse<List<MissionItem>> {
-        return client.get("programs/$stampId/missions").body()
+        return client.get("stamps/$stampId/missions").body()
     }
 
 // =========================

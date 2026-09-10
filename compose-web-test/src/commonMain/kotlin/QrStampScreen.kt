@@ -560,7 +560,7 @@ fun QrStampScreen(
 
                             val mission =
                                 missions.firstOrNull {
-                                    it.type != "stay_time"
+                                    it.type == "stay_time"
                                 }
 
                             if (mission == null) {

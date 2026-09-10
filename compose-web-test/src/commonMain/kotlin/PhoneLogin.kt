@@ -17,16 +17,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.delete
+import androidx.compose.foundation.text.input.insert
+import androidx.compose.foundation.text.input.replace
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -614,11 +621,41 @@ private fun AuthTextField(
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
+    val textFieldState = rememberTextFieldState(
+        initialText = value
+    )
+
+    // 외부 value → TextFieldState 동기화
+    LaunchedEffect(value) {
+        val currentText = textFieldState.text.toString()
+
+        if (currentText != value) {
+            textFieldState.edit {
+                replace(
+                    0,
+                    length,
+                    value,
+                )
+            }
+        }
+    }
+
+    // TextFieldState → 외부 value 동기화
+    LaunchedEffect(textFieldState) {
+        snapshotFlow {
+            textFieldState.text.toString()
+        }.collect { text ->
+            if (text != value) {
+                onValueChange(text)
+            }
+        }
+    }
+
     BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
+        state = textFieldState,
         enabled = enabled,
-        singleLine = true,
+        lineLimits = androidx.compose.foundation.text.input
+            .TextFieldLineLimits.SingleLine,
         keyboardOptions = KeyboardOptions(
             keyboardType = keyboardType,
             imeAction = ImeAction.Done,
@@ -629,7 +666,7 @@ private fun AuthTextField(
             fontSize = 16.sp,
             color = Color.Black,
         ),
-        decorationBox = { innerTextField ->
+        decorator = { innerTextField ->
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Bottom,
@@ -640,7 +677,7 @@ private fun AuthTextField(
                         .height(47.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) {
-                    if (value.isEmpty()) {
+                    if (textFieldState.text.isEmpty()) {
                         Text(
                             text = placeholder,
                             fontSize = 15.sp,
