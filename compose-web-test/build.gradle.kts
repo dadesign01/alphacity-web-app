@@ -40,6 +40,9 @@ kotlin {
         val wasmJsMain by getting {
             dependencies {
                 implementation("io.ktor:ktor-client-js:3.1.3")
+
+                implementation(npm("@zxing/browser", "0.1.5"))
+                implementation(npm("@zxing/library", "0.21.3"))
             }
         }
     }

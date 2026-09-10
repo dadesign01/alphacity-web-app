@@ -1,5 +1,3 @@
-@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
-
 package com.alphacity.stamptour.ui.screen
 
 import androidx.compose.foundation.Image
@@ -16,9 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,37 +32,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.WebElementView
+import coil3.compose.AsyncImage
 import com.alphacity.stamptour.network.dto.FestivalDetail
 import com.alphacity.stamptour.network.dto.FestivalProgramSummary
 import com.alphacity.stamptour.repository.HomeRepository
 import composewebtest.generated.resources.Res
 import composewebtest.generated.resources.header_left_arrow
-import kotlinx.browser.document
 import org.jetbrains.compose.resources.painterResource
-import org.w3c.dom.HTMLImageElement
 
 private val Primary = Color(0xFF02CDF8)
-private const val API_BASE_URL = "https://ollymoa-server.vercel.app"
-private val Pretendard = FontFamily.SansSerif
 
-private val MainGradient = Brush.horizontalGradient(
-    colorStops = arrayOf(
-        0.02f to Color(0xFF6092FF),
-        0.36f to Color(0xFF2563EB),
-        1.0f to Color(0xFF1551D3),
-    ),
-)
+private const val API_BASE_URL =
+    "https://ollymoa-server.vercel.app"
+
+private val Pretendard =
+    FontFamily.SansSerif
+
+private val MainGradient =
+    Brush.horizontalGradient(
+        colorStops = arrayOf(
+            0.02f to Color(0xFF6092FF),
+            0.36f to Color(0xFF2563EB),
+            1.0f to Color(0xFF1551D3),
+        ),
+    )
 
 // ============================================
 // Image URL
 // ============================================
 
-private fun imageUrl(path: String?): String? {
+private fun imageUrl(
+    path: String?,
+): String? {
     if (path.isNullOrBlank()) {
         return null
     }
@@ -75,9 +79,19 @@ private fun imageUrl(path: String?): String? {
     ) {
         path
     } else {
-        "$API_BASE_URL${if (path.startsWith("/")) path else "/$path"}"
+        "$API_BASE_URL${
+            if (path.startsWith("/")) {
+                path
+            } else {
+                "/$path"
+            }
+        }"
     }
 }
+
+// ============================================
+// Festival Detail Screen
+// ============================================
 
 @Composable
 fun FestivalDetailScreen(
@@ -91,9 +105,15 @@ fun FestivalDetailScreen(
     festivalAddress: String? = null,
     festivalLatitude: Double? = null,
     festivalLongitude: Double? = null,
+
     onBackClick: () -> Unit = {},
-    onSeeAllPrograms: () -> Unit = {},
+
+    // 축제 ID를 넘겨서 해당 축제의 전체 프로그램 목록으로 이동
+    onSeeAllPrograms: (Int) -> Unit = {},
+
     onProgramClick: (Int) -> Unit = {},
+
+    // 부모에서 지도 탭으로 전환 처리
     onNavigateToMap: (Double, Double) -> Unit = { _, _ -> },
 ) {
     val repository = remember {
@@ -112,6 +132,10 @@ fun FestivalDetailScreen(
         mutableStateOf<String?>(null)
     }
 
+    // ============================================
+    // 축제 상세 조회
+    // ============================================
+
     LaunchedEffect(festivalId) {
         isLoading = true
         errorMessage = null
@@ -123,8 +147,10 @@ fun FestivalDetailScreen(
             }
             .onFailure {
                 festival = null
+
                 errorMessage =
-                    it.message ?: "축제 정보를 불러오지 못했습니다."
+                    it.message
+                        ?: "축제 정보를 불러오지 못했습니다."
 
                 println(
                     "[FestivalDetailScreen] 축제 조회 실패: ${it.message}"
@@ -138,7 +164,9 @@ fun FestivalDetailScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(
+                rememberScrollState()
+            ),
     ) {
 
         // ============================================
@@ -188,12 +216,14 @@ fun FestivalDetailScreen(
         // ============================================
 
         if (isLoading) {
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(400.dp),
                 contentAlignment = Alignment.Center,
             ) {
+
                 CircularProgressIndicator(
                     color = Primary,
                 )
@@ -207,6 +237,7 @@ fun FestivalDetailScreen(
         // ============================================
 
         if (festival == null) {
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -214,6 +245,7 @@ fun FestivalDetailScreen(
                     .padding(20.dp),
                 contentAlignment = Alignment.Center,
             ) {
+
                 Text(
                     text =
                         errorMessage
@@ -232,46 +264,32 @@ fun FestivalDetailScreen(
 
         // ============================================
         // Festival Image
+        // DB 이미지 → AsyncImage
         // ============================================
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp)
-                .background(Color(0xFFE8E8E8)),
+                .background(
+                    Color(0xFFE8E8E8)
+                ),
             contentAlignment = Alignment.Center,
         ) {
 
-            val festivalImage = imageUrl(
-                currentFestival.imageUrl
-            )
+            val festivalImage =
+                imageUrl(
+                    currentFestival.imageUrl
+                )
 
             if (!festivalImage.isNullOrBlank()) {
 
-                WebElementView(
-                    factory = {
-                        (document.createElement("img") as HTMLImageElement).apply {
-
-                            src = festivalImage
-                            alt = currentFestival.name
-
-                            style.width = "100%"
-                            style.height = "100%"
-                            style.objectFit = "cover"
-                            style.display = "block"
-                        }
-                    },
+                AsyncImage(
+                    model = festivalImage,
+                    contentDescription =
+                        currentFestival.name,
                     modifier = Modifier.fillMaxSize(),
-                    update = { image ->
-
-                        image.src = festivalImage
-                        image.alt = currentFestival.name
-
-                        image.style.width = "100%"
-                        image.style.height = "100%"
-                        image.style.objectFit = "cover"
-                        image.style.display = "block"
-                    },
+                    contentScale = ContentScale.Crop,
                 )
 
             } else {
@@ -320,7 +338,10 @@ fun FestivalDetailScreen(
             // Address
             // ============================================
 
-            if (!currentFestival.address.isNullOrBlank()) {
+            if (
+                !currentFestival.address
+                    .isNullOrBlank()
+            ) {
 
                 Spacer(
                     modifier = Modifier.height(4.dp)
@@ -339,7 +360,10 @@ fun FestivalDetailScreen(
             // Description
             // ============================================
 
-            if (!currentFestival.description.isNullOrBlank()) {
+            if (
+                !currentFestival.description
+                    .isNullOrBlank()
+            ) {
 
                 Spacer(
                     modifier = Modifier.height(16.dp)
@@ -364,9 +388,14 @@ fun FestivalDetailScreen(
             // ============================================
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement =
+                    Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
+
+                // ========================================
+                // 지도보기
+                // ========================================
 
                 if (
                     currentFestival.latitude != null &&
@@ -375,28 +404,39 @@ fun FestivalDetailScreen(
 
                     Button(
                         onClick = {
+
                             onNavigateToMap(
                                 currentFestival.latitude,
                                 currentFestival.longitude,
                             )
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF6366F1),
-                            contentColor = Color.White,
-                        ),
-                        shape = RoundedCornerShape(10.dp),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor =
+                                    Color(0xFF6366F1),
+                                contentColor =
+                                    Color.White,
+                            ),
+                        shape =
+                            RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp),
                     ) {
+
                         Text(
                             text = "지도보기",
                             fontFamily = Pretendard,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight =
+                                FontWeight.SemiBold,
                             fontSize = 15.sp,
                         )
                     }
                 }
+
+                // ========================================
+                // 프로그램 보러가기
+                // ========================================
 
                 Box(
                     modifier = Modifier
@@ -405,16 +445,25 @@ fun FestivalDetailScreen(
                         .clip(
                             RoundedCornerShape(10.dp)
                         )
-                        .background(MainGradient)
+                        .background(
+                            MainGradient
+                        )
                         .clickable {
-                            onSeeAllPrograms()
+
+                            // 현재 축제의 고유 ID 전달
+                            onSeeAllPrograms(
+                                currentFestival.id
+                            )
                         },
-                    contentAlignment = Alignment.Center,
+                    contentAlignment =
+                        Alignment.Center,
                 ) {
+
                     Text(
                         text = "프로그램 보러가기",
                         fontFamily = Pretendard,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight =
+                            FontWeight.SemiBold,
                         fontSize = 15.sp,
                         color = Color.White,
                     )
@@ -448,7 +497,9 @@ fun FestivalDetailScreen(
                     FestivalProgramPreview(
                         program = program,
                         onClick = {
-                            onProgramClick(program.id)
+                            onProgramClick(
+                                program.id
+                            )
                         },
                     )
                 }
@@ -456,6 +507,10 @@ fun FestivalDetailScreen(
         }
     }
 }
+
+// ============================================
+// Festival Program Preview
+// ============================================
 
 @Composable
 private fun FestivalProgramPreview(
@@ -469,11 +524,13 @@ private fun FestivalProgramPreview(
             .clickable {
                 onClick()
             },
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment =
+            Alignment.CenterVertically,
     ) {
 
         // ============================================
         // 프로그램 썸네일
+        // DB 이미지 → AsyncImage
         // ============================================
 
         Box(
@@ -482,46 +539,32 @@ private fun FestivalProgramPreview(
                 .clip(
                     RoundedCornerShape(10.dp)
                 )
-                .background(Color(0xFFF5F5F5)),
-            contentAlignment = Alignment.Center,
+                .background(
+                    Color(0xFFF5F5F5)
+                ),
+            contentAlignment =
+                Alignment.Center,
         ) {
 
-            // DB 이미지 경로 → 실제 API 이미지 URL
-            val programImage = imageUrl(
-                program.imageUrl
-            )
+            val programImage =
+                imageUrl(
+                    program.imageUrl
+                )
 
             if (!programImage.isNullOrBlank()) {
 
-                WebElementView(
-                    factory = {
-                        (document.createElement("img") as HTMLImageElement).apply {
-
-                            src = programImage
-                            alt = program.name
-
-                            style.width = "100%"
-                            style.height = "100%"
-                            style.objectFit = "cover"
-                            style.display = "block"
-                        }
-                    },
+                AsyncImage(
+                    model = programImage,
+                    contentDescription =
+                        program.name,
                     modifier = Modifier.fillMaxSize(),
-                    update = { image ->
-
-                        image.src = programImage
-                        image.alt = program.name
-
-                        image.style.width = "100%"
-                        image.style.height = "100%"
-                        image.style.objectFit = "cover"
-                        image.style.display = "block"
-                    },
+                    contentScale =
+                        ContentScale.Crop,
                 )
 
             } else {
 
-                // 이미지가 없을 경우 기존 첫 글자 표시
+                // 이미지가 없을 경우 기존 첫 글자
                 Text(
                     text = program.name.take(1),
                     fontFamily = Pretendard,
@@ -559,11 +602,20 @@ private fun FestivalProgramPreview(
             val categoryText =
                 when (program.category) {
 
-                    "food" -> "맛집"
-                    "exhibition" -> "전시"
-                    "seminar" -> "세미나"
-                    "experience" -> "체험"
-                    "event" -> "이벤트"
+                    "food" ->
+                        "맛집"
+
+                    "exhibition" ->
+                        "전시"
+
+                    "seminar" ->
+                        "세미나"
+
+                    "experience" ->
+                        "체험"
+
+                    "event" ->
+                        "이벤트"
 
                     else ->
                         program.category ?: ""
@@ -580,7 +632,10 @@ private fun FestivalProgramPreview(
                 )
             }
 
-            if (!program.location.isNullOrBlank()) {
+            if (
+                !program.location
+                    .isNullOrBlank()
+            ) {
 
                 Spacer(
                     modifier = Modifier.height(2.dp)

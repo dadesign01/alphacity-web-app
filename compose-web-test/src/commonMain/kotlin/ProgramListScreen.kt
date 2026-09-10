@@ -2,6 +2,7 @@
 
 package com.alphacity.stamptour.ui.screen
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,29 +36,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.WebElementView
+import coil3.compose.AsyncImage
 import com.alphacity.stamptour.network.dto.FestivalItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.repository.HomeRepository
-import kotlinx.browser.document
-import kotlinx.browser.window
-import org.w3c.dom.HTMLImageElement
+import composewebtest.generated.resources.Res
+import composewebtest.generated.resources.header_left_arrow
+import composewebtest.generated.resources.selectbox_arrow
 
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
 
-private const val API_BASE_URL = "https://ollymoa-server.vercel.app"
+private const val API_BASE_URL =
+    "https://ollymoa-server.vercel.app"
 
 // ============================================================
 // Image URL
 // ============================================================
 
-private fun imageUrl(path: String?): String? {
+private fun imageUrl(
+    path: String?,
+): String? {
     if (path.isNullOrBlank()) {
         return null
     }
@@ -359,39 +366,15 @@ private fun ProgramListHeader(
             contentAlignment =
                 Alignment.Center,
         ) {
-            WebElementView(
-                factory = {
-                    (
-                            document.createElement(
-                                "img"
-                            ) as HTMLImageElement
-                            ).apply {
-                            src =
-                                "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/header-left-arrow.png"
-
-                            alt = "뒤로가기"
-
-                            style.width = "8px"
-                            style.height = "15px"
-                            style.objectFit = "contain"
-                            style.display = "block"
-                        }
-                },
+            Image(
+                painter = painterResource(
+                    Res.drawable.header_left_arrow
+                ),
+                contentDescription = "뒤로가기",
                 modifier = Modifier.size(
                     width = 8.dp,
                     height = 15.dp,
                 ),
-                update = { image ->
-                    image.src =
-                        "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/header-left-arrow.png"
-
-                    image.alt = "뒤로가기"
-
-                    image.style.width = "8px"
-                    image.style.height = "15px"
-                    image.style.objectFit = "contain"
-                    image.style.display = "block"
-                },
             )
         }
 
@@ -521,39 +504,17 @@ private fun ProgramListCard(
             if (
                 !programImage.isNullOrBlank()
             ) {
-
-                WebElementView(
-                    factory = {
-                        (
-                                document.createElement(
-                                    "img"
-                                ) as HTMLImageElement
-                                ).apply {
-                                src = programImage
-                                alt = program.name
-
-                                style.width = "100%"
-                                style.height = "100%"
-                                style.objectFit = "cover"
-                                style.display = "block"
-                                style.borderRadius = "15px"
-                            }
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                    update = { image ->
-                        image.src = programImage
-                        image.alt = program.name
-
-                        image.style.width = "100%"
-                        image.style.height = "100%"
-                        image.style.objectFit = "cover"
-                        image.style.display = "block"
-                        image.style.borderRadius = "15px"
-                    },
+                AsyncImage(
+                    model = programImage,
+                    contentDescription = program.name,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(
+                            RoundedCornerShape(15.dp)
+                        ),
+                    contentScale = ContentScale.Crop,
                 )
-
             } else {
-
                 Text(
                     text = program.name.take(1),
                     fontFamily = Pretendard,
@@ -926,53 +887,23 @@ private fun FestivalSelectBar(
 private fun SelectBoxArrow(
     expanded: Boolean,
 ) {
-    WebElementView(
-        factory = {
-            (
-                    document.createElement(
-                        "img"
-                    ) as HTMLImageElement
-                    ).apply {
-                    src =
-                        "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/selectbox_arrow.png"
-
-                    alt = "선택"
-
-                    style.width = "6px"
-                    style.height = "10px"
-                    style.objectFit = "contain"
-                    style.display = "block"
-
-                    style.transform =
-                        if (expanded) {
-                            "scaleY(-1)"
-                        } else {
-                            "scaleY(1)"
-                        }
-                }
-        },
-        modifier = Modifier.size(
-            width = 6.dp,
-            height = 10.dp,
+    Image(
+        painter = painterResource(
+            Res.drawable.selectbox_arrow
         ),
-        update = { image ->
-
-            image.src =
-                "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/selectbox_arrow.png"
-
-            image.alt = "선택"
-
-            image.style.width = "6px"
-            image.style.height = "10px"
-            image.style.objectFit = "contain"
-            image.style.display = "block"
-
-            image.style.transform =
-                if (expanded) {
-                    "scaleY(-1)"
-                } else {
-                    "scaleY(1)"
-                }
-        },
+        contentDescription = "선택",
+        modifier = Modifier
+            .size(
+                width = 6.dp,
+                height = 10.dp,
+            )
+            .graphicsLayer {
+                scaleY =
+                    if (expanded) {
+                        -1f
+                    } else {
+                        1f
+                    }
+            },
     )
 }

@@ -60,11 +60,16 @@ import composewebtest.generated.resources.Res
 import composewebtest.generated.resources.header_left_arrow
 import composewebtest.generated.resources.program_stamp_info
 import composewebtest.generated.resources.tts_sound
+import composewebtest.generated.resources.road_navigation
+import composewebtest.generated.resources.map_icon
+import composewebtest.generated.resources.mission_check_icon
 import composewebtest.theme.MainGradient
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.jetbrains.compose.resources.painterResource
 import org.w3c.dom.HTMLAudioElement
+import coil3.compose.AsyncImage
+import kotlinx.browser.window
 
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
@@ -131,6 +136,8 @@ fun ProgramDetailScreen(
     var message by remember {
         mutableStateOf<String?>(null)
     }
+
+    var showQrScanner by remember { mutableStateOf(false) }
 
     // TTS 재생 상태
     var isSpeaking by remember {
@@ -277,46 +284,23 @@ fun ProgramDetailScreen(
                                 Alignment.Center,
                         ) {
                             if (!programImage.isNullOrBlank()) {
-                                androidx.compose.ui.viewinterop.WebElementView(
-                                    factory = {
-                                        (
-                                                document
-                                                    .createElement("img")
-                                                        as org.w3c.dom.HTMLImageElement
-                                                ).apply {
-                                                src = programImage
-                                                alt = currentProgram.name
-
-                                                style.width = "100%"
-                                                style.height = "100%"
-                                                style.objectFit = "cover"
-                                                style.display = "block"
-                                                style.borderRadius = "15px"
-                                            }
-                                    },
-                                    modifier = Modifier.fillMaxSize(),
-                                    update = { image ->
-                                        image.src = programImage
-                                        image.alt = currentProgram.name
-
-                                        image.style.width = "100%"
-                                        image.style.height = "100%"
-                                        image.style.objectFit = "cover"
-                                        image.style.display = "block"
-                                        image.style.borderRadius = "15px"
-                                    },
+                                AsyncImage(
+                                    model = programImage,
+                                    contentDescription = currentProgram.name,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(
+                                            RoundedCornerShape(15.dp)
+                                        ),
+                                    contentScale = ContentScale.Crop,
                                 )
                             } else {
                                 Text(
-                                    text =
-                                        currentProgram.name
-                                            .take(1),
+                                    text = currentProgram.name.take(1),
                                     fontFamily = Pretendard,
-                                    fontWeight =
-                                        FontWeight.Bold,
+                                    fontWeight = FontWeight.Bold,
                                     fontSize = 40.sp,
-                                    color =
-                                        Color(0xFFB5B5B5),
+                                    color = Color(0xFFB5B5B5),
                                 )
                             }
                         }
@@ -814,23 +798,29 @@ fun ProgramDetailScreen(
                                     .background(
                                         Color(0xFFF8F8F8)
                                     ),
-                                contentAlignment =
-                                    Alignment.CenterStart,
+                                contentAlignment = Alignment.CenterStart,
                             ) {
-                                Text(
-                                    text =
-                                        participationMissionText,
-                                    fontFamily = Pretendard,
-                                    fontWeight =
-                                        FontWeight.Normal,
-                                    fontSize = 14.sp,
-                                    color =
-                                        Color(0xFF464646),
-                                    modifier =
-                                        Modifier.padding(
-                                            horizontal = 16.dp
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(15.dp),
+                                ) {
+                                    Image(
+                                        painter = painterResource(
+                                            Res.drawable.mission_check_icon
                                         ),
-                                )
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+
+                                    Text(
+                                        text = participationMissionText,
+                                        fontFamily = Pretendard,
+                                        fontWeight = FontWeight.Normal,
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF464646),
+                                    )
+                                }
                             }
                         }
 
@@ -914,27 +904,25 @@ fun ProgramDetailScreen(
                                         horizontalArrangement =
                                             Arrangement.spacedBy(8.dp),
                                     ) {
-                                        Text(
-                                            text = "📍",
-                                            fontFamily =
-                                                Pretendard,
-                                            fontWeight =
-                                                FontWeight.Bold,
-                                            fontSize = 20.sp,
-                                            color =
-                                                Color(0xFF2563EB),
-                                        )
+                                        // 길찾기
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(15.dp),
+                                        ) {
+                                            Image(
+                                                painter = painterResource(Res.drawable.road_navigation),
+                                                contentDescription = "길찾기",
+                                                modifier = Modifier.size(20.dp),
+                                            )
 
-                                        Text(
-                                            text = "길찾기",
-                                            fontFamily =
-                                                Pretendard,
-                                            fontWeight =
-                                                FontWeight.SemiBold,
-                                            fontSize = 16.sp,
-                                            color =
-                                                Color(0xFF2563EB),
-                                        )
+                                            Text(
+                                                text = "길찾기",
+                                                fontFamily = Pretendard,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 16.sp,
+                                                color = Color(0xFF2563EB),
+                                            )
+                                        }
                                     }
                                 }
 
@@ -976,29 +964,23 @@ fun ProgramDetailScreen(
                                     contentAlignment =
                                         Alignment.Center,
                                 ) {
+                                    // 지도에서 보기
                                     Row(
-                                        verticalAlignment =
-                                            Alignment.CenterVertically,
-                                        horizontalArrangement =
-                                            Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(15.dp),
                                     ) {
-                                        Text(
-                                            text = "🗺️",
-                                            fontSize = 17.sp,
-                                            color =
-                                                Color(0xFF2563EB),
+                                        Image(
+                                            painter = painterResource(Res.drawable.map_icon),
+                                            contentDescription = "지도에서 보기",
+                                            modifier = Modifier.size(20.dp),
                                         )
 
                                         Text(
-                                            text =
-                                                "지도에서 보기",
-                                            fontFamily =
-                                                Pretendard,
-                                            fontWeight =
-                                                FontWeight.Medium,
+                                            text = "지도에서 보기",
+                                            fontFamily = Pretendard,
+                                            fontWeight = FontWeight.Medium,
                                             fontSize = 16.sp,
-                                            color =
-                                                Color(0xFF2563EB),
+                                            color = Color(0xFF2563EB),
                                         )
                                     }
                                 }
@@ -1024,12 +1006,28 @@ fun ProgramDetailScreen(
                             ) {
                                 Text(
                                     text = "참여하기",
-                                    fontFamily =
-                                        Pretendard,
-                                    fontWeight =
-                                        FontWeight.Medium,
+                                    fontFamily = Pretendard,
+                                    fontWeight = FontWeight.Medium,
                                     fontSize = 16.sp,
                                     color = Color.White,
+                                )
+                            }
+
+                            if (showQrScanner) {
+                                QrScannerHost(
+                                    onQrDetected = { qrUrl ->
+                                        showQrScanner = false
+
+                                        if (
+                                            qrUrl.startsWith("http://") ||
+                                            qrUrl.startsWith("https://")
+                                        ) {
+                                            window.location.href = qrUrl
+                                        }
+                                    },
+                                    onClose = {
+                                        showQrScanner = false
+                                    },
                                 )
                             }
                         }
@@ -1048,12 +1046,12 @@ fun ProgramDetailScreen(
                 Text(
                     text = "알림",
                     fontFamily = Pretendard,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                 )
             },
             text = {
                 Text(
-                    text = message ?: "",
+                    text = message!!,
                     fontFamily = Pretendard,
                 )
             },
@@ -1061,12 +1059,12 @@ fun ProgramDetailScreen(
                 TextButton(
                     onClick = {
                         message = null
-                    },
+                        showQrScanner = true
+                    }
                 ) {
                     Text(
                         text = "확인",
                         fontFamily = Pretendard,
-                        color = Primary,
                     )
                 }
             },

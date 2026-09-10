@@ -32,7 +32,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.WebElementView
+import androidx.compose.foundation.Image
+import org.jetbrains.compose.resources.painterResource
+import composewebtest.generated.resources.Res
+import composewebtest.generated.resources.tab_home
+import composewebtest.generated.resources.tab_map
+import composewebtest.generated.resources.tab_stamp
+import composewebtest.generated.resources.tab_mypage
 import com.alphacity.stamptour.web.WebTokenManager
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -605,52 +611,6 @@ fun MainScreen(
 }
 
 
-/* ============================================================
- * Helper Composable
- * ============================================================ */
-
-/*
- * WebElementView를 이용한 이미지 렌더링
- *
- * composeResources/drawable에 있는 이미지를
- * 브라우저의 img element로 표시합니다.
- */
-@OptIn(ExperimentalComposeUiApi::class)
-@Composable
-private fun QuickMenuImage(
-    resourceName: String,
-    modifier: Modifier = Modifier,
-) {
-    WebElementView(
-        factory = {
-            (document.createElement("img") as HTMLImageElement).apply {
-                src =
-                    "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/$resourceName"
-
-                alt = ""
-
-                style.width = "100%"
-                style.height = "100%"
-                style.objectFit = "contain"
-                style.display = "block"
-            }
-        },
-        modifier = modifier,
-        update = { image ->
-            image.src =
-                "${window.location.origin}/composeResources/composewebtest.generated.resources/drawable/$resourceName"
-
-            image.alt = ""
-
-            image.style.width = "100%"
-            image.style.height = "100%"
-            image.style.objectFit = "contain"
-            image.style.display = "block"
-        },
-    )
-}
-
-
 @Composable
 private fun BottomNavigationBar(
     selectedTab: BottomTab,
@@ -672,14 +632,26 @@ private fun BottomNavigationBar(
             val isSelected =
                 selectedTab == tab
 
-            /*
-             * 각 탭에 대응하는 이미지
-             */
-            val imageResource = when (tab) {
-                BottomTab.HOME -> "tab_home.png"
-                BottomTab.MAP -> "tab_map.png"
-                BottomTab.STAMP -> "tab_stamp.png"
-                BottomTab.MYPAGE -> "tab_mypage.png"
+            val iconPainter = when (tab) {
+                BottomTab.HOME ->
+                    painterResource(
+                        Res.drawable.tab_home
+                    )
+
+                BottomTab.MAP ->
+                    painterResource(
+                        Res.drawable.tab_map
+                    )
+
+                BottomTab.STAMP ->
+                    painterResource(
+                        Res.drawable.tab_stamp
+                    )
+
+                BottomTab.MYPAGE ->
+                    painterResource(
+                        Res.drawable.tab_mypage
+                    )
             }
 
             Column(
@@ -688,17 +660,16 @@ private fun BottomNavigationBar(
                     .clickable {
                         onTabSelected(tab)
                     }
-                    .padding(vertical = 4.dp),
+                    .padding(
+                        vertical = 4.dp
+                    ),
                 horizontalAlignment =
                     Alignment.CenterHorizontally,
             ) {
 
-                /*
-                 * 기존 문자 아이콘 대신
-                 * WebElementView 기반 PNG 이미지 사용
-                 */
-                QuickMenuImage(
-                    resourceName = imageResource,
+                Image(
+                    painter = iconPainter,
+                    contentDescription = tab.title,
                     modifier = Modifier
                         .width(24.dp)
                         .height(24.dp),
@@ -712,11 +683,12 @@ private fun BottomNavigationBar(
                     text = tab.title,
                     fontWeight = FontWeight.Medium,
                     fontSize = 10.sp,
-                    color = if (isSelected) {
-                        Primary
-                    } else {
-                        Color(0xFF999999)
-                    },
+                    color =
+                        if (isSelected) {
+                            Primary
+                        } else {
+                            Color(0xFF999999)
+                        },
                 )
             }
         }
