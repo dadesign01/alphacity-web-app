@@ -29,6 +29,7 @@ private fun App() {
                 currentPath == "/stamp-not-earned" ||
                 currentPath == "/terms" ||
                 currentPath == "/stamp" ||
+                currentPath == "/qr-scanner" ||
                 currentPath.startsWith("/stamp/")
 
     if (!isValidPath) {

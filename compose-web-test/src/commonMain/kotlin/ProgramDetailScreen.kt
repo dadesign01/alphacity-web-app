@@ -52,32 +52,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import coil3.compose.AsyncImage
 import com.alphacity.stamptour.network.ApiService
 import com.alphacity.stamptour.network.dto.MissionItem
 import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.repository.ProgramDetailRepository
 import composewebtest.generated.resources.Res
 import composewebtest.generated.resources.header_left_arrow
-import composewebtest.generated.resources.program_stamp_info
-import composewebtest.generated.resources.tts_sound
-import composewebtest.generated.resources.road_navigation
 import composewebtest.generated.resources.map_icon
 import composewebtest.generated.resources.mission_check_icon
-import composewebtest.theme.MainGradient
+import composewebtest.generated.resources.program_stamp_info
+import composewebtest.generated.resources.road_navigation
+import composewebtest.generated.resources.tts_sound
 import kotlinx.browser.document
-import kotlinx.browser.window
 import org.jetbrains.compose.resources.painterResource
 import org.w3c.dom.HTMLAudioElement
-import coil3.compose.AsyncImage
-import kotlinx.browser.window
+import composewebtest.theme.MainGradient
 
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
 
-private const val API_BASE_URL = "https://ollymoa-server.vercel.app"
+private const val API_BASE_URL =
+    "https://ollymoa-server.vercel.app"
 
-private fun imageUrl(path: String?): String? {
-    if (path.isNullOrBlank()) return null
+private fun imageUrl(
+    path: String?,
+): String? {
+    if (path.isNullOrBlank()) {
+        return null
+    }
 
     return if (
         path.startsWith("http://") ||
@@ -85,7 +88,13 @@ private fun imageUrl(path: String?): String? {
     ) {
         path
     } else {
-        "$API_BASE_URL${if (path.startsWith("/")) path else "/$path"}"
+        "$API_BASE_URL${
+            if (path.startsWith("/")) {
+                path
+            } else {
+                "/$path"
+            }
+        }"
     }
 }
 
@@ -95,8 +104,41 @@ fun ProgramDetailScreen(
     programName: String = "",
     category: String = "",
     onBackClick: () -> Unit = {},
-    onNavigateToMap: (lat: Double?, lng: Double?) -> Unit = { _, _ -> },
+    onNavigateToMap: (
+        lat: Double?,
+        lng: Double?,
+    ) -> Unit = { _, _ -> },
 ) {
+    // ============================================================
+    // QR 스캐너 화면
+    //
+    // 중요:
+    // 기존처럼 상세 화면 아래에 QrScannerHost를 붙이지 않는다.
+    // showQrScanner가 true이면 이 화면 자체를 QR 스캐너로 교체한다.
+    // ============================================================
+
+    var showQrScanner by remember {
+        mutableStateOf(false)
+    }
+
+    if (showQrScanner) {
+        QrScannerFullScreen(
+            onQrDetected = { qrText ->
+                println(
+                    "[ProgramDetailScreen] QR detected: $qrText"
+                )
+
+                // 현재는 QR 문자열만 확인한다.
+                // 로그인 / 스탬프 / 위치인증은 이후 연결.
+            },
+            onClose = {
+                showQrScanner = false
+            },
+        )
+
+        return
+    }
+
     val repository = remember {
         ProgramDetailRepository(ApiService)
     }
@@ -137,14 +179,10 @@ fun ProgramDetailScreen(
         mutableStateOf<String?>(null)
     }
 
-    var showQrScanner by remember { mutableStateOf(false) }
-
-    // TTS 재생 상태
     var isSpeaking by remember {
         mutableStateOf(false)
     }
 
-    // 현재 재생 중인 HTML Audio
     var ttsAudio by remember {
         mutableStateOf<HTMLAudioElement?>(null)
     }
@@ -158,11 +196,16 @@ fun ProgramDetailScreen(
         }
     }
 
+    // ============================================================
+    // 프로그램 조회
+    // ============================================================
+
     LaunchedEffect(programId) {
         isLoading = true
         errorMessage = null
 
-        repository.getProgramById(programId)
+        repository
+            .getProgramById(programId)
             .onSuccess {
                 program = it
             }
@@ -172,7 +215,8 @@ fun ProgramDetailScreen(
                         ?: "프로그램을 불러오지 못했습니다."
             }
 
-        repository.getProgramMissions(programId)
+        repository
+            .getProgramMissions(programId)
             .onSuccess {
                 missions = it
             }
@@ -182,6 +226,10 @@ fun ProgramDetailScreen(
 
         isLoading = false
     }
+
+    // ============================================================
+    // 화면
+    // ============================================================
 
     Column(
         modifier = Modifier
@@ -203,6 +251,10 @@ fun ProgramDetailScreen(
         )
 
         when {
+            // ====================================================
+            // Loading
+            // ====================================================
+
             isLoading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -214,6 +266,10 @@ fun ProgramDetailScreen(
                 }
             }
 
+            // ====================================================
+            // Error
+            // ====================================================
+
             program == null -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -224,8 +280,9 @@ fun ProgramDetailScreen(
                             Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = errorMessage
-                                ?: "프로그램 정보를 불러올 수 없습니다.",
+                            text =
+                                errorMessage
+                                    ?: "프로그램 정보를 불러올 수 없습니다.",
                             fontFamily = Pretendard,
                             fontSize = 14.sp,
                             color = Color(0xFF595959),
@@ -250,6 +307,10 @@ fun ProgramDetailScreen(
                 }
             }
 
+            // ====================================================
+            // 정상
+            // ====================================================
+
             else -> {
                 val currentProgram = program!!
 
@@ -263,8 +324,14 @@ fun ProgramDetailScreen(
                                 rememberScrollState()
                             ),
                     ) {
+                        // ====================================================
+                        // 프로그램 이미지
+                        // ====================================================
+
                         val programImage =
-                            imageUrl(currentProgram.imageUrl)
+                            imageUrl(
+                                currentProgram.imageUrl
+                            )
 
                         Box(
                             modifier = Modifier
@@ -273,7 +340,9 @@ fun ProgramDetailScreen(
                                     horizontal = 20.dp,
                                     vertical = 20.dp,
                                 )
-                                .aspectRatio(390f / 290f)
+                                .aspectRatio(
+                                    390f / 290f
+                                )
                                 .clip(
                                     RoundedCornerShape(15.dp)
                                 )
@@ -286,24 +355,35 @@ fun ProgramDetailScreen(
                             if (!programImage.isNullOrBlank()) {
                                 AsyncImage(
                                     model = programImage,
-                                    contentDescription = currentProgram.name,
+                                    contentDescription =
+                                        currentProgram.name,
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .clip(
                                             RoundedCornerShape(15.dp)
                                         ),
-                                    contentScale = ContentScale.Crop,
+                                    contentScale =
+                                        ContentScale.Crop,
                                 )
                             } else {
                                 Text(
-                                    text = currentProgram.name.take(1),
-                                    fontFamily = Pretendard,
-                                    fontWeight = FontWeight.Bold,
+                                    text =
+                                        currentProgram.name
+                                            .take(1),
+                                    fontFamily =
+                                        Pretendard,
+                                    fontWeight =
+                                        FontWeight.Bold,
                                     fontSize = 40.sp,
-                                    color = Color(0xFFB5B5B5),
+                                    color =
+                                        Color(0xFFB5B5B5),
                                 )
                             }
                         }
+
+                        // ====================================================
+                        // 카테고리 / 상태
+                        // ====================================================
 
                         val badgeLabel =
                             when (currentProgram.category) {
@@ -315,12 +395,15 @@ fun ProgramDetailScreen(
                             }
 
                         val isInProgress =
-                            currentProgram.status == "in_progress"
+                            currentProgram.status ==
+                                    "in_progress"
 
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 20.dp)
+                                .padding(
+                                    horizontal = 20.dp
+                                )
                                 .padding(
                                     top = 4.dp,
                                     bottom = 10.dp,
@@ -333,9 +416,13 @@ fun ProgramDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .width(60.dp)
-                                    .aspectRatio(60f / 28f)
+                                    .aspectRatio(
+                                        60f / 28f
+                                    )
                                     .clip(
-                                        RoundedCornerShape(15.dp)
+                                        RoundedCornerShape(
+                                            15.dp
+                                        )
                                     )
                                     .border(
                                         width = 1.dp,
@@ -363,9 +450,13 @@ fun ProgramDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .width(60.dp)
-                                    .aspectRatio(60f / 28f)
+                                    .aspectRatio(
+                                        60f / 28f
+                                    )
                                     .clip(
-                                        RoundedCornerShape(15.dp)
+                                        RoundedCornerShape(
+                                            15.dp
+                                        )
                                     )
                                     .background(
                                         if (isInProgress) {
@@ -393,6 +484,10 @@ fun ProgramDetailScreen(
                             }
                         }
 
+                        // ====================================================
+                        // 프로그램 이름
+                        // ====================================================
+
                         Text(
                             text = currentProgram.name,
                             fontFamily = Pretendard,
@@ -400,22 +495,36 @@ fun ProgramDetailScreen(
                             fontSize = 20.sp,
                             color = Color(0xFF121212),
                             modifier = Modifier
-                                .padding(horizontal = 20.dp)
-                                .padding(bottom = 10.dp),
+                                .padding(
+                                    horizontal = 20.dp
+                                )
+                                .padding(
+                                    bottom = 10.dp
+                                ),
                         )
+
+                        // ====================================================
+                        // 위치 / 운영일 / 운영시간 / 스탬프
+                        // ====================================================
 
                         Column(
                             modifier = Modifier
-                                .padding(horizontal = 20.dp),
+                                .padding(
+                                    horizontal = 20.dp
+                                ),
                             verticalArrangement =
                                 Arrangement.spacedBy(10.dp),
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .aspectRatio(350f / 56f)
+                                    .aspectRatio(
+                                        350f / 56f
+                                    )
                                     .clip(
-                                        RoundedCornerShape(12.dp)
+                                        RoundedCornerShape(
+                                            12.dp
+                                        )
                                     )
                                     .background(
                                         Color(0xFFF8F8F8)
@@ -443,9 +552,13 @@ fun ProgramDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .aspectRatio(350f / 56f)
+                                    .aspectRatio(
+                                        350f / 56f
+                                    )
                                     .clip(
-                                        RoundedCornerShape(12.dp)
+                                        RoundedCornerShape(
+                                            12.dp
+                                        )
                                     )
                                     .background(
                                         Color(0xFFF8F8F8)
@@ -455,7 +568,8 @@ fun ProgramDetailScreen(
                             ) {
                                 Text(
                                     text =
-                                        currentProgram.operatingDays
+                                        currentProgram
+                                            .operatingDays
                                             ?: "",
                                     fontFamily = Pretendard,
                                     fontWeight =
@@ -473,9 +587,13 @@ fun ProgramDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .aspectRatio(350f / 56f)
+                                    .aspectRatio(
+                                        350f / 56f
+                                    )
                                     .clip(
-                                        RoundedCornerShape(12.dp)
+                                        RoundedCornerShape(
+                                            12.dp
+                                        )
                                     )
                                     .background(
                                         Color(0xFFF8F8F8)
@@ -485,7 +603,8 @@ fun ProgramDetailScreen(
                             ) {
                                 Text(
                                     text =
-                                        currentProgram.operatingHours
+                                        currentProgram
+                                            .operatingHours
                                             ?: "",
                                     fontFamily = Pretendard,
                                     fontWeight =
@@ -503,9 +622,13 @@ fun ProgramDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .aspectRatio(350f / 56f)
+                                    .aspectRatio(
+                                        350f / 56f
+                                    )
                                     .clip(
-                                        RoundedCornerShape(12.dp)
+                                        RoundedCornerShape(
+                                            12.dp
+                                        )
                                     )
                                     .background(
                                         Color(0xFFEDF7FF)
@@ -522,27 +645,33 @@ fun ProgramDetailScreen(
                                         Alignment.CenterVertically,
                                 ) {
                                     Image(
-                                        painter = painterResource(
-                                            Res.drawable.program_stamp_info
-                                        ),
+                                        painter =
+                                            painterResource(
+                                                Res.drawable
+                                                    .program_stamp_info
+                                            ),
                                         contentDescription =
                                             "스탬프 1개 적립",
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .zIndex(0f),
+                                        modifier =
+                                            Modifier
+                                                .size(24.dp)
+                                                .zIndex(0f),
                                         contentScale =
                                             ContentScale.Fit,
                                     )
 
                                     Spacer(
                                         modifier =
-                                            Modifier.width(15.dp)
+                                            Modifier.width(
+                                                15.dp
+                                            )
                                     )
 
                                     Text(
                                         text =
                                             "스탬프 1개 적립",
-                                        fontFamily = Pretendard,
+                                        fontFamily =
+                                            Pretendard,
                                         fontWeight =
                                             FontWeight.Normal,
                                         fontSize = 14.sp,
@@ -562,13 +691,19 @@ fun ProgramDetailScreen(
                             ),
                         )
 
+                        // ====================================================
+                        // 소개
+                        // ====================================================
+
                         if (
                             !currentProgram.description
                                 .isNullOrBlank()
                         ) {
                             Row(
                                 modifier = Modifier
-                                    .padding(horizontal = 20.dp)
+                                    .padding(
+                                        horizontal = 20.dp
+                                    )
                                     .padding(top = 4.dp),
                                 verticalAlignment =
                                     Alignment.CenterVertically,
@@ -637,10 +772,13 @@ fun ProgramDetailScreen(
                                                         if (
                                                             isSpeaking
                                                         ) {
-                                                            // 현재 재생 중이면 정지
-                                                            ttsAudio?.pause()
-                                                            ttsAudio?.currentTime =
+                                                            ttsAudio
+                                                                ?.pause()
+
+                                                            ttsAudio
+                                                                ?.currentTime =
                                                                 0.0
+
                                                             isSpeaking =
                                                                 false
                                                         } else {
@@ -648,9 +786,11 @@ fun ProgramDetailScreen(
                                                                 ttsUrl
                                                                     ?: return@clickable
 
-                                                            // 기존 오디오 정리
-                                                            ttsAudio?.pause()
-                                                            ttsAudio?.currentTime =
+                                                            ttsAudio
+                                                                ?.pause()
+
+                                                            ttsAudio
+                                                                ?.currentTime =
                                                                 0.0
 
                                                             val audio =
@@ -665,19 +805,17 @@ fun ProgramDetailScreen(
 
                                                             audio.preload =
                                                                 "auto"
+
                                                             audio.onended =
                                                                 {
-                                                                    isSpeaking = false
+                                                                    isSpeaking =
+                                                                        false
                                                                 }
 
                                                             audio.onerror =
-                                                                {
-                                                                        _: JsAny?,
-                                                                        _: String,
-                                                                        _: Int,
-                                                                        _: Int,
-                                                                        _: JsAny? ->
-                                                                    isSpeaking = false
+                                                                { _, _, _, _, _ ->
+                                                                    isSpeaking =
+                                                                        false
                                                                     null
                                                                 }
 
@@ -703,12 +841,11 @@ fun ProgramDetailScreen(
                                             Image(
                                                 painter =
                                                     painterResource(
-                                                        Res.drawable.tts_sound
+                                                        Res.drawable
+                                                            .tts_sound
                                                     ),
                                                 contentDescription =
-                                                    if (
-                                                        hasTts
-                                                    ) {
+                                                    if (hasTts) {
                                                         "TTS 재생"
                                                     } else {
                                                         "TTS 없음"
@@ -738,7 +875,8 @@ fun ProgramDetailScreen(
                                 text =
                                     currentProgram.description
                                         ?: "",
-                                fontFamily = Pretendard,
+                                fontFamily =
+                                    FontFamily.SansSerif,
                                 fontWeight =
                                     FontWeight.Normal,
                                 fontSize = 16.sp,
@@ -790,35 +928,56 @@ fun ProgramDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 20.dp)
-                                    .aspectRatio(350f / 56f)
+                                    .padding(
+                                        horizontal = 20.dp
+                                    )
+                                    .aspectRatio(
+                                        350f / 56f
+                                    )
                                     .clip(
-                                        RoundedCornerShape(12.dp)
+                                        RoundedCornerShape(
+                                            12.dp
+                                        )
                                     )
                                     .background(
                                         Color(0xFFF8F8F8)
                                     ),
-                                contentAlignment = Alignment.CenterStart,
+                                contentAlignment =
+                                    Alignment.CenterStart,
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(15.dp),
+                                    modifier =
+                                        Modifier.padding(
+                                            horizontal = 16.dp
+                                        ),
+                                    verticalAlignment =
+                                        Alignment.CenterVertically,
+                                    horizontalArrangement =
+                                        Arrangement.spacedBy(
+                                            15.dp
+                                        ),
                                 ) {
                                     Image(
-                                        painter = painterResource(
-                                            Res.drawable.mission_check_icon
-                                        ),
+                                        painter =
+                                            painterResource(
+                                                Res.drawable
+                                                    .mission_check_icon
+                                            ),
                                         contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
+                                        modifier =
+                                            Modifier.size(20.dp),
                                     )
 
                                     Text(
-                                        text = participationMissionText,
-                                        fontFamily = Pretendard,
-                                        fontWeight = FontWeight.Normal,
+                                        text =
+                                            participationMissionText,
+                                        fontFamily =
+                                            Pretendard,
+                                        fontWeight =
+                                            FontWeight.Normal,
                                         fontSize = 14.sp,
-                                        color = Color(0xFF464646),
+                                        color =
+                                            Color(0xFF464646),
                                     )
                                 }
                             }
@@ -833,17 +992,28 @@ fun ProgramDetailScreen(
                         )
                     }
 
+                    // ========================================================
+                    // 하단 고정 영역
+                    // ========================================================
+
                     Box(
                         modifier = Modifier
-                            .align(Alignment.BottomCenter)
+                            .align(
+                                Alignment.BottomCenter
+                            )
                             .fillMaxWidth()
-                            .aspectRatio(390f / 256f)
+                            .aspectRatio(
+                                390f / 256f
+                            )
                             .zIndex(10f)
                             .background(
                                 Brush.verticalGradient(
                                     colors = listOf(
-                                        Color.White.copy(alpha = 0f),
-                                        Color(0xFFEDF7FF).copy(alpha = 1f),
+                                        Color.White.copy(
+                                            alpha = 0f
+                                        ),
+                                        Color(0xFFEDF7FF)
+                                            .copy(alpha = 1f),
                                     ),
                                 )
                             ),
@@ -851,17 +1021,30 @@ fun ProgramDetailScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .align(Alignment.BottomCenter)
-                                .padding(horizontal = 20.dp)
-                                .padding(bottom = 20.dp),
+                                .align(
+                                    Alignment.BottomCenter
+                                )
+                                .padding(
+                                    horizontal = 20.dp
+                                )
+                                .padding(
+                                    bottom = 20.dp
+                                ),
                             verticalArrangement =
                                 Arrangement.spacedBy(11.dp),
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier =
+                                    Modifier.fillMaxWidth(),
                                 horizontalArrangement =
-                                    Arrangement.spacedBy(11.dp),
+                                    Arrangement.spacedBy(
+                                        11.dp
+                                    ),
                             ) {
+                                // ==================================================
+                                // 길찾기
+                                // ==================================================
+
                                 Box(
                                     modifier = Modifier
                                         .weight(126f)
@@ -869,9 +1052,13 @@ fun ProgramDetailScreen(
                                             126f / 56f
                                         )
                                         .clip(
-                                            RoundedCornerShape(12.dp)
+                                            RoundedCornerShape(
+                                                12.dp
+                                            )
                                         )
-                                        .background(Color.White)
+                                        .background(
+                                            Color.White
+                                        )
                                         .border(
                                             width = 1.dp,
                                             color =
@@ -883,12 +1070,16 @@ fun ProgramDetailScreen(
                                         )
                                         .clickable {
                                             val address =
-                                                currentProgram.location
+                                                currentProgram
+                                                    .location
 
                                             if (
                                                 !address.isNullOrBlank()
                                             ) {
-                                                window.location.href =
+                                                kotlinx.browser
+                                                    .window
+                                                    .location
+                                                    .href =
                                                     "https://map.naver.com/p/search/$address"
                                             } else {
                                                 message =
@@ -902,29 +1093,40 @@ fun ProgramDetailScreen(
                                         verticalAlignment =
                                             Alignment.CenterVertically,
                                         horizontalArrangement =
-                                            Arrangement.spacedBy(8.dp),
+                                            Arrangement.spacedBy(
+                                                15.dp
+                                            ),
                                     ) {
-                                        // 길찾기
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(15.dp),
-                                        ) {
-                                            Image(
-                                                painter = painterResource(Res.drawable.road_navigation),
-                                                contentDescription = "길찾기",
-                                                modifier = Modifier.size(20.dp),
-                                            )
+                                        Image(
+                                            painter =
+                                                painterResource(
+                                                    Res.drawable
+                                                        .road_navigation
+                                                ),
+                                            contentDescription =
+                                                "길찾기",
+                                            modifier =
+                                                Modifier.size(
+                                                    20.dp
+                                                ),
+                                        )
 
-                                            Text(
-                                                text = "길찾기",
-                                                fontFamily = Pretendard,
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontSize = 16.sp,
-                                                color = Color(0xFF2563EB),
-                                            )
-                                        }
+                                        Text(
+                                            text = "길찾기",
+                                            fontFamily =
+                                                Pretendard,
+                                            fontWeight =
+                                                FontWeight.SemiBold,
+                                            fontSize = 16.sp,
+                                            color =
+                                                Color(0xFF2563EB),
+                                        )
                                     }
                                 }
+
+                                // ==================================================
+                                // 지도에서 보기
+                                // ==================================================
 
                                 Box(
                                     modifier = Modifier
@@ -933,9 +1135,13 @@ fun ProgramDetailScreen(
                                             213f / 56f
                                         )
                                         .clip(
-                                            RoundedCornerShape(12.dp)
+                                            RoundedCornerShape(
+                                                12.dp
+                                            )
                                         )
-                                        .background(Color.White)
+                                        .background(
+                                            Color.White
+                                        )
                                         .border(
                                             width = 1.dp,
                                             color =
@@ -947,14 +1153,18 @@ fun ProgramDetailScreen(
                                         )
                                         .clickable {
                                             if (
-                                                currentProgram.latitude !=
+                                                currentProgram
+                                                    .latitude !=
                                                 null &&
-                                                currentProgram.longitude !=
+                                                currentProgram
+                                                    .longitude !=
                                                 null
                                             ) {
                                                 onNavigateToMap(
-                                                    currentProgram.latitude,
-                                                    currentProgram.longitude,
+                                                    currentProgram
+                                                        .latitude,
+                                                    currentProgram
+                                                        .longitude,
                                                 )
                                             } else {
                                                 message =
@@ -964,27 +1174,46 @@ fun ProgramDetailScreen(
                                     contentAlignment =
                                         Alignment.Center,
                                 ) {
-                                    // 지도에서 보기
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(15.dp),
+                                        verticalAlignment =
+                                            Alignment.CenterVertically,
+                                        horizontalArrangement =
+                                            Arrangement.spacedBy(
+                                                15.dp
+                                            ),
                                     ) {
                                         Image(
-                                            painter = painterResource(Res.drawable.map_icon),
-                                            contentDescription = "지도에서 보기",
-                                            modifier = Modifier.size(20.dp),
+                                            painter =
+                                                painterResource(
+                                                    Res.drawable
+                                                        .map_icon
+                                                ),
+                                            contentDescription =
+                                                "지도에서 보기",
+                                            modifier =
+                                                Modifier.size(
+                                                    20.dp
+                                                ),
                                         )
 
                                         Text(
-                                            text = "지도에서 보기",
-                                            fontFamily = Pretendard,
-                                            fontWeight = FontWeight.Medium,
+                                            text =
+                                                "지도에서 보기",
+                                            fontFamily =
+                                                Pretendard,
+                                            fontWeight =
+                                                FontWeight.Medium,
                                             fontSize = 16.sp,
-                                            color = Color(0xFF2563EB),
+                                            color =
+                                                Color(0xFF2563EB),
                                         )
                                     }
                                 }
                             }
+
+                            // ==================================================
+                            // 참여하기
+                            // ==================================================
 
                             Box(
                                 modifier = Modifier
@@ -993,41 +1222,27 @@ fun ProgramDetailScreen(
                                         350f / 56f
                                     )
                                     .clip(
-                                        RoundedCornerShape(12.dp)
+                                        RoundedCornerShape(
+                                            12.dp
+                                        )
                                     )
                                     .background(
                                         MainGradient
                                     )
                                     .clickable {
                                         message =
-                                            "QR코드 스캔하여 참여해주시길 바랍니다."
+                                            "QR코드를 스캔하여 참여하시겠습니까?"
                                     },
-                                contentAlignment = Alignment.Center,
+                                contentAlignment =
+                                    Alignment.Center,
                             ) {
                                 Text(
                                     text = "참여하기",
                                     fontFamily = Pretendard,
-                                    fontWeight = FontWeight.Medium,
+                                    fontWeight =
+                                        FontWeight.Medium,
                                     fontSize = 16.sp,
                                     color = Color.White,
-                                )
-                            }
-
-                            if (showQrScanner) {
-                                QrScannerHost(
-                                    onQrDetected = { qrUrl ->
-                                        showQrScanner = false
-
-                                        if (
-                                            qrUrl.startsWith("http://") ||
-                                            qrUrl.startsWith("https://")
-                                        ) {
-                                            window.location.href = qrUrl
-                                        }
-                                    },
-                                    onClose = {
-                                        showQrScanner = false
-                                    },
                                 )
                             }
                         }
@@ -1037,6 +1252,10 @@ fun ProgramDetailScreen(
         }
     }
 
+    // ================================================================
+    // 참여하기 확인창
+    // ================================================================
+
     if (message != null) {
         AlertDialog(
             onDismissRequest = {
@@ -1044,7 +1263,7 @@ fun ProgramDetailScreen(
             },
             title = {
                 Text(
-                    text = "알림",
+                    text = "참여하기",
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Bold,
                 )
@@ -1059,17 +1278,37 @@ fun ProgramDetailScreen(
                 TextButton(
                     onClick = {
                         message = null
+
+                        // 확인 즉시 QR 스캐너 화면으로 전환
                         showQrScanner = true
-                    }
+                    },
                 ) {
                     Text(
                         text = "확인",
                         fontFamily = Pretendard,
+                        color = Primary,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        message = null
+                    },
+                ) {
+                    Text(
+                        text = "취소",
+                        fontFamily = Pretendard,
+                        color = Color(0xFF888888),
                     )
                 }
             },
         )
     }
+
+    // ================================================================
+    // 제한 알림
+    // ================================================================
 
     if (showRestrictionAlert) {
         AlertDialog(
@@ -1105,7 +1344,14 @@ fun ProgramDetailScreen(
         )
     }
 
-    if (showMissionSheet && program != null) {
+    // ================================================================
+    // 미션 선택
+    // ================================================================
+
+    if (
+        showMissionSheet &&
+        program != null
+    ) {
         MissionSelectionBottomSheet(
             missions = missions,
             category = program!!.category ?: "",
@@ -1137,7 +1383,9 @@ fun ProgramDetailScreen(
                     return@MissionSelectionBottomSheet
                 }
 
-                if (mission.isCompleted == true) {
+                if (
+                    mission.isCompleted == true
+                ) {
                     return@MissionSelectionBottomSheet
                 }
 
@@ -1149,15 +1397,22 @@ fun ProgramDetailScreen(
         )
     }
 
+    // ================================================================
+    // 선택된 미션
+    // ================================================================
+
     selectedMission?.let { mission ->
-        val currentProgram = program ?: return@let
+        val currentProgram =
+            program ?: return@let
 
         when (mission.type) {
             "quiz" -> {
                 QuizMissionScreen(
                     mission = mission,
-                    programLat = currentProgram.latitude,
-                    programLng = currentProgram.longitude,
+                    programLat =
+                        currentProgram.latitude,
+                    programLng =
+                        currentProgram.longitude,
                     onDismiss = {
                         selectedMission = null
                     },
@@ -1170,8 +1425,10 @@ fun ProgramDetailScreen(
             "location_auth" -> {
                 LocationMissionScreen(
                     mission = mission,
-                    programLat = currentProgram.latitude,
-                    programLng = currentProgram.longitude,
+                    programLat =
+                        currentProgram.latitude,
+                    programLng =
+                        currentProgram.longitude,
                     onDismiss = {
                         selectedMission = null
                     },
@@ -1184,8 +1441,10 @@ fun ProgramDetailScreen(
             "stay_time" -> {
                 StayTimeMissionScreen(
                     mission = mission,
-                    programLat = currentProgram.latitude,
-                    programLng = currentProgram.longitude,
+                    programLat =
+                        currentProgram.latitude,
+                    programLng =
+                        currentProgram.longitude,
                     onDismiss = {
                         selectedMission = null
                     },
@@ -1198,6 +1457,89 @@ fun ProgramDetailScreen(
         }
     }
 }
+
+// ============================================================================
+// QR Scanner Full Screen
+// ============================================================================
+
+@Composable
+private fun QrScannerFullScreen(
+    onQrDetected: (String) -> Unit,
+    onClose: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+    ) {
+        // 실제 WASM QR 카메라
+        QrScannerHost(
+            onQrDetected = onQrDetected,
+            onClose = onClose,
+        )
+
+        // 닫기 버튼
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(
+                    start = 20.dp,
+                    top = 20.dp,
+                )
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(
+                    Color.Black.copy(alpha = 0.55f)
+                )
+                .clickable {
+                    onClose()
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "‹",
+                fontFamily = Pretendard,
+                fontSize = 34.sp,
+                color = Color.White,
+            )
+        }
+
+        // 안내 문구
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 35.dp),
+            horizontalAlignment =
+                Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "QR코드 스캔",
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                color = Color.White,
+            )
+
+            Spacer(
+                modifier = Modifier.height(6.dp)
+            )
+
+            Text(
+                text = "카메라로 QR코드를 비춰주세요.",
+                fontFamily = Pretendard,
+                fontSize = 14.sp,
+                color =
+                    Color.White.copy(
+                        alpha = 0.85f
+                    ),
+            )
+        }
+    }
+}
+
+// ============================================================================
+// Header
+// ============================================================================
 
 @Composable
 private fun DetailHeader(
@@ -1212,7 +1554,8 @@ private fun DetailHeader(
                 horizontal = 20.dp,
                 vertical = 16.dp,
             ),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment =
+            Alignment.CenterVertically,
     ) {
         Image(
             painter = painterResource(
@@ -1244,6 +1587,10 @@ private fun DetailHeader(
     }
 }
 
+// ============================================================================
+// Mission Selection Bottom Sheet
+// ============================================================================
+
 @Composable
 private fun MissionSelectionBottomSheet(
     missions: List<MissionItem>,
@@ -1260,7 +1607,8 @@ private fun MissionSelectionBottomSheet(
             .clickable {
                 onDismiss()
             },
-        contentAlignment = Alignment.BottomCenter,
+        contentAlignment =
+            Alignment.BottomCenter,
     ) {
         Column(
             modifier = Modifier
@@ -1282,7 +1630,9 @@ private fun MissionSelectionBottomSheet(
                     .clip(
                         RoundedCornerShape(100.dp)
                     )
-                    .background(Color(0xFFD9D9D9))
+                    .background(
+                        Color(0xFFD9D9D9)
+                    )
                     .align(
                         Alignment.CenterHorizontally
                     ),
@@ -1341,7 +1691,8 @@ private fun MissionSelectionBottomSheet(
                         mission.type == "stay_time"
                     } else {
                         mission.type == "quiz" ||
-                                mission.type == "location_auth"
+                                mission.type ==
+                                "location_auth"
                     }
 
                 val isCompleted =
@@ -1409,7 +1760,8 @@ private fun MissionSelectionBottomSheet(
                                 else -> "?"
                             },
                             fontFamily = Pretendard,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight =
+                                FontWeight.Bold,
                             fontSize = 17.sp,
                             color = when (mission.type) {
                                 "quiz" ->
@@ -1428,41 +1780,50 @@ private fun MissionSelectionBottomSheet(
                     }
 
                     Spacer(
-                        modifier = Modifier.width(12.dp)
+                        modifier =
+                            Modifier.width(12.dp)
                     )
 
                     Column(
-                        modifier = Modifier.weight(1f)
+                        modifier =
+                            Modifier.weight(1f)
                     ) {
                         Row(
                             verticalAlignment =
                                 Alignment.CenterVertically,
                             horizontalArrangement =
-                                Arrangement.spacedBy(6.dp),
+                                Arrangement.spacedBy(
+                                    6.dp
+                                ),
                         ) {
                             Text(
                                 text = mission.name,
-                                fontFamily = Pretendard,
+                                fontFamily =
+                                    Pretendard,
                                 fontWeight =
                                     FontWeight.Medium,
                                 fontSize = 14.sp,
-                                color = Color(0xFF121212),
+                                color =
+                                    Color(0xFF121212),
                             )
 
                             Text(
-                                text = when (mission.type) {
-                                    "quiz" -> "퀴즈"
+                                text =
+                                    when (mission.type) {
+                                        "quiz" ->
+                                            "퀴즈"
 
-                                    "location_auth" ->
-                                        "위치 인증"
+                                        "location_auth" ->
+                                            "위치 인증"
 
-                                    "stay_time" ->
-                                        "체류시간"
+                                        "stay_time" ->
+                                            "체류시간"
 
-                                    else ->
-                                        mission.type
-                                },
-                                fontFamily = Pretendard,
+                                        else ->
+                                            mission.type
+                                    },
+                                fontFamily =
+                                    Pretendard,
                                 fontWeight =
                                     FontWeight.SemiBold,
                                 fontSize = 10.sp,
@@ -1499,7 +1860,9 @@ private fun MissionSelectionBottomSheet(
                                                     )
                                             }
                                         } else {
-                                            Color(0xFFAAAAAA)
+                                            Color(
+                                                0xFFAAAAAA
+                                            )
                                         }
                                     )
                                     .padding(
@@ -1521,15 +1884,18 @@ private fun MissionSelectionBottomSheet(
                                     "${mission.place?.name ?: ""} " +
                                             "${mission.stayMinutes ?: 0}분"
 
-                                else -> null
+                                else ->
+                                    null
                             }
 
                         if (!detail.isNullOrBlank()) {
                             Text(
                                 text = detail,
-                                fontFamily = Pretendard,
+                                fontFamily =
+                                    Pretendard,
                                 fontSize = 12.sp,
-                                color = Color(0xFF888888),
+                                color =
+                                    Color(0xFF888888),
                                 maxLines = 1,
                             )
                         }
@@ -1542,7 +1908,8 @@ private fun MissionSelectionBottomSheet(
                             else -> "›"
                         },
                         fontFamily = Pretendard,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight =
+                            FontWeight.Bold,
                         fontSize = 20.sp,
                         color = when {
                             isCompleted ->
@@ -1565,41 +1932,52 @@ private fun MissionSelectionBottomSheet(
     }
 }
 
+// ============================================================================
+// TTS Sound Bars
+// ============================================================================
+
 @Composable
 private fun TTSSoundBars() {
-    val transition = rememberInfiniteTransition(
-        label = "tts"
-    )
+    val transition =
+        rememberInfiniteTransition(
+            label = "tts"
+        )
 
-    val bar1 = transition.animateFloat(
-        initialValue = 5f,
-        targetValue = 14f,
-        animationSpec = infiniteRepeatable(
-            tween(400),
-            RepeatMode.Reverse,
-        ),
-        label = "bar1",
-    )
+    val bar1 =
+        transition.animateFloat(
+            initialValue = 5f,
+            targetValue = 14f,
+            animationSpec =
+                infiniteRepeatable(
+                    tween(400),
+                    RepeatMode.Reverse,
+                ),
+            label = "bar1",
+        )
 
-    val bar2 = transition.animateFloat(
-        initialValue = 4f,
-        targetValue = 16f,
-        animationSpec = infiniteRepeatable(
-            tween(500),
-            RepeatMode.Reverse,
-        ),
-        label = "bar2",
-    )
+    val bar2 =
+        transition.animateFloat(
+            initialValue = 4f,
+            targetValue = 16f,
+            animationSpec =
+                infiniteRepeatable(
+                    tween(500),
+                    RepeatMode.Reverse,
+                ),
+            label = "bar2",
+        )
 
-    val bar3 = transition.animateFloat(
-        initialValue = 6f,
-        targetValue = 12f,
-        animationSpec = infiniteRepeatable(
-            tween(350),
-            RepeatMode.Reverse,
-        ),
-        label = "bar3",
-    )
+    val bar3 =
+        transition.animateFloat(
+            initialValue = 6f,
+            targetValue = 12f,
+            animationSpec =
+                infiniteRepeatable(
+                    tween(350),
+                    RepeatMode.Reverse,
+                ),
+            label = "bar3",
+        )
 
     Row(
         horizontalArrangement =
@@ -1616,11 +1994,15 @@ private fun TTSSoundBars() {
             Box(
                 modifier = Modifier
                     .width(4.dp)
-                    .height(bar.value.dp)
+                    .height(
+                        bar.value.dp
+                    )
                     .clip(
                         RoundedCornerShape(2.dp)
                     )
-                    .background(Primary),
+                    .background(
+                        Primary
+                    ),
             )
         }
     }

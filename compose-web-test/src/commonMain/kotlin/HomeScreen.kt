@@ -62,6 +62,7 @@ import org.jetbrains.compose.resources.painterResource
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.graphicsLayer
 
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
@@ -860,7 +861,10 @@ private fun HeaderRightArrow() {
             .size(
                 width = 8.dp,
                 height = 15.dp,
-            ),
+            )
+            .graphicsLayer {
+                scaleX = -1f
+            },
     )
 }
 

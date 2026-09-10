@@ -1,4 +1,5 @@
 package com.alphacity.stamptour.ui.screen
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,15 +32,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import com.alphacity.stamptour.network.dto.EventItem
+import com.alphacity.stamptour.repository.HomeRepository
 
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
+
+private const val API_BASE_URL = "https://ollymoa-server.vercel.app"
 
 private enum class EventTab(val title: String) {
     RAFFLE("추첨 이벤트"),
@@ -63,6 +71,41 @@ private data class WebEventItem(
     val location: String? = null,
 )
 
+private fun imageUrl(path: String?): String? {
+    if (path.isNullOrBlank()) {
+        return null
+    }
+
+    return if (
+        path.startsWith("http://") ||
+        path.startsWith("https://")
+    ) {
+        path
+    } else {
+        "$API_BASE_URL${if (path.startsWith("/")) path else "/$path"}"
+    }
+}
+
+private fun EventItem.toWebEventItem(): WebEventItem {
+    return WebEventItem(
+        id = id,
+        name = name,
+        type = type,
+        description = description,
+        imageUrl = imageUrl(imageUrl),
+        startDate = startDate,
+        endDate = endDate,
+        reward = reward,
+        participantCount = participantCount,
+        participantLimit = participantLimit,
+        status = status,
+        price = price,
+        duration = duration,
+        capacity = capacity,
+        location = location,
+    )
+}
+
 @Composable
 fun EventHighlightScreen(
     onBackClick: () -> Unit = {},
@@ -79,66 +122,70 @@ fun EventHighlightScreen(
         mutableStateOf("")
     }
 
-    // 웹 화면 렌더링용 테스트 데이터
-    // 추후에 기존 API 응답으로 교체
-    val raffleEvents = remember {
-        listOf(
-            WebEventItem(
-                id = 1,
-                name = "추첨 이벤트",
-                type = "raffle",
-                description = "이벤트에 참여하고 다양한 경품을 받아보세요!",
-                startDate = "2026-09-01",
-                endDate = "2026-09-30",
-                reward = "특별 경품",
-                participantCount = 128,
-                status = "in_progress",
-            ),
-            WebEventItem(
-                id = 2,
-                name = "스탬프 투어 추첨 이벤트",
-                type = "raffle",
-                description = "스탬프를 모으고 추첨 이벤트에 참여해보세요.",
-                startDate = "2026-09-05",
-                endDate = "2026-10-01",
-                reward = "상품권",
-                participantCount = 54,
-                status = "in_progress",
-            ),
-        )
+    val repository = remember {
+        HomeRepository()
     }
 
-    val firstComeEvents = remember {
-        listOf(
-            WebEventItem(
-                id = 3,
-                name = "선착순 특별 사은품",
-                type = "first_come",
-                description = "선착순으로 참여하고 특별한 사은품을 받아보세요!",
-                startDate = "2026-09-01",
-                endDate = "2026-09-20",
-                reward = "기념품",
-                participantCount = 42,
-                participantLimit = 100,
-                status = "in_progress",
-            ),
-            WebEventItem(
-                id = 4,
-                name = "방문객 한정 굿즈",
-                type = "first_come",
-                description = "행사장을 방문한 분들을 위한 특별 굿즈입니다.",
-                startDate = "2026-09-10",
-                endDate = "2026-09-30",
-                reward = "한정 굿즈",
-                participantCount = 100,
-                participantLimit = 100,
-                status = "in_progress",
-            ),
-        )
+    var events by remember {
+        mutableStateOf<List<WebEventItem>>(emptyList())
+    }
+
+    var isLoading by remember {
+        mutableStateOf(true)
+    }
+
+    LaunchedEffect(Unit) {
+        isLoading = true
+
+        repository
+            .getPrograms()
+            .onSuccess { programs ->
+                events = programs
+                    .flatMap { program ->
+                        program.events.orEmpty()
+                    }
+                    .distinctBy { event ->
+                        event.id
+                    }
+                    .sortedBy { event ->
+                        event.startDate
+                    }
+                    .map { event ->
+                        event.toWebEventItem()
+                    }
+
+                println(
+                    "[EventHighlightScreen] events size = ${events.size}"
+                )
+
+                println(
+                    "[EventHighlightScreen] events = $events"
+                )
+            }
+            .onFailure { error ->
+                events = emptyList()
+
+                println(
+                    "[EventHighlightScreen] 이벤트 조회 실패: ${error.message}"
+                )
+            }
+
+        isLoading = false
+    }
+
+    val raffleEvents = remember(events) {
+        events.filter { event ->
+            event.type == "raffle"
+        }
+    }
+
+    val firstComeEvents = remember(events) {
+        events.filter { event ->
+            event.type == "first_come"
+        }
     }
 
     if (selectedEventId > 0) {
-        // 실제 상세 화면은 다음 단계에서 기존 Android 파일 기준으로 연결
         PlaceholderEventDetail(
             eventId = selectedEventId,
             eventType = selectedEventType,
@@ -353,19 +400,28 @@ private fun RaffleEventCard(
                 .clip(RoundedCornerShape(22.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFE8E8E8)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = event.name.take(1),
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 32.sp,
-                    color = Color(0xFFB5B5B5),
+            if (!event.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = event.imageUrl,
+                    contentDescription = event.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFE8E8E8)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = event.name.take(1),
+                        fontFamily = Pretendard,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 32.sp,
+                        color = Color(0xFFB5B5B5),
+                    )
+                }
             }
 
             if (!isOpen) {

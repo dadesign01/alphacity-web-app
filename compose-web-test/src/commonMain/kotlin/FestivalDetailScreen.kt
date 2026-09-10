@@ -33,8 +33,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import org.jetbrains.compose.resources.Font
+
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -42,6 +45,7 @@ import com.alphacity.stamptour.network.dto.FestivalDetail
 import com.alphacity.stamptour.network.dto.FestivalProgramSummary
 import com.alphacity.stamptour.repository.HomeRepository
 import composewebtest.generated.resources.Res
+import composewebtest.generated.resources.NotoColorEmoji
 import composewebtest.generated.resources.header_left_arrow
 import org.jetbrains.compose.resources.painterResource
 
@@ -118,6 +122,49 @@ fun FestivalDetailScreen(
 ) {
     val repository = remember {
         HomeRepository()
+    }
+
+    // ============================================
+    // Emoji Font
+    // ============================================
+
+// ============================================
+// Emoji Font
+// ============================================
+// ============================================
+// Emoji Font
+// ============================================
+
+    val fontFamilyResolver =
+        LocalFontFamilyResolver.current
+
+    val emojiFontFamily =
+
+            FontFamily(
+                Font(
+                    Res.font.NotoColorEmoji,
+                    weight = FontWeight.Normal,
+                )
+            )
+
+
+    LaunchedEffect(
+        fontFamilyResolver,
+        emojiFontFamily,
+    ) {
+        try {
+            fontFamilyResolver.preload(
+                emojiFontFamily
+            )
+
+            println(
+                "[FestivalDetailScreen] NotoColorEmoji preload 완료"
+            )
+        } catch (e: Exception) {
+            println(
+                "[FestivalDetailScreen] NotoColorEmoji preload 실패: ${e.message}"
+            )
+        }
     }
 
     var festival by remember {
@@ -371,7 +418,7 @@ fun FestivalDetailScreen(
 
                 Text(
                     text = currentFestival.description,
-                    fontFamily = Pretendard,
+                    fontFamily = emojiFontFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = 14.sp,
                     color = Color(0xFF121212),
