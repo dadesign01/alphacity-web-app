@@ -21,6 +21,19 @@ import org.w3c.dom.HTMLVideoElement
 import org.w3c.dom.mediacapture.MediaStream
 import kotlin.js.toJsBoolean
 
+private fun createRearCameraConstraints():
+        org.w3c.dom.mediacapture.MediaStreamConstraints =
+    js(
+        """({
+            video: {
+                facingMode: {
+                    exact: "environment"
+                }
+            },
+            audio: false
+        })"""
+    )
+
 @Composable
 fun QrScanner(
     onQrDetected: (String) -> Unit,
@@ -45,11 +58,7 @@ fun QrScanner(
 
         var cameraStream: MediaStream? = null
 
-        val constraints =
-            org.w3c.dom.mediacapture.MediaStreamConstraints(
-                video = true.toJsBoolean(),
-                audio = false.toJsBoolean(),
-            )
+        val constraints = createRearCameraConstraints()
 
         window.navigator.mediaDevices
             ?.getUserMedia(constraints)
@@ -59,7 +68,7 @@ fun QrScanner(
                 null
             }
             ?.catch { error ->
-                println("카메라 권한 또는 카메라 실행 실패: $error")
+                println("후면 카메라 실행 실패: $error")
                 null
             }
 
