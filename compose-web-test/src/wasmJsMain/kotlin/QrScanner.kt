@@ -19,19 +19,10 @@ import kotlinx.browser.document
 import org.w3c.dom.HTMLVideoElement
 
 @JsModule("./zxing-wrapper.mjs")
-external object ZXingWrapper {
-    fun createQrReader(): JsAny
-
-    fun startQrScan(
-        reader: JsAny,
-        video: HTMLVideoElement,
-        callback: (String) -> Unit,
-    ): JsAny
-
-    fun stopQrScan(
-        controls: JsAny,
-    )
-}
+external fun startQrScanner(
+    video: HTMLVideoElement,
+    callback: (String) -> Unit,
+): JsAny
 
 @Composable
 fun QrScanner(
@@ -55,14 +46,9 @@ fun QrScanner(
         video.style.height = "100%"
         video.style.objectFit = "cover"
 
-        println("ZXing QR Reader 생성 시작")
+        println("QR Scanner 시작")
 
-        val reader = ZXingWrapper.createQrReader()
-
-        println("ZXing QR Reader 생성 완료")
-
-        val controls = ZXingWrapper.startQrScan(
-            reader = reader,
+        startQrScanner(
             video = video,
             callback = { text ->
                 println("QR 인식 결과: $text")
@@ -70,10 +56,7 @@ fun QrScanner(
             },
         )
 
-        println("ZXing QR Scanner 시작 완료")
-
         onDispose {
-            ZXingWrapper.stopQrScan(controls)
             video.srcObject = null
         }
     }
