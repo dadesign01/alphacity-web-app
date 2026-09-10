@@ -203,10 +203,7 @@ fun PhoneLogin(
                 AuthTextField(
                     value = name,
                     onValueChange = { input ->
-                        // 숫자는 입력되지 않도록 제거
-                        name = input.filter {
-                            !it.isDigit()
-                        }
+                        name = input
                     },
                     placeholder = "이름을 입력해주세요.",
                     keyboardType = KeyboardType.Text,

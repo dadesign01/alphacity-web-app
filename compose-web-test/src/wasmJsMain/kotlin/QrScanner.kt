@@ -16,23 +16,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.WebElementView
 import kotlinx.browser.document
-import kotlinx.browser.window
 import org.w3c.dom.HTMLVideoElement
-import org.w3c.dom.mediacapture.MediaStream
-import kotlin.js.toJsBoolean
 
-private fun createRearCameraConstraints():
-        org.w3c.dom.mediacapture.MediaStreamConstraints =
-    js(
-        """({
-            video: {
-                facingMode: {
-                    exact: "environment"
-                }
-            },
-            audio: false
-        })"""
+@JsModule("./zxing-wrapper.mjs")
+external object ZXingWrapper {
+    fun createQrReader(): JsAny
+
+    fun startQrScan(
+        reader: JsAny,
+        video: HTMLVideoElement,
+        callback: (String) -> Unit,
+    ): JsAny
+
+    fun stopQrScan(
+        controls: JsAny,
     )
+}
 
 @Composable
 fun QrScanner(
@@ -56,25 +55,26 @@ fun QrScanner(
         video.style.height = "100%"
         video.style.objectFit = "cover"
 
-        var cameraStream: MediaStream? = null
+        println("ZXing QR Reader 생성 시작")
 
-        val constraints = createRearCameraConstraints()
+        val reader = ZXingWrapper.createQrReader()
 
-        window.navigator.mediaDevices
-            ?.getUserMedia(constraints)
-            ?.then { stream ->
-                cameraStream = stream
-                video.srcObject = stream
-                null
-            }
-            ?.catch { error ->
-                println("후면 카메라 실행 실패: $error")
-                null
-            }
+        println("ZXing QR Reader 생성 완료")
+
+        val controls = ZXingWrapper.startQrScan(
+            reader = reader,
+            video = video,
+            callback = { text ->
+                println("QR 인식 결과: $text")
+                onQrDetected(text)
+            },
+        )
+
+        println("ZXing QR Scanner 시작 완료")
 
         onDispose {
+            ZXingWrapper.stopQrScan(controls)
             video.srcObject = null
-            cameraStream = null
         }
     }
 
