@@ -987,7 +987,9 @@ fun QrStampScreen(
             targetLongitude != null
         ) {
 
+
             QrLocationVerificationScreen(
+                programId = target.programId,
                 targetLatitude =
                     targetLatitude,
 

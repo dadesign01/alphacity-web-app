@@ -34,6 +34,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.alphacity.stamptour.getCurrentBrowserLocation
+import com.alphacity.stamptour.network.ApiService
+import com.alphacity.stamptour.repository.ProgramDetailRepository
 import composewebtest.generated.resources.Res
 import composewebtest.generated.resources.location_gps
 import composewebtest.theme.MainGradient
@@ -91,12 +93,32 @@ private fun calculateQrDistanceMeters(
 
 @Composable
 fun QrLocationVerificationScreen(
+    programId: Int,
     targetLatitude: Double,
     targetLongitude: Double,
     placeName: String,
     onVerified: (latitude: Double, longitude: Double) -> Unit,
     onExit: () -> Unit,
 ) {
+    // =============================================================
+    // 프로그램 정보
+    // =============================================================
+
+    var programName by remember {
+        mutableStateOf("")
+    }
+
+    val programDetailRepository =
+        remember {
+            ProgramDetailRepository(
+                ApiService
+            )
+        }
+
+    // =============================================================
+    // 위치 정보
+    // =============================================================
+
     var distance by remember {
         mutableStateOf<Double?>(null)
     }
@@ -117,6 +139,36 @@ fun QrLocationVerificationScreen(
         rememberCoroutineScope()
 
     // =============================================================
+    // 프로그램 조회
+    // =============================================================
+
+    LaunchedEffect(programId) {
+        println("================================")
+        println("=== QR PROGRAM LOAD ===")
+        println("programId = $programId")
+        println("================================")
+
+        val result =
+            programDetailRepository.getProgramById(
+                programId
+            )
+
+        result.onSuccess { program ->
+            programName = program.name
+
+            println("=== QR PROGRAM LOAD SUCCESS ===")
+            println("programId = ${program.id}")
+            println("programName = ${program.name}")
+        }.onFailure { error ->
+            println("================================")
+            println("=== QR PROGRAM LOAD FAILED ===")
+            println("programId = $programId")
+            println("error = ${error.message}")
+            println("================================")
+        }
+    }
+
+    // =============================================================
     // 단발성 GPS 확인
     // =============================================================
 
@@ -124,6 +176,8 @@ fun QrLocationVerificationScreen(
         return try {
             println("================================")
             println("=== QR LOCATION CHECK ===")
+            println("programId = $programId")
+            println("placeName = $placeName")
             println("target latitude = $targetLatitude")
             println("target longitude = $targetLongitude")
             println("================================")
@@ -339,10 +393,6 @@ fun QrLocationVerificationScreen(
             ) {
                 // =================================================
                 // 카드
-                //
-                // 최대 350dp
-                // 모바일에서는 화면 폭에 맞게 축소
-                // 높이는 aspectRatio로 자동 계산
                 // =================================================
 
                 BoxWithConstraints(
@@ -384,6 +434,29 @@ fun QrLocationVerificationScreen(
                                 Arrangement.Center,
                         ) {
                             // -------------------------------------
+                            // 행사명
+                            // -------------------------------------
+
+                            Text(
+                                text = programName,
+                                fontFamily = Pretendard,
+                                fontWeight =
+                                    FontWeight.Normal,
+                                fontSize = 16.sp,
+                                lineHeight = 21.sp,
+                                color = Color.Black,
+                                textAlign =
+                                    TextAlign.Center,
+                                modifier =
+                                    Modifier.fillMaxWidth(),
+                            )
+
+                            Spacer(
+                                modifier =
+                                    Modifier.height(8.dp)
+                            )
+
+                            // -------------------------------------
                             // 거리
                             // -------------------------------------
 
@@ -419,7 +492,6 @@ fun QrLocationVerificationScreen(
                             Text(
                                 text =
                                     "미션 지정 장소에서 위치 인증이 되어야\n" +
-                                            "체류시간 미션이 시작됩니다.\n" +
                                             "(*100m 이내 인증 가능)",
                                 fontFamily = Pretendard,
                                 fontWeight =
