@@ -1,4 +1,7 @@
-@file:OptIn(ExperimentalComposeUiApi::class)
+@file:OptIn(
+    ExperimentalComposeUiApi::class,
+    kotlin.js.ExperimentalWasmJsInterop::class,
+)
 
 package com.alphacity.stamptour.ui.screen
 
@@ -13,27 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.WebElementView
 import kotlinx.browser.document
+import kotlinx.browser.window
 import org.w3c.dom.HTMLVideoElement
-
-@JsModule("@zxing/browser")
-external class BrowserQRCodeReader {
-    fun decodeFromVideoDevice(
-        deviceId: String?,
-        video: HTMLVideoElement,
-        callback: (
-            result: ZXingResult?,
-            error: JsAny?
-        ) -> Unit,
-    ): ZXingControls
-}
-
-external interface ZXingResult {
-    val text: String
-}
-
-external interface ZXingControls {
-    fun stop()
-}
+import org.w3c.dom.mediacapture.MediaStream
+import kotlin.js.toJsBoolean
 
 @Composable
 fun QrScanner(
@@ -41,17 +27,10 @@ fun QrScanner(
     onClose: () -> Unit,
 ) {
     val video = remember {
-        document.createElement(
-            "video"
-        ) as HTMLVideoElement
-    }
-
-    val reader = remember {
-        BrowserQRCodeReader()
+        document.createElement("video") as HTMLVideoElement
     }
 
     DisposableEffect(Unit) {
-
         video.autoplay = true
         video.muted = true
 
@@ -64,51 +43,36 @@ fun QrScanner(
         video.style.height = "100%"
         video.style.objectFit = "cover"
 
-        var controls: ZXingControls? = null
-        var detected = false
+        var cameraStream: MediaStream? = null
 
-        controls =
-            reader.decodeFromVideoDevice(
-                null,
-                video,
-            ) { result, error ->
+        val constraints =
+            org.w3c.dom.mediacapture.MediaStreamConstraints(
+                video = true.toJsBoolean(),
+                audio = false.toJsBoolean(),
+            )
 
-                if (
-                    !detected &&
-                    result != null &&
-                    result.text.isNotBlank()
-                ) {
-                    detected = true
-
-                    println(
-                        "[QrScanner] QR detected: ${result.text}"
-                    )
-
-                    onQrDetected(
-                        result.text
-                    )
-
-                    controls?.stop()
-                }
+        window.navigator.mediaDevices
+            ?.getUserMedia(constraints)
+            ?.then { stream ->
+                cameraStream = stream
+                video.srcObject = stream
+                null
+            }
+            ?.catch { error ->
+                println("카메라 권한 또는 카메라 실행 실패: $error")
+                null
             }
 
         onDispose {
-            controls?.stop()
-
             video.srcObject = null
-
-            println(
-                "[QrScanner] camera stopped"
-            )
+            cameraStream = null
         }
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Color.Black
-            ),
+            .background(Color.Black),
     ) {
         WebElementView(
             factory = {

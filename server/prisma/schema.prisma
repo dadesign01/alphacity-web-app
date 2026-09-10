@@ -469,6 +469,7 @@ enum MissionType {
   quiz
   location_auth
   stay_time
+  QR
 }
 
 enum StampCondition {

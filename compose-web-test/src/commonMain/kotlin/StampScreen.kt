@@ -1014,6 +1014,7 @@ private fun MissionListSection(
                     "quiz" -> "퀴즈"
                     "location_auth" -> "위치인증"
                     "stay_time" -> "체류시간"
+                    "QR" -> "현장 QR인증"
                     else -> mission.type
                 }
 
