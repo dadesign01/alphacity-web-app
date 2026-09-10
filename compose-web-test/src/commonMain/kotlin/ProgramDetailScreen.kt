@@ -734,26 +734,16 @@ fun ProgramDetailScreen(
                                             }
                                             ?.let { url ->
                                                 if (
-                                                    url.startsWith(
-                                                        "http://"
-                                                    ) ||
-                                                    url.startsWith(
-                                                        "https://"
-                                                    )
+                                                    url.startsWith("http://") ||
+                                                    url.startsWith("https://")
                                                 ) {
                                                     url
                                                 } else {
-                                                    "$API_BASE_URL${
-                                                        if (
-                                                            url.startsWith(
-                                                                "/"
-                                                            )
-                                                        ) {
-                                                            url
-                                                        } else {
-                                                            "/$url"
-                                                        }
-                                                    }"
+                                                    if (url.startsWith("/")) {
+                                                        url
+                                                    } else {
+                                                        "/$url"
+                                                    }
                                                 }
                                             }
 
