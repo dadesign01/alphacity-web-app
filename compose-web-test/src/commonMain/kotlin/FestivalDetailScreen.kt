@@ -54,8 +54,8 @@ private val Primary = Color(0xFF02CDF8)
 private const val API_BASE_URL =
     "https://ollymoa-server.vercel.app"
 
-private val Pretendard =
-    FontFamily.SansSerif
+
+private val Pretendard = FontFamily.SansSerif
 
 private val MainGradient =
     Brush.horizontalGradient(
@@ -418,7 +418,7 @@ fun FestivalDetailScreen(
 
                 Text(
                     text = currentFestival.description,
-                    fontFamily = emojiFontFamily,
+                    fontFamily = Pretendard,
                     fontWeight = FontWeight.Normal,
                     fontSize = 14.sp,
                     color = Color(0xFF121212),

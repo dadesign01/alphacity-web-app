@@ -52,7 +52,7 @@ model Program {
   description      String?         @db.Text
   category         ProgramCategory @default(exhibition)
   imageUrl         String?         @map("image_url") @db.VarChar(500)
-  ttsUrl           String?          @map("tts_url") @db.VarChar(100)
+  ttsUrl           String?         @map("tts_url") @db.VarChar(100)
   operatingHours   String?         @map("operating_hours") @db.VarChar(100)
   location         String?         @db.VarChar(500)
   latitude         Decimal?        @db.Decimal(10, 7)

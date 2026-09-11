@@ -21,7 +21,7 @@ kotlin {
                 implementation(compose.materialIconsExtended)
 
                 implementation(compose.components.resources)
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
 
                 implementation("org.jetbrains.androidx.navigation:navigation-compose:2.9.0")
 

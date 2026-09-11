@@ -304,32 +304,6 @@ fun ProgramListScreen(
             Spacer(
                 modifier = Modifier.height(30.dp)
             )
-
-            // ==================================================
-            // Footer
-            // ==================================================
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Color(0xFFF9F9F9)
-                    )
-                    .padding(
-                        vertical = 20.dp
-                    ),
-                horizontalAlignment =
-                    Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text =
-                        "2026 OLLYMOA. All rights reserved.",
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 10.sp,
-                    color = Color(0xFF7D7D7D),
-                )
-            }
         }
     }
 }

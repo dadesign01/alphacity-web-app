@@ -111,10 +111,6 @@ fun ProgramDetailScreen(
 ) {
     // ============================================================
     // QR 스캐너 화면
-    //
-    // 중요:
-    // 기존처럼 상세 화면 아래에 QrScannerHost를 붙이지 않는다.
-    // showQrScanner가 true이면 이 화면 자체를 QR 스캐너로 교체한다.
     // ============================================================
 
     var showQrScanner by remember {
@@ -127,9 +123,6 @@ fun ProgramDetailScreen(
                 println(
                     "[ProgramDetailScreen] QR detected: $qrText"
                 )
-
-                // 현재는 QR 문자열만 확인한다.
-                // 로그인 / 스탬프 / 위치인증은 이후 연결.
             },
             onClose = {
                 showQrScanner = false
@@ -699,12 +692,116 @@ fun ProgramDetailScreen(
                             !currentProgram.description
                                 .isNullOrBlank()
                         ) {
+                            val ttsUrl =
+                                currentProgram.ttsUrl
+                                    ?.trim()
+                                    ?.takeIf {
+                                        it.isNotEmpty()
+                                    }
+                                    ?.let { url ->
+                                        if (
+                                            url.startsWith("http://") ||
+                                            url.startsWith("https://")
+                                        ) {
+                                            url
+                                        } else {
+                                            "$API_BASE_URL${
+                                                if (url.startsWith("/")) {
+                                                    url
+                                                } else {
+                                                    "/$url"
+                                                }
+                                            }"
+                                        }
+                                    }
+
+                            println("========== TTS DEBUG ==========")
+                            println("program name = ${currentProgram.name}")
+                            println("raw ttsUrl = [${currentProgram.ttsUrl}]")
+                            println("category = [${currentProgram.category}]")
+                            println("converted ttsUrl = [$ttsUrl]")
+
+
+                            val hasTts = !ttsUrl.isNullOrBlank()
+
+                            println("converted ttsUrl = [$hasTts]")
+
+                            // ====================================================
+                            // 소개 제목 + TTS 아이콘
+                            //
+                            // 이 Row 전체만 클릭 가능
+                            // 아래 설명 Text는 클릭 영역에 포함되지 않음
+                            // ====================================================
+
                             Row(
                                 modifier = Modifier
+                                    .fillMaxWidth()
                                     .padding(
                                         horizontal = 20.dp
                                     )
-                                    .padding(top = 4.dp),
+                                    .padding(top = 4.dp)
+                                    .clickable(
+                                        enabled = hasTts
+                                    ) {
+                                        val url =
+                                            ttsUrl
+                                                ?: return@clickable
+
+                                        // 이미 재생 중이면 정지
+                                        if (isSpeaking) {
+                                            ttsAudio?.pause()
+                                            ttsAudio?.currentTime = 0.0
+                                            ttsAudio = null
+                                            isSpeaking = false
+                                            return@clickable
+                                        }
+
+                                        // 기존 오디오 정리
+                                        ttsAudio?.pause()
+                                        ttsAudio?.currentTime = 0.0
+                                        ttsAudio = null
+                                        isSpeaking = false
+
+                                        // 새 오디오 생성
+                                        val audio =
+                                            document.createElement(
+                                                "audio"
+                                            ) as HTMLAudioElement
+
+                                        audio.src = url
+                                        audio.preload = "auto"
+
+                                        audio.onended = {
+                                            println(
+                                                "[TTS] ENDED"
+                                            )
+
+                                            isSpeaking = false
+                                            ttsAudio = null
+                                        }
+
+                                        audio.onerror =
+                                            { _, _, _, _, _ ->
+                                                println(
+                                                    "[TTS] AUDIO ERROR"
+                                                )
+
+                                                println(
+                                                    "[TTS] URL = $url"
+                                                )
+
+                                                isSpeaking = false
+                                                ttsAudio = null
+
+                                                null
+                                            }
+
+                                        ttsAudio = audio
+
+                                        audio.play()
+
+                                        isSpeaking = true
+                                    },
                                 verticalAlignment =
                                     Alignment.CenterVertically,
                             ) {
@@ -726,101 +823,11 @@ fun ProgramDetailScreen(
                                             Modifier.width(8.dp)
                                     )
 
-                                    val ttsUrl =
-                                        currentProgram.ttsUrl
-                                            ?.trim()
-                                            ?.takeIf {
-                                                it.isNotEmpty()
-                                            }
-                                            ?.let { url ->
-                                                if (
-                                                    url.startsWith("http://") ||
-                                                    url.startsWith("https://")
-                                                ) {
-                                                    url
-                                                } else {
-                                                    if (url.startsWith("/")) {
-                                                        url
-                                                    } else {
-                                                        "/$url"
-                                                    }
-                                                }
-                                            }
-
-                                    val hasTts =
-                                        !ttsUrl.isNullOrBlank()
-
                                     Box(
                                         modifier = Modifier
-                                            .width(15.dp)
+                                            .size(15.dp)
                                             .aspectRatio(
                                                 15f / 14f
-                                            )
-                                            .then(
-                                                if (hasTts) {
-                                                    Modifier.clickable {
-                                                        if (
-                                                            isSpeaking
-                                                        ) {
-                                                            ttsAudio
-                                                                ?.pause()
-
-                                                            ttsAudio
-                                                                ?.currentTime =
-                                                                0.0
-
-                                                            isSpeaking =
-                                                                false
-                                                        } else {
-                                                            val url =
-                                                                ttsUrl
-                                                                    ?: return@clickable
-
-                                                            ttsAudio
-                                                                ?.pause()
-
-                                                            ttsAudio
-                                                                ?.currentTime =
-                                                                0.0
-
-                                                            val audio =
-                                                                document
-                                                                    .createElement(
-                                                                        "audio"
-                                                                    )
-                                                                        as HTMLAudioElement
-
-                                                            audio.src =
-                                                                url
-
-                                                            audio.preload =
-                                                                "auto"
-
-                                                            audio.onended =
-                                                                {
-                                                                    isSpeaking =
-                                                                        false
-                                                                }
-
-                                                            audio.onerror =
-                                                                { _, _, _, _, _ ->
-                                                                    isSpeaking =
-                                                                        false
-                                                                    null
-                                                                }
-
-                                                            ttsAudio =
-                                                                audio
-
-                                                            isSpeaking =
-                                                                true
-
-                                                            audio.play()
-                                                        }
-                                                    }
-                                                } else {
-                                                    Modifier
-                                                }
                                             ),
                                         contentAlignment =
                                             Alignment.Center,
@@ -831,8 +838,7 @@ fun ProgramDetailScreen(
                                             Image(
                                                 painter =
                                                     painterResource(
-                                                        Res.drawable
-                                                            .tts_sound
+                                                        Res.drawable.tts_sound
                                                     ),
                                                 contentDescription =
                                                     if (hasTts) {
@@ -855,6 +861,13 @@ fun ProgramDetailScreen(
                                     }
                                 }
                             }
+
+                            // ====================================================
+                            // 소개 내용
+                            //
+                            // 위 Row와 완전히 분리되어 있음.
+                            // 따라서 여기를 눌러도 TTS가 재생되지 않음.
+                            // ====================================================
 
                             Spacer(
                                 modifier =
@@ -1269,7 +1282,6 @@ fun ProgramDetailScreen(
                     onClick = {
                         message = null
 
-                        // 확인 즉시 QR 스캐너 화면으로 전환
                         showQrScanner = true
                     },
                 ) {
@@ -1462,13 +1474,11 @@ private fun QrScannerFullScreen(
             .fillMaxSize()
             .background(Color.Black),
     ) {
-        // 실제 WASM QR 카메라
         QrScannerHost(
             onQrDetected = onQrDetected,
             onClose = onClose,
         )
 
-        // 닫기 버튼
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -1494,7 +1504,6 @@ private fun QrScannerFullScreen(
             )
         }
 
-        // 안내 문구
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
