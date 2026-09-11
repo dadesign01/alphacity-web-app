@@ -45,9 +45,7 @@ private fun App() {
      * 같은 QR URL을 다시 QrStampScreen으로
      * 진입시키지 않는다.
      */
-    val qrTarget = remember {
-        QrTargetParser.parse()
-    }
+    val qrTarget = QrTargetParser.parse()
 
     AppNavigation(
         qrTarget = qrTarget,

@@ -50,7 +50,7 @@ import kotlin.math.sqrt
 
 private val Pretendard = FontFamily.SansSerif
 
-private const val QR_LOCATION_AUTH_RADIUS_METERS = 25.0
+private const val QR_LOCATION_AUTH_RADIUS_METERS = 50.0
 
 private fun calculateQrDistanceMeters(
     latitude1: Double,
@@ -290,7 +290,7 @@ fun QrLocationVerificationScreen(
     // 1초마다 현재 위치를 다시 받아서
     // 목표 장소와의 거리를 계속 갱신한다.
     //
-    // 25m 이내 진입 시 자동 인증
+    // 50m 이내 진입 시 자동 인증
     // =============================================================
 
     LaunchedEffect(isTracking) {

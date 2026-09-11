@@ -130,19 +130,6 @@ fun ProgramDetailScreen(
                     "[ProgramDetailScreen] QR detected: $qrText"
                 )
 
-                // QR 스캔 화면 상태를 먼저 종료
-                // iOS Safari가 이전 화면을 복원할 때
-                // QrScannerFullScreen이 다시 뜨지 않도록 한다.
-                showQrScanner = false
-
-                println(
-                    "[ProgramDetailScreen] QR Scanner 종료"
-                )
-
-                println(
-                    "[ProgramDetailScreen] QR 이동: $qrText"
-                )
-
                 window.location.href = qrText
             },
             onClose = {
@@ -1497,10 +1484,6 @@ fun ProgramDetailScreen(
             "stay_time" -> {
                 StayTimeMissionScreen(
                     mission = mission,
-                    programLat =
-                        currentProgram.latitude,
-                    programLng =
-                        currentProgram.longitude,
                     onDismiss = {
                         selectedMission = null
                     },

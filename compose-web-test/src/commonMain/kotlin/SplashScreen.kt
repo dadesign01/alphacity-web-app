@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import composewebtest.generated.resources.Res
-import composewebtest.generated.resources.web_app_splash
+import composewebtest.generated.resources.splash_img
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 
@@ -60,7 +60,7 @@ fun SplashScreen(
             ),
         ) {
             Image(
-                painter = painterResource(Res.drawable.web_app_splash),
+                painter = painterResource(Res.drawable.splash_img),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),

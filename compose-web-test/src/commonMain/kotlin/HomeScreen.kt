@@ -1416,7 +1416,7 @@ private fun StampProgressSection(
                         ),
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(40.dp),
                     )
                 }
             }

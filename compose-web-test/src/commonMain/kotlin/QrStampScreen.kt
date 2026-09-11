@@ -52,8 +52,6 @@ import kotlin.time.ExperimentalTime
 private const val API_BASE_URL =
     "https://ollymoa-server.vercel.app/api/v1"
 
-private const val TEMP_SKIP_SEMINAR_LOCATION = true
-
 private val httpClient = HttpClient {
     install(ContentNegotiation) {
         json()
@@ -218,10 +216,18 @@ fun QrStampScreen(
         mutableStateOf(false)
     }
 
+    /*
+     * QR 행사 위치 인증 완료 여부
+     */
     var locationVerified by remember(target) {
         mutableStateOf(false)
     }
 
+    /*
+     * QR 위치 인증에서 실제로 확인된 사용자 좌표
+     *
+     * 최종 스탬프 적립에서도 이 좌표를 그대로 사용한다.
+     */
     var verifiedLatitude by remember(target) {
         mutableStateOf<Double?>(null)
     }
@@ -230,6 +236,9 @@ fun QrStampScreen(
         mutableStateOf<Double?>(null)
     }
 
+    /*
+     * seminar 프로그램의 체류시간 미션
+     */
     var stayMission by remember(target) {
         mutableStateOf<MissionItem?>(null)
     }
@@ -238,21 +247,48 @@ fun QrStampScreen(
         mutableStateOf(false)
     }
 
+    /*
+     * 최종 스탬프 적립 준비 여부
+     */
     var collectReady by remember(target) {
         mutableStateOf(false)
     }
 
+    /*
+     * ============================================================
+     * QR Target 자체가 없는 경우
+     * ============================================================
+     */
     if (target == null) {
+
         LaunchedEffect(Unit) {
             message =
                 "유효하지 않은 QR 코드입니다."
 
             showAlert = true
         }
+
     } else {
 
+        /*
+         * ============================================================
+         * 1. QR 유효성 검증
+         *
+         * 서버에서:
+         *
+         * programId
+         * stampId
+         * qrCode
+         *
+         * 세 값을 함께 검증한다.
+         *
+         * 다른 행사 QR이면 여기서 즉시 차단한다.
+         * ============================================================
+         */
         LaunchedEffect(target) {
+
             try {
+
                 println("================================")
                 println("=== QR VALIDATION START ===")
                 println("programId = ${target.programId}")
@@ -299,10 +335,43 @@ fun QrStampScreen(
                             validateResult.message
                 )
 
+                println(
+                    "validate error = " +
+                            validateResult.error
+                )
+
+                /*
+                 * ----------------------------------------------------
+                 * 서버에서 잘못된 행사 QR이라고 판단한 경우
+                 * ----------------------------------------------------
+                 */
+                if (
+                    validateResult.error?.code ==
+                    "INVALID_PROGRAM"
+                ) {
+
+                    println(
+                        "=== WRONG EVENT QR ==="
+                    )
+
+                    message =
+                        "행사가 다른 QR입니다."
+
+                    showAlert = true
+
+                    return@LaunchedEffect
+                }
+
+                /*
+                 * ----------------------------------------------------
+                 * 그 외 QR 검증 실패
+                 * ----------------------------------------------------
+                 */
                 if (
                     !validateResult.success ||
                     validateResult.data?.valid != true
                 ) {
+
                     println("=== QR INVALID ===")
 
                     message =
@@ -315,11 +384,110 @@ fun QrStampScreen(
                     return@LaunchedEffect
                 }
 
+                /*
+                 * ----------------------------------------------------
+                 * 서버 검증 결과와
+                 * 현재 QR Target을 한 번 더 비교
+                 *
+                 * 서버가 valid라고 하더라도
+                 * 실제 반환 데이터가 현재 QR Target과
+                 * 다르면 진행하지 않는다.
+                 * ----------------------------------------------------
+                 */
+                val validatedData =
+                    validateResult.data
+
+                if (validatedData == null) {
+
+                    println(
+                        "=== QR VALIDATION DATA NULL ==="
+                    )
+
+                    message =
+                        "유효하지 않은 QR 코드입니다."
+
+                    showAlert = true
+
+                    return@LaunchedEffect
+                }
+
+                val sameProgram =
+                    validatedData.programId ==
+                            target.programId
+
+                val sameStamp =
+                    validatedData.stampId ==
+                            target.stampId
+
+                val sameQrCode =
+                    validatedData.qrCode ==
+                            target.qrCode
+
+                println("================================")
+                println("=== QR TARGET COMPARISON ===")
+                println(
+                    "target.programId = " +
+                            target.programId
+                )
+                println(
+                    "validated.programId = " +
+                            validatedData.programId
+                )
+                println(
+                    "sameProgram = $sameProgram"
+                )
+                println(
+                    "target.stampId = " +
+                            target.stampId
+                )
+                println(
+                    "validated.stampId = " +
+                            validatedData.stampId
+                )
+                println(
+                    "sameStamp = $sameStamp"
+                )
+                println(
+                    "target.qrCode = " +
+                            target.qrCode
+                )
+                println(
+                    "validated.qrCode = " +
+                            validatedData.qrCode
+                )
+                println(
+                    "sameQrCode = $sameQrCode"
+                )
+                println("================================")
+
+                if (
+                    !sameProgram ||
+                    !sameStamp ||
+                    !sameQrCode
+                ) {
+
+                    println(
+                        "=== QR TARGET MISMATCH ==="
+                    )
+
+                    message =
+                        if (!sameProgram) {
+                            "행사가 다른 QR입니다."
+                        } else {
+                            "유효하지 않은 QR 코드입니다."
+                        }
+
+                    showAlert = true
+
+                    return@LaunchedEffect
+                }
+
                 println("=== QR VALID ===")
 
                 qrValidated = true
 
             } catch (e: CancellationException) {
+
                 println("================================")
                 println("=== QR VALIDATION CANCELLED ===")
                 println("message = ${e.message}")
@@ -328,6 +496,7 @@ fun QrStampScreen(
                 throw e
 
             } catch (e: Exception) {
+
                 println("================================")
                 println("=== QR VALIDATION EXCEPTION ===")
                 println("exception = $e")
@@ -343,16 +512,19 @@ fun QrStampScreen(
         }
 
         /*
-         * QR 유효성 확인 직후
-         * 이미 해당 스탬프를 적립했는지 먼저 확인한다.
+         * ============================================================
+         * 2. 이미 해당 스탬프를 적립했는지 확인
          *
          * 이미 적립되어 있다면
-         * 프로그램 조회 / 위치 인증 / 미션으로 넘어가지 않는다.
+         * 프로그램 조회 / 위치 인증 / 체류 미션으로
+         * 넘어가지 않는다.
+         * ============================================================
          */
         LaunchedEffect(
             target,
             qrValidated,
         ) {
+
             if (!qrValidated) {
                 return@LaunchedEffect
             }
@@ -362,6 +534,7 @@ fun QrStampScreen(
             }
 
             try {
+
                 println("================================")
                 println("=== STAMP STATUS CHECK START ===")
                 println("stampId = ${target.stampId}")
@@ -374,6 +547,7 @@ fun QrStampScreen(
                     WebTokenManager.getAccessToken()
 
                 if (accessToken.isNullOrBlank()) {
+
                     println(
                         "=== LOGIN REQUIRED FOR STAMP CHECK ==="
                     )
@@ -395,7 +569,9 @@ fun QrStampScreen(
                     .onSuccess { userStamps ->
 
                         println("================================")
-                        println("=== STAMP STATUS CHECK RESULT ===")
+                        println(
+                            "=== STAMP STATUS CHECK RESULT ==="
+                        )
                         println(
                             "userStamp count = " +
                                     userStamps.size
@@ -418,6 +594,7 @@ fun QrStampScreen(
                         )
 
                         if (alreadyCollected) {
+
                             println("================================")
                             println("=== ALREADY COLLECTED ===")
                             println(
@@ -440,7 +617,9 @@ fun QrStampScreen(
                     .onFailure { error ->
 
                         println("================================")
-                        println("=== STAMP STATUS CHECK FAILED ===")
+                        println(
+                            "=== STAMP STATUS CHECK FAILED ==="
+                        )
                         println(
                             "error = " +
                                     error.message
@@ -454,18 +633,28 @@ fun QrStampScreen(
                     }
 
             } catch (e: CancellationException) {
+
                 println("================================")
-                println("=== STAMP STATUS CHECK CANCELLED ===")
+                println(
+                    "=== STAMP STATUS CHECK CANCELLED ==="
+                )
                 println("message = ${e.message}")
                 println("================================")
 
                 throw e
 
             } catch (e: Exception) {
+
                 println("================================")
-                println("=== STAMP STATUS CHECK EXCEPTION ===")
-                println("exception = $e")
-                println("message = ${e.message}")
+                println(
+                    "=== STAMP STATUS CHECK EXCEPTION ==="
+                )
+                println(
+                    "exception = $e"
+                )
+                println(
+                    "message = $message"
+                )
                 println(e.stackTraceToString())
                 println("================================")
 
@@ -476,11 +665,28 @@ fun QrStampScreen(
             }
         }
 
+        /*
+         * ============================================================
+         * 3. 프로그램 조회 및 기본 조건 확인
+         *
+         * seminar 포함 모든 프로그램을 동일하게 처리한다.
+         *
+         * 여기서는:
+         *
+         * - 프로그램 존재 여부
+         * - 프로그램 기간
+         * - 프로그램 운영시간
+         * - 프로그램 위치
+         *
+         * 를 확인한다.
+         * ============================================================
+         */
         LaunchedEffect(
             target,
             qrValidated,
             stampStatusChecked,
         ) {
+
             if (!qrValidated) {
                 return@LaunchedEffect
             }
@@ -494,6 +700,7 @@ fun QrStampScreen(
             }
 
             try {
+
                 println("================================")
                 println("=== PROGRAM LOAD START ===")
                 println("programId = ${target.programId}")
@@ -514,8 +721,14 @@ fun QrStampScreen(
 
                 val loadedProgram =
                     programResult.getOrElse { error ->
-                        println("=== PROGRAM LOAD FAILED ===")
-                        println("error = ${error.message}")
+
+                        println(
+                            "=== PROGRAM LOAD FAILED ==="
+                        )
+
+                        println(
+                            "error = ${error.message}"
+                        )
 
                         message =
                             "행사 정보를 확인할 수 없습니다."
@@ -525,38 +738,58 @@ fun QrStampScreen(
                         return@LaunchedEffect
                     }
 
-                println("=== PROGRAM LOAD SUCCESS ===")
-                println("program id = ${loadedProgram.id}")
-                println("program name = ${loadedProgram.name}")
+                println(
+                    "=== PROGRAM LOAD SUCCESS ==="
+                )
+
+                println(
+                    "program id = " +
+                            loadedProgram.id
+                )
+
+                println(
+                    "program name = " +
+                            loadedProgram.name
+                )
+
                 println(
                     "program category = " +
                             loadedProgram.category
                 )
+
                 println(
                     "program location = " +
                             loadedProgram.location
                 )
+
                 println(
                     "program latitude = " +
                             loadedProgram.latitude
                 )
+
                 println(
                     "program longitude = " +
                             loadedProgram.longitude
                 )
+
                 println(
                     "program startDate = " +
                             loadedProgram.startDate
                 )
+
                 println(
                     "program endDate = " +
                             loadedProgram.endDate
                 )
+
                 println(
                     "program operatingHours = " +
                             loadedProgram.operatingHours
                 )
 
+                /*
+                 * 프로그램 기간 확인
+                 */
                 val withinProgramPeriod =
                     isWithinProgramPeriod(
                         startDate =
@@ -566,6 +799,7 @@ fun QrStampScreen(
                     )
 
                 if (!withinProgramPeriod) {
+
                     println(
                         "=== PROGRAM NOT IN ACTIVE PERIOD ==="
                     )
@@ -581,12 +815,16 @@ fun QrStampScreen(
                     return@LaunchedEffect
                 }
 
+                /*
+                 * 프로그램 운영시간 확인
+                 */
                 val withinOperatingHours =
                     isWithinOperatingHours(
                         loadedProgram.operatingHours
                     )
 
                 if (!withinOperatingHours) {
+
                     println(
                         "=== PROGRAM OUTSIDE OPERATING HOURS ==="
                     )
@@ -604,17 +842,18 @@ fun QrStampScreen(
                     return@LaunchedEffect
                 }
 
-                val isSeminar =
-                    loadedProgram.category == "seminar"
-
+                /*
+                 * seminar 포함 모든 프로그램은
+                 * 위치 정보가 반드시 있어야 한다.
+                 */
                 if (
-                    !isSeminar &&
-                    (
-                            loadedProgram.latitude == null ||
-                                    loadedProgram.longitude == null
-                            )
+                    loadedProgram.latitude == null ||
+                    loadedProgram.longitude == null
                 ) {
-                    println("=== PROGRAM LOCATION INVALID ===")
+
+                    println(
+                        "=== PROGRAM LOCATION INVALID ==="
+                    )
 
                     message =
                         "행사 위치 정보가 등록되지 않아\n" +
@@ -625,33 +864,32 @@ fun QrStampScreen(
                     return@LaunchedEffect
                 }
 
-                program = loadedProgram
-
-                if (
-                    TEMP_SKIP_SEMINAR_LOCATION &&
-                    isSeminar
-                ) {
-                    println("================================")
-                    println("=== TEMP SEMINAR LOCATION SKIP ===")
-                    println("locationVerified = true")
-                    println("================================")
-
-                    locationVerified = true
-                }
+                program =
+                    loadedProgram
 
             } catch (e: CancellationException) {
+
                 println("================================")
-                println("=== PROGRAM LOAD CANCELLED ===")
+                println(
+                    "=== PROGRAM LOAD CANCELLED ==="
+                )
                 println("message = ${e.message}")
                 println("================================")
 
                 throw e
 
             } catch (e: Exception) {
+
                 println("================================")
-                println("=== PROGRAM LOAD EXCEPTION ===")
-                println("exception = $e")
-                println("message = ${e.message}")
+                println(
+                    "=== PROGRAM LOAD EXCEPTION ==="
+                )
+                println(
+                    "exception = $e"
+                )
+                println(
+                    "message = $message"
+                )
                 println(e.stackTraceToString())
                 println("================================")
 
@@ -662,12 +900,18 @@ fun QrStampScreen(
             }
         }
 
+        /*
+         * ============================================================
+         * 4. 로그인 상태 확인
+         * ============================================================
+         */
         LaunchedEffect(
             target,
             qrValidated,
             program,
             stampStatusChecked,
         ) {
+
             if (!qrValidated) {
                 return@LaunchedEffect
             }
@@ -697,6 +941,7 @@ fun QrStampScreen(
             )
 
             if (accessToken.isNullOrBlank()) {
+
                 println("=== LOGIN REQUIRED ===")
 
                 onLoginRequired()
@@ -709,6 +954,22 @@ fun QrStampScreen(
             loginVerified = true
         }
 
+        /*
+         * ============================================================
+         * 5. 위치 인증 완료 후 다음 단계
+         *
+         * 모든 프로그램은 반드시
+         * QrLocationVerificationScreen을 거친다.
+         *
+         * 위치 인증 완료 후:
+         *
+         * 일반 프로그램
+         *     → 바로 스탬프 적립
+         *
+         * seminar
+         *     → 체류시간 미션
+         * ============================================================
+         */
         LaunchedEffect(
             target,
             locationVerified,
@@ -716,6 +977,7 @@ fun QrStampScreen(
             loginVerified,
             stampStatusChecked,
         ) {
+
             val loadedProgram =
                 program
                     ?: return@LaunchedEffect
@@ -728,13 +990,10 @@ fun QrStampScreen(
                 return@LaunchedEffect
             }
 
-            val isSeminar =
-                loadedProgram.category == "seminar"
-
-            if (
-                !isSeminar &&
-                !locationVerified
-            ) {
+            /*
+             * 위치 인증 전에는 아무것도 진행하지 않는다.
+             */
+            if (!locationVerified) {
                 return@LaunchedEffect
             }
 
@@ -746,14 +1005,26 @@ fun QrStampScreen(
                 return@LaunchedEffect
             }
 
-            if (
-                TEMP_SKIP_SEMINAR_LOCATION &&
-                isSeminar
-            ) {
+            val isSeminar =
+                loadedProgram.category == "seminar"
+
+            /*
+             * --------------------------------------------------------
+             * seminar
+             *
+             * 위치 인증이 이미 완료된 상태에서
+             * 체류시간 미션을 불러온다.
+             * --------------------------------------------------------
+             */
+            if (isSeminar) {
+
                 println("================================")
                 println("=== SEMINAR DETECTED ===")
-                println("=== TEMP: LOCATION SKIP ===")
-                println("programId = ${loadedProgram.id}")
+                println("=== LOCATION VERIFIED ===")
+                println(
+                    "programId = " +
+                            loadedProgram.id
+                )
                 println("================================")
 
                 missionLoading = true
@@ -764,6 +1035,7 @@ fun QrStampScreen(
                     "체류 미션을 확인하고 있습니다."
 
                 try {
+
                     val repository =
                         StampRepository(
                             ApiService
@@ -787,6 +1059,7 @@ fun QrStampScreen(
                             )
 
                             missions.forEach { mission ->
+
                                 println(
                                     "mission id = ${mission.id}, " +
                                             "type = ${mission.type}, " +
@@ -801,6 +1074,7 @@ fun QrStampScreen(
                                 }
 
                             if (mission == null) {
+
                                 println(
                                     "=== STAY MISSION NOT FOUND ==="
                                 )
@@ -818,7 +1092,8 @@ fun QrStampScreen(
                             )
 
                             println(
-                                "mission id = ${mission.id}"
+                                "mission id = " +
+                                        mission.id
                             )
 
                             println(
@@ -828,7 +1103,8 @@ fun QrStampScreen(
 
                             showAlert = false
 
-                            stayMission = mission
+                            stayMission =
+                                mission
                         }
                         .onFailure { error ->
 
@@ -848,18 +1124,28 @@ fun QrStampScreen(
                         }
 
                 } catch (e: CancellationException) {
+
                     println("================================")
-                    println("=== MISSION LOAD CANCELLED ===")
+                    println(
+                        "=== MISSION LOAD CANCELLED ==="
+                    )
                     println("message = ${e.message}")
                     println("================================")
 
                     throw e
 
                 } catch (e: Exception) {
+
                     println("================================")
-                    println("=== MISSION LOAD EXCEPTION ===")
-                    println("exception = $e")
-                    println("message = ${e.message}")
+                    println(
+                        "=== MISSION LOAD EXCEPTION ==="
+                    )
+                    println(
+                        "exception = $e"
+                    )
+                    println(
+                        "message = $message"
+                    )
                     println(e.stackTraceToString())
                     println("================================")
 
@@ -869,17 +1155,42 @@ fun QrStampScreen(
                     showAlert = true
 
                 } finally {
+
                     missionLoading = false
                 }
 
             } else {
+
+                /*
+                 * ----------------------------------------------------
+                 * 일반 프로그램
+                 *
+                 * 위치 인증이 끝났으므로 바로 적립 단계로 간다.
+                 * ----------------------------------------------------
+                 */
+                println("================================")
                 println("=== NORMAL PROGRAM ===")
+                println("=== LOCATION VERIFIED ===")
                 println("→ 바로 스탬프 적립")
+                println("================================")
 
                 collectReady = true
             }
         }
 
+        /*
+         * ============================================================
+         * 6. 스탬프 적립
+         *
+         * 일반 프로그램 / seminar 모두 동일하다.
+         *
+         * seminar의 경우에도
+         * QR 위치 인증에서 실제로 확인된 좌표를 사용한다.
+         *
+         * seminar 체류 미션 완료 후
+         * collectReady = true가 되면서 실행된다.
+         * ============================================================
+         */
         LaunchedEffect(
             target,
             collectReady,
@@ -887,79 +1198,49 @@ fun QrStampScreen(
             verifiedLongitude,
             program,
         ) {
+
             if (!collectReady) {
                 return@LaunchedEffect
             }
 
-            val loadedProgram =
-                program
+            program
+                ?: return@LaunchedEffect
+
+            /*
+             * QR 위치 인증에서 실제로 받은 좌표가 없으면
+             * 절대로 임의의 프로그램 좌표를 사용하지 않는다.
+             */
+            val currentLatitude =
+                verifiedLatitude
                     ?: return@LaunchedEffect
 
-            val isSeminar =
-                loadedProgram.category == "seminar"
+            val currentLongitude =
+                verifiedLongitude
+                    ?: return@LaunchedEffect
 
-            val currentLatitude: Double
-            val currentLongitude: Double
-
-            if (
-                TEMP_SKIP_SEMINAR_LOCATION &&
-                isSeminar
-            ) {
-                currentLatitude =
-                    loadedProgram.latitude
-                        ?: run {
-                            message =
-                                "행사 위치 정보가 없습니다."
-
-                            showAlert = true
-
-                            return@LaunchedEffect
-                        }
-
-                currentLongitude =
-                    loadedProgram.longitude
-                        ?: run {
-                            message =
-                                "행사 위치 정보가 없습니다."
-
-                            showAlert = true
-
-                            return@LaunchedEffect
-                        }
+            try {
 
                 println("================================")
-                println("=== SEMINAR TEMP COLLECT ===")
+                println("=== COLLECT STAMP START ===")
                 println(
-                    "=== LOCATION VERIFICATION SKIPPED ==="
+                    "qrCode = " +
+                            target.qrCode
                 )
                 println(
-                    "program latitude = " +
+                    "latitude = " +
                             currentLatitude
                 )
                 println(
-                    "program longitude = " +
+                    "longitude = " +
                             currentLongitude
                 )
-                println("================================")
-
-            } else {
-                currentLatitude =
-                    verifiedLatitude
-                        ?: return@LaunchedEffect
-
-                currentLongitude =
-                    verifiedLongitude
-                        ?: return@LaunchedEffect
-            }
-
-            try {
-                println("================================")
-                println("=== COLLECT STAMP START ===")
-                println("qrCode = ${target.qrCode}")
-                println("latitude = $currentLatitude")
-                println("longitude = $currentLongitude")
-                println("seminar = $isSeminar")
-                println("================================")
+                println(
+                    "programId = " +
+                            program?.id
+                )
+                println(
+                    "================================"
+                )
 
                 message =
                     "스탬프를 적립하고 있습니다."
@@ -968,7 +1249,10 @@ fun QrStampScreen(
                     WebTokenManager.getAccessToken()
 
                 if (accessToken.isNullOrBlank()) {
-                    println("=== ACCESS TOKEN MISSING ===")
+
+                    println(
+                        "=== ACCESS TOKEN MISSING ==="
+                    )
 
                     onLoginRequired()
 
@@ -979,6 +1263,7 @@ fun QrStampScreen(
                     httpClient.post(
                         "$API_BASE_URL/stamps/collect"
                     ) {
+
                         contentType(
                             ContentType.Application.Json
                         )
@@ -992,8 +1277,10 @@ fun QrStampScreen(
                             CollectStampRequest(
                                 qrCode =
                                     target.qrCode,
+
                                 latitude =
                                     currentLatitude,
+
                                 longitude =
                                     currentLongitude,
                             )
@@ -1010,29 +1297,38 @@ fun QrStampScreen(
                     response.body()
 
                 println("=== COLLECT RESULT ===")
+
                 println(
                     "success = " +
                             result.success
                 )
+
                 println(
                     "data = " +
                             result.data
                 )
+
                 println(
                     "message = " +
                             result.message
                 )
+
                 println(
                     "error = " +
                             result.error
                 )
+
                 println("======================")
 
+                /*
+                 * 이미 적립된 경우
+                 */
                 if (
                     !result.success &&
                     result.error?.code ==
                     "ALREADY_COLLECTED"
                 ) {
+
                     println(
                         "=== ALREADY COLLECTED ==="
                     )
@@ -1042,40 +1338,71 @@ fun QrStampScreen(
                     return@LaunchedEffect
                 }
 
+                /*
+                 * 적립 성공
+                 */
                 if (result.success) {
-                    println("=== STAMP EARNED ===")
-                    println("→ onEarned() 호출")
+
+                    println(
+                        "=== STAMP EARNED ==="
+                    )
+
+                    println(
+                        "→ onEarned() 호출"
+                    )
 
                     onEarned()
 
-                    println("→ onEarned() 완료")
+                    println(
+                        "→ onEarned() 완료"
+                    )
 
                     return@LaunchedEffect
                 }
 
+                /*
+                 * 적립 실패
+                 */
                 message =
                     result.error?.message
                         ?: result.message
                                 ?: "스탬프 수집에 실패했습니다."
 
-                println("=== COLLECT FAILED ===")
-                println("message = $message")
+                println(
+                    "=== COLLECT FAILED ==="
+                )
+
+                println(
+                    "message = $message"
+                )
 
                 showAlert = true
 
             } catch (e: CancellationException) {
+
                 println("================================")
-                println("=== COLLECT CANCELLED ===")
-                println("message = ${e.message}")
+                println(
+                    "=== COLLECT CANCELLED ==="
+                )
+                println(
+                    "message = ${e.message}"
+                )
                 println("================================")
 
                 throw e
 
             } catch (e: Exception) {
+
                 println("================================")
-                println("=== COLLECT EXCEPTION ===")
-                println("exception = $e")
-                println("message = ${e.message}")
+                println(
+                    "=== COLLECT STAMP EXCEPTION ==="
+                )
+                println(
+                    "exception = $e"
+                )
+                println(
+                    "message = $message"
+                )
                 println(e.stackTraceToString())
                 println("================================")
 
@@ -1087,18 +1414,32 @@ fun QrStampScreen(
         }
     }
 
+    /*
+     * ============================================================
+     * 화면 표시
+     * ============================================================
+     */
+
+    /*
+     * 오류 / 차단 메시지
+     */
     if (showAlert) {
+
         AlertDialog(
             onDismissRequest = {
                 exitQrPage()
             },
+
             title = {
                 Text("알림")
             },
+
             text = {
                 Text(message)
             },
+
             confirmButton = {
+
                 TextButton(
                     onClick = {
                         exitQrPage()
@@ -1108,30 +1449,44 @@ fun QrStampScreen(
                 }
             },
         )
+
+        /*
+         * ============================================================
+         * seminar 체류시간 미션
+         *
+         * 위치 인증은 이미 QrLocationVerificationScreen에서
+         * 완료된 상태다.
+         *
+         * 따라서 여기서는 GPS 인증을 다시 하지 않는다.
+         * ============================================================
+         */
     } else if (stayMission != null) {
+
         StayTimeMissionScreen(
-            mission = stayMission!!,
-
-            programLat =
-                program?.latitude,
-
-            programLng =
-                program?.longitude,
-
-            skipLocationVerification = true,
+            mission =
+                stayMission!!,
 
             onCompleted = {
+
                 println("================================")
-                println("=== STAY MISSION COMPLETED ===")
-                println("=== TEMP LOCATION SKIPPED ===")
-                println("=== STAMP COLLECT READY ===")
+                println(
+                    "=== STAY MISSION COMPLETED ==="
+                )
+                println(
+                    "=== LOCATION ALREADY VERIFIED ==="
+                )
+                println(
+                    "=== STAMP COLLECT READY ==="
+                )
                 println("================================")
 
                 stayMission = null
+
                 collectReady = true
             },
 
             onDismiss = {
+
                 println(
                     "=== STAY MISSION DISMISSED ==="
                 )
@@ -1141,15 +1496,24 @@ fun QrStampScreen(
                 exitQrPage()
             },
         )
+
+        /*
+         * ============================================================
+         * QR 행사 위치 인증
+         *
+         * seminar 포함 모든 프로그램이
+         * 반드시 이 화면을 거친다.
+         * ============================================================
+         */
     } else if (
         target != null &&
         qrValidated &&
         stampStatusChecked &&
         program != null &&
         loginVerified &&
-        !locationVerified &&
-        program!!.category != "seminar"
+        !locationVerified
     ) {
+
         val targetLatitude =
             program!!.latitude
 
@@ -1160,7 +1524,9 @@ fun QrStampScreen(
             targetLatitude != null &&
             targetLongitude != null
         ) {
+
             QrLocationVerificationScreen(
+
                 programId =
                     target.programId,
 
@@ -1179,21 +1545,34 @@ fun QrStampScreen(
                         longitude ->
 
                     println("================================")
-                    println("=== QR LOCATION VERIFIED ===")
-                    println("latitude = $latitude")
-                    println("longitude = $longitude")
+                    println(
+                        "=== QR LOCATION VERIFIED ==="
+                    )
+                    println(
+                        "latitude = $latitude"
+                    )
+                    println(
+                        "longitude = $longitude"
+                    )
                     println(
                         "category = " +
                                 program?.category
                     )
                     println("================================")
 
+                    /*
+                     * QR 위치 인증에서 확인한
+                     * 실제 사용자 좌표 저장
+                     */
                     verifiedLatitude =
                         latitude
 
                     verifiedLongitude =
                         longitude
 
+                    /*
+                     * 위치 인증 완료
+                     */
                     locationVerified =
                         true
                 },
@@ -1202,7 +1581,9 @@ fun QrStampScreen(
                     exitQrPage()
                 },
             )
+
         } else {
+
             Column(
                 modifier =
                     Modifier.fillMaxSize(),
@@ -1213,6 +1594,7 @@ fun QrStampScreen(
                 verticalArrangement =
                     Arrangement.Center,
             ) {
+
                 CircularProgressIndicator()
 
                 Spacer(
@@ -1226,10 +1608,17 @@ fun QrStampScreen(
                 )
             }
         }
+
+        /*
+         * ============================================================
+         * 최종 적립 진행 중
+         * ============================================================
+         */
     } else if (
         collectReady &&
         !showAlert
     ) {
+
         Column(
             modifier =
                 Modifier.fillMaxSize(),
@@ -1240,6 +1629,7 @@ fun QrStampScreen(
             verticalArrangement =
                 Arrangement.Center,
         ) {
+
             CircularProgressIndicator()
 
             Spacer(
@@ -1249,7 +1639,14 @@ fun QrStampScreen(
 
             Text(message)
         }
+
+        /*
+         * ============================================================
+         * 그 외 초기 로딩
+         * ============================================================
+         */
     } else if (!showAlert) {
+
         Column(
             modifier =
                 Modifier.fillMaxSize(),
@@ -1260,6 +1657,7 @@ fun QrStampScreen(
             verticalArrangement =
                 Arrangement.Center,
         ) {
+
             CircularProgressIndicator()
 
             Spacer(
