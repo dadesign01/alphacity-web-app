@@ -1,6 +1,7 @@
 package com.alphacity.stamptour
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
 import com.alphacity.stamptour.ui.navigation.AppNavigation
@@ -37,7 +38,16 @@ private fun App() {
         return
     }
 
-    val qrTarget = QrTargetParser.parse()
+    /*
+     * QR URL은 최초 1회만 파싱한다.
+     *
+     * Compose가 다시 recomposition 되더라도
+     * 같은 QR URL을 다시 QrStampScreen으로
+     * 진입시키지 않는다.
+     */
+    val qrTarget = remember {
+        QrTargetParser.parse()
+    }
 
     AppNavigation(
         qrTarget = qrTarget,

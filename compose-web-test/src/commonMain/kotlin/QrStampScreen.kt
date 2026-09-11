@@ -184,11 +184,7 @@ private fun isWithinOperatingHours(
 }
 
 private fun exitQrPage() {
-    if (window.history.length > 1) {
-        window.history.back()
-    } else {
-        window.location.replace("about:blank")
-    }
+    window.location.replace("about:blank")
 }
 
 @Composable

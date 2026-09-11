@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.WebElementView
 import com.alphacity.stamptour.network.ApiClient
 import com.alphacity.stamptour.network.dto.ApiResponse
 import com.alphacity.stamptour.network.dto.PhoneLoginData
@@ -60,12 +61,10 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.painterResource
-import web.QrTarget
-import androidx.compose.ui.viewinterop.WebElementView
 import kotlinx.browser.document
+import org.jetbrains.compose.resources.painterResource
 import org.w3c.dom.HTMLInputElement
-import org.w3c.dom.events.Event
+import web.QrTarget
 import kotlin.js.unsafeCast
 
 @Composable
@@ -210,14 +209,17 @@ fun PhoneLogin(
                     modifier = Modifier.height(14.dp)
                 )
 
-                AuthTextField(
+                // ========================================
+                // 이름
+                // iOS Safari 한글 입력 대응
+                // 실제 HTML input 사용
+                // ========================================
+
+                NameWebTextField(
                     value = name,
                     onValueChange = { input ->
                         name = input
                     },
-                    placeholder = "이름을 입력해주세요.",
-                    keyboardType = KeyboardType.Text,
-                    focusRequester = nameFocusRequester,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -225,6 +227,7 @@ fun PhoneLogin(
 
                 // ========================================
                 // 전화번호
+                // 기존 AuthTextField 유지
                 // ========================================
 
                 Spacer(
@@ -380,6 +383,7 @@ fun PhoneLogin(
                         modifier = Modifier.height(14.dp)
                     )
 
+                    // 기존 AuthTextField 그대로
                     AuthTextField(
                         value = verificationCode,
                         onValueChange = { input ->
@@ -614,7 +618,142 @@ fun PhoneLogin(
     }
 }
 
+// ============================================================
+// 이름 전용 HTML Input
+//
+// iOS Safari 한글 IME 문제 때문에 Compose BasicTextField 대신
+// 실제 HTML <input>을 사용한다.
+//
+// 전화번호 / 인증번호는 기존 AuthTextField를 그대로 사용한다.
+// ============================================================
+
 @OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun NameWebTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier,
+    ) {
+        WebElementView(
+            factory = {
+                val input =
+                    document
+                        .createElement("input")
+                        .unsafeCast<HTMLInputElement>()
+
+                input.type = "text"
+                input.placeholder = "이름을 입력해주세요."
+                input.autocomplete = "off"
+                input.spellcheck = false
+
+                // HTML input 자체 디자인 제거
+                input.style.setProperty(
+                    "width",
+                    "100%",
+                )
+
+                input.style.setProperty(
+                    "height",
+                    "47px",
+                )
+
+                input.style.setProperty(
+                    "border",
+                    "none",
+                )
+
+                input.style.setProperty(
+                    "outline",
+                    "none",
+                )
+
+                input.style.setProperty(
+                    "background",
+                    "transparent",
+                )
+
+                input.style.setProperty(
+                    "padding",
+                    "0",
+                )
+
+                input.style.setProperty(
+                    "margin",
+                    "0",
+                )
+
+                // 기존 Compose TextField와 동일한 글자 디자인
+                input.style.setProperty(
+                    "font-size",
+                    "16px",
+                )
+
+                input.style.setProperty(
+                    "color",
+                    "#000000",
+                )
+
+                input.style.setProperty(
+                    "font-family",
+                    "inherit",
+                )
+
+                // iOS Safari에서 입력 이벤트가 발생할 때
+                // Compose 쪽 name 상태를 갱신
+                input.addEventListener("input") {
+                    onValueChange(
+                        input.value
+                    )
+                }
+
+                input
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(47.dp),
+            update = { inputElement ->
+
+                val input =
+                    inputElement
+                        .unsafeCast<HTMLInputElement>()
+
+                // 현재 입력 중일 때는 외부 value로 덮어쓰지 않는다.
+                //
+                // 이게 중요하다.
+                // iOS 한글 IME composition 중에 Compose state로
+                // 다시 값을 밀어 넣으면 글자가 중복될 수 있다.
+                val isFocused =
+                    input === document.activeElement
+
+                if (
+                    !isFocused &&
+                    input.value != value
+                ) {
+                    input.value = value
+                }
+            },
+        )
+
+        // 기존 디자인의 검은색 1dp underline
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .align(Alignment.BottomCenter)
+                .background(Color.Black),
+        )
+    }
+}
+
+// ============================================================
+// 기존 AuthTextField
+//
+// 전화번호 / 인증번호는 이 로직을 그대로 유지한다.
+// ============================================================
+
 @Composable
 private fun AuthTextField(
     value: String,
@@ -625,60 +764,79 @@ private fun AuthTextField(
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    WebElementView(
-        factory = {
-            val input =
-                document
-                    .createElement("input")
-                    .unsafeCast<HTMLInputElement>()
+    val textFieldState = rememberTextFieldState(
+        initialText = value
+    )
 
-            input.type =
-                when (keyboardType) {
-                    KeyboardType.Phone,
-                    KeyboardType.Number -> "tel"
+//    // 외부 value → TextFieldState 동기화
+//    LaunchedEffect(value) {
+//        val currentText = textFieldState.text.toString()
+//
+//        if (currentText != value) {
+//            textFieldState.edit {
+//                replace(
+//                    0,
+//                    length,
+//                    value,
+//                )
+//            }
+//        }
+//    }
 
-                    else -> "text"
-                }
-
-            input.placeholder = placeholder
-
-            input.autocomplete = "off"
-            input.spellcheck = false
-
-            input.style.width = "100%"
-            input.style.height = "47px"
-            input.style.border = "none"
-            input.style.outline = "none"
-            input.style.background = "transparent"
-            input.style.padding = "0"
-            input.style.margin = "0"
-
-            input.style.fontSize = "16px"
-            input.style.color = "#000000"
-            input.style.fontFamily = "inherit"
-
-            input.disabled = !enabled
-
-            input.addEventListener("input") {
-                onValueChange(input.value)
+    // TextFieldState → 외부 value 동기화
+    LaunchedEffect(textFieldState) {
+        snapshotFlow {
+            textFieldState.text.toString()
+        }.collect { text ->
+            if (text != value) {
+                onValueChange(text)
             }
+        }
+    }
 
-            input
-        },
+    BasicTextField(
+        state = textFieldState,
+        enabled = enabled,
+        lineLimits = androidx.compose.foundation.text.input
+            .TextFieldLineLimits.SingleLine,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = keyboardType,
+            imeAction = ImeAction.Done,
+        ),
         modifier = modifier
             .focusRequester(focusRequester),
-        update = { input ->
-
-            input.disabled = !enabled
-
-            /*
-             * iOS 한글 조합 중에는 절대 value를 다시 세팅하지 않는다.
-             */
-            if (
-                input.value != value &&
-                !input.matches(":focus")
+        textStyle = TextStyle(
+            fontSize = 16.sp,
+            color = Color.Black,
+        ),
+        decorator = { innerTextField ->
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Bottom,
             ) {
-                input.value = value
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(47.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    if (textFieldState.text.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            fontSize = 15.sp,
+                            color = Color(0xFF8F8F8F),
+                        )
+                    }
+
+                    innerTextField()
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Color.Black),
+                )
             }
         },
     )

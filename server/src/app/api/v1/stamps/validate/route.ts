@@ -95,13 +95,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (stamp.programId !== programId) {
-      return errorResponse(
-        'INVALID_PROGRAM',
-        '해당 행사에 등록된 스탬프가 아닙니다',
-        400,
-      );
-    }
+  if (stamp.programId !== programId) {
+    return errorResponse(
+      'PROGRAM_MISMATCH',
+      '다른 행사 QR 코드입니다.',
+      400,
+    );
+  }
 
     if (!stamp.isActive) {
       return errorResponse(
