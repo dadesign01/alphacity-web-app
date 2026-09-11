@@ -206,6 +206,7 @@ fun MainScreen(
             if (programId != null) {
                 ProgramDetailScreen(
                     programId = programId,
+
                     onBackClick = {
                         navigate {
                             showProgramDetail = false
@@ -213,11 +214,8 @@ fun MainScreen(
                             showFestivalDetail = true
                         }
                     },
+
                     onNavigateToMap = { _, _ ->
-                        /*
-                         * 이 기능 자체가 회원 전용이므로
-                         * 여기까지 왔다면 회원 상태입니다.
-                         */
                         navigate {
                             showProgramDetail = false
                             selectedProgramId = null
@@ -227,6 +225,12 @@ fun MainScreen(
                             mapBackTarget = MapBackTarget.Program
                             selectedTab = BottomTab.MAP
                         }
+                    },
+
+                    onNavigateToMyCoupons = {
+                        showProgramDetail = false
+                        selectedProgramId = null
+                        showMyCoupons = true
                     },
                 )
             }

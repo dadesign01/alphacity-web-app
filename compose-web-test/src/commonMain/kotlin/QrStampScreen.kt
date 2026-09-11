@@ -76,12 +76,10 @@ private fun isWithinProgramPeriod(
                 .date
 
         val startDateText =
-            startDate
-                .take(10)
+            startDate.take(10)
 
         val endDateText =
-            endDate
-                .take(10)
+            endDate.take(10)
 
         val start =
             LocalDate.parse(startDateText)
@@ -209,6 +207,10 @@ fun QrStampScreen(
     }
 
     var qrValidated by remember(target) {
+        mutableStateOf(false)
+    }
+
+    var stampStatusChecked by remember(target) {
         mutableStateOf(false)
     }
 
@@ -344,11 +346,150 @@ fun QrStampScreen(
             }
         }
 
+        /*
+         * QR 유효성 확인 직후
+         * 이미 해당 스탬프를 적립했는지 먼저 확인한다.
+         *
+         * 이미 적립되어 있다면
+         * 프로그램 조회 / 위치 인증 / 미션으로 넘어가지 않는다.
+         */
         LaunchedEffect(
             target,
             qrValidated,
         ) {
             if (!qrValidated) {
+                return@LaunchedEffect
+            }
+
+            if (stampStatusChecked) {
+                return@LaunchedEffect
+            }
+
+            try {
+                println("================================")
+                println("=== STAMP STATUS CHECK START ===")
+                println("stampId = ${target.stampId}")
+                println("================================")
+
+                message =
+                    "스탬프 적립 여부를 확인하고 있습니다."
+
+                val accessToken =
+                    WebTokenManager.getAccessToken()
+
+                if (accessToken.isNullOrBlank()) {
+                    println(
+                        "=== LOGIN REQUIRED FOR STAMP CHECK ==="
+                    )
+
+                    onLoginRequired()
+
+                    return@LaunchedEffect
+                }
+
+                val repository =
+                    StampRepository(
+                        ApiService
+                    )
+
+                val userStampResult =
+                    repository.getUserStamps()
+
+                userStampResult
+                    .onSuccess { userStamps ->
+
+                        println("================================")
+                        println("=== STAMP STATUS CHECK RESULT ===")
+                        println(
+                            "userStamp count = " +
+                                    userStamps.size
+                        )
+                        println(
+                            "target stampId = " +
+                                    target.stampId
+                        )
+                        println("================================")
+
+                        val alreadyCollected =
+                            userStamps.any {
+                                it.stampId ==
+                                        target.stampId
+                            }
+
+                        println(
+                            "alreadyCollected = " +
+                                    alreadyCollected
+                        )
+
+                        if (alreadyCollected) {
+                            println("================================")
+                            println("=== ALREADY COLLECTED ===")
+                            println(
+                                "→ 바로 STAMP_NOT_EARNED 이동"
+                            )
+                            println("================================")
+
+                            onAlreadyCollected()
+
+                            return@onSuccess
+                        }
+
+                        println("================================")
+                        println("=== STAMP NOT COLLECTED ===")
+                        println("→ 다음 단계 진행")
+                        println("================================")
+
+                        stampStatusChecked = true
+                    }
+                    .onFailure { error ->
+
+                        println("================================")
+                        println("=== STAMP STATUS CHECK FAILED ===")
+                        println(
+                            "error = " +
+                                    error.message
+                        )
+                        println("================================")
+
+                        message =
+                            "스탬프 적립 여부를 확인할 수 없습니다."
+
+                        showAlert = true
+                    }
+
+            } catch (e: CancellationException) {
+                println("================================")
+                println("=== STAMP STATUS CHECK CANCELLED ===")
+                println("message = ${e.message}")
+                println("================================")
+
+                throw e
+
+            } catch (e: Exception) {
+                println("================================")
+                println("=== STAMP STATUS CHECK EXCEPTION ===")
+                println("exception = $e")
+                println("message = ${e.message}")
+                println(e.stackTraceToString())
+                println("================================")
+
+                message =
+                    "스탬프 적립 여부를 확인하는 중 오류가 발생했습니다."
+
+                showAlert = true
+            }
+        }
+
+        LaunchedEffect(
+            target,
+            qrValidated,
+            stampStatusChecked,
+        ) {
+            if (!qrValidated) {
+                return@LaunchedEffect
+            }
+
+            if (!stampStatusChecked) {
                 return@LaunchedEffect
             }
 
@@ -391,12 +532,30 @@ fun QrStampScreen(
                 println("=== PROGRAM LOAD SUCCESS ===")
                 println("program id = ${loadedProgram.id}")
                 println("program name = ${loadedProgram.name}")
-                println("program category = ${loadedProgram.category}")
-                println("program location = ${loadedProgram.location}")
-                println("program latitude = ${loadedProgram.latitude}")
-                println("program longitude = ${loadedProgram.longitude}")
-                println("program startDate = ${loadedProgram.startDate}")
-                println("program endDate = ${loadedProgram.endDate}")
+                println(
+                    "program category = " +
+                            loadedProgram.category
+                )
+                println(
+                    "program location = " +
+                            loadedProgram.location
+                )
+                println(
+                    "program latitude = " +
+                            loadedProgram.latitude
+                )
+                println(
+                    "program longitude = " +
+                            loadedProgram.longitude
+                )
+                println(
+                    "program startDate = " +
+                            loadedProgram.startDate
+                )
+                println(
+                    "program endDate = " +
+                            loadedProgram.endDate
+                )
                 println(
                     "program operatingHours = " +
                             loadedProgram.operatingHours
@@ -511,8 +670,13 @@ fun QrStampScreen(
             target,
             qrValidated,
             program,
+            stampStatusChecked,
         ) {
             if (!qrValidated) {
+                return@LaunchedEffect
+            }
+
+            if (!stampStatusChecked) {
                 return@LaunchedEffect
             }
 
@@ -554,10 +718,15 @@ fun QrStampScreen(
             locationVerified,
             program,
             loginVerified,
+            stampStatusChecked,
         ) {
             val loadedProgram =
                 program
                     ?: return@LaunchedEffect
+
+            if (!stampStatusChecked) {
+                return@LaunchedEffect
+            }
 
             if (!loginVerified) {
                 return@LaunchedEffect
@@ -612,6 +781,7 @@ fun QrStampScreen(
 
                     missionResult
                         .onSuccess { missions ->
+
                             println(
                                 "=== PROGRAM MISSIONS ==="
                             )
@@ -656,7 +826,8 @@ fun QrStampScreen(
                             )
 
                             println(
-                                "stayMinutes = ${mission.stayMinutes}"
+                                "stayMinutes = " +
+                                        mission.stayMinutes
                             )
 
                             showAlert = false
@@ -664,12 +835,14 @@ fun QrStampScreen(
                             stayMission = mission
                         }
                         .onFailure { error ->
+
                             println(
                                 "=== PROGRAM MISSION LOAD FAILED ==="
                             )
 
                             println(
-                                "error = ${error.message}"
+                                "error = " +
+                                        error.message
                             )
 
                             message =
@@ -841,10 +1014,22 @@ fun QrStampScreen(
                     response.body()
 
                 println("=== COLLECT RESULT ===")
-                println("success = ${result.success}")
-                println("data = ${result.data}")
-                println("message = ${result.message}")
-                println("error = ${result.error}")
+                println(
+                    "success = " +
+                            result.success
+                )
+                println(
+                    "data = " +
+                            result.data
+                )
+                println(
+                    "message = " +
+                            result.message
+                )
+                println(
+                    "error = " +
+                            result.error
+                )
                 println("======================")
 
                 if (
@@ -963,6 +1148,7 @@ fun QrStampScreen(
     } else if (
         target != null &&
         qrValidated &&
+        stampStatusChecked &&
         program != null &&
         loginVerified &&
         !locationVerified &&

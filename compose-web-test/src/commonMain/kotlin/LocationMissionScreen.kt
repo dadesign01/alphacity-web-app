@@ -55,7 +55,7 @@ private val Pretendard = FontFamily.SansSerif
 /*
  * 기존 Android 로직과 동일하게 50m 유지
  */
-private const val LOCATION_THRESHOLD_METERS = 25.0
+private const val LOCATION_THRESHOLD_METERS = 50.0
 
 @Composable
 fun LocationMissionScreen(

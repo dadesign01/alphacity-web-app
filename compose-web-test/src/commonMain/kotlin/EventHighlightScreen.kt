@@ -1,6 +1,10 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+
 package com.alphacity.stamptour.ui.screen
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,16 +47,30 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.alphacity.stamptour.network.dto.EventItem
 import com.alphacity.stamptour.repository.HomeRepository
+import composewebtest.generated.resources.Res
+import composewebtest.generated.resources.header_left_arrow
+import org.jetbrains.compose.resources.painterResource
 
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
 
-private const val API_BASE_URL = "https://ollymoa-server.vercel.app"
+private const val API_BASE_URL =
+    "https://ollymoa-server.vercel.app"
 
-private enum class EventTab(val title: String) {
+// ============================================================
+// Event Tab
+// ============================================================
+
+private enum class EventTab(
+    val title: String,
+) {
     RAFFLE("추첨 이벤트"),
     FIRST_COME("선착순 사은품"),
 }
+
+// ============================================================
+// Web Event Item
+// ============================================================
 
 private data class WebEventItem(
     val id: Int,
@@ -59,8 +78,8 @@ private data class WebEventItem(
     val type: String,
     val description: String? = null,
     val imageUrl: String? = null,
-    val startDate: String = "",
-    val endDate: String = "",
+    val startDate: String,
+    val endDate: String,
     val reward: String? = null,
     val participantCount: Int = 0,
     val participantLimit: Int = 0,
@@ -71,10 +90,17 @@ private data class WebEventItem(
     val location: String? = null,
 )
 
-private fun imageUrl(path: String?): String? {
+// ============================================================
+// Image URL
+// ============================================================
+
+private fun imageUrl(
+    path: String?,
+): String? {
     if (path.isNullOrBlank()) {
         return null
     }
+
 
     return if (
         path.startsWith("http://") ||
@@ -84,7 +110,13 @@ private fun imageUrl(path: String?): String? {
     } else {
         "$API_BASE_URL${if (path.startsWith("/")) path else "/$path"}"
     }
+
+
 }
+
+// ============================================================
+// Event Item Mapping
+// ============================================================
 
 private fun EventItem.toWebEventItem(): WebEventItem {
     return WebEventItem(
@@ -106,6 +138,10 @@ private fun EventItem.toWebEventItem(): WebEventItem {
     )
 }
 
+// ============================================================
+// Event Highlight Screen
+// ============================================================
+
 @Composable
 fun EventHighlightScreen(
     onBackClick: () -> Unit = {},
@@ -113,6 +149,7 @@ fun EventHighlightScreen(
     var selectedTab by remember {
         mutableStateOf(EventTab.RAFFLE)
     }
+
 
     var selectedEventId by remember {
         mutableStateOf(-1)
@@ -225,32 +262,49 @@ fun EventHighlightScreen(
                     rememberScrollState()
                 ),
         ) {
-            when (selectedTab) {
-                EventTab.RAFFLE -> {
-                    RaffleTabContent(
-                        events = raffleEvents,
-                        onEventClick = { event ->
-                            selectedEventId = event.id
-                            selectedEventType = event.type
-                        },
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        color = Primary,
                     )
                 }
+            } else {
+                when (selectedTab) {
+                    EventTab.RAFFLE -> {
+                        RaffleTabContent(
+                            events = raffleEvents,
+                            onEventClick = { event ->
+                                selectedEventId = event.id
+                                selectedEventType = event.type
+                            },
+                        )
+                    }
 
-                EventTab.FIRST_COME -> {
-                    FirstComeTabContent(
-                        events = firstComeEvents,
-                        onEventClick = { event ->
-                            selectedEventId = event.id
-                            selectedEventType = event.type
-                        },
-                    )
+                    EventTab.FIRST_COME -> {
+                        FirstComeTabContent(
+                            events = firstComeEvents,
+                            onEventClick = { event ->
+                                selectedEventId = event.id
+                                selectedEventType = event.type
+                            },
+                        )
+                    }
                 }
             }
-
-            Footer()
         }
     }
+
+
 }
+
+// ============================================================
+// Header
+// ============================================================
 
 @Composable
 private fun EventHighlightHeader(
@@ -261,26 +315,34 @@ private fun EventHighlightHeader(
             .fillMaxWidth()
             .background(Color.White)
             .padding(
-                horizontal = 20.dp,
-                vertical = 16.dp,
+                horizontal = 16.dp,
+                vertical = 14.dp,
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = "‹",
-            fontFamily = Pretendard,
-            fontWeight = FontWeight.Normal,
-            fontSize = 34.sp,
-            color = Color(0xFF121212),
+        Box(
             modifier = Modifier
                 .size(
-                    width = 13.dp,
-                    height = 26.dp,
+                    width = 8.dp,
+                    height = 15.dp,
                 )
                 .clickable {
                     onBackClick()
                 },
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(
+                    Res.drawable.header_left_arrow
+                ),
+                contentDescription = "뒤로가기",
+                modifier = Modifier.size(
+                    width = 8.dp,
+                    height = 15.dp,
+                ),
+            )
+        }
+
 
         Spacer(
             modifier = Modifier.width(12.dp)
@@ -289,12 +351,18 @@ private fun EventHighlightHeader(
         Text(
             text = "이벤트 하이라이트",
             fontFamily = Pretendard,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
             color = Color(0xFF121212),
         )
     }
+
+
 }
+
+// ============================================================
+// Event Tabs
+// ============================================================
 
 @Composable
 private fun EventTabBar(
@@ -304,19 +372,22 @@ private fun EventTabBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
             .padding(
                 horizontal = 20.dp,
                 vertical = 12.dp,
             ),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         EventTab.entries.forEach { tab ->
-            val isSelected = selectedTab == tab
+            val isSelected =
+                selectedTab == tab
 
-            Row(
+
+            Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(11.dp))
+                    .clip(
+                        RoundedCornerShape(25.dp)
+                    )
                     .background(
                         if (isSelected) {
                             Color(0xFF121212)
@@ -331,23 +402,30 @@ private fun EventTabBar(
                         horizontal = 14.dp,
                         vertical = 8.dp,
                     ),
-                verticalAlignment = Alignment.CenterVertically,
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = tab.title,
                     fontFamily = Pretendard,
                     fontWeight = FontWeight.Normal,
-                    fontSize = 14.sp,
-                    color = if (isSelected) {
-                        Color.White
-                    } else {
-                        Color(0xFF121212)
-                    },
+                    fontSize = 16.sp,
+                    color =
+                        if (isSelected) {
+                            Color(0xFFF8F8F8)
+                        } else {
+                            Color(0xFF212121)
+                        },
                 )
             }
         }
     }
+
+
 }
+
+// ============================================================
+// Raffle
+// ============================================================
 
 @Composable
 private fun RaffleTabContent(
@@ -357,155 +435,125 @@ private fun RaffleTabContent(
     if (events.isEmpty()) {
         EmptyContent()
     } else {
-        events.forEachIndexed { index, event ->
+        events.forEach { event ->
             Box(
-                modifier = Modifier.clickable {
-                    onEventClick(event)
-                }
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        onEventClick(event)
+                    },
             ) {
                 RaffleEventCard(
                     event = event,
                 )
             }
 
-            if (index < events.lastIndex) {
-                HorizontalDivider(
-                    color = Color(0xFFB5B5B5),
-                    thickness = 0.5.dp,
-                    modifier = Modifier.padding(
+
+            HorizontalDivider(
+                color = Color(0xFFB5B5B5),
+                thickness = 0.5.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
                         horizontal = 20.dp
                     ),
-                )
-            }
+            )
         }
     }
+
+
 }
+
+// ============================================================
+// Raffle Event Card
+// ============================================================
 
 @Composable
 private fun RaffleEventCard(
     event: WebEventItem,
 ) {
-    val isOpen = event.status != "ended"
+    val isOpen =
+        event.status != "ended"
+
 
     Column(
-        modifier = Modifier.padding(
-            horizontal = 20.dp,
-            vertical = 12.dp,
-        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = 20.dp,
+                vertical = 15.dp,
+            ),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(165.dp)
-                .clip(RoundedCornerShape(22.dp)),
+                .height(210.dp)
+                .clip(
+                    RoundedCornerShape(15.dp)
+                )
+                .background(
+                    Color(0xFFE8E8E8)
+                ),
             contentAlignment = Alignment.Center,
         ) {
             if (!event.imageUrl.isNullOrBlank()) {
                 AsyncImage(
                     model = event.imageUrl,
                     contentDescription = event.name,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(
+                            RoundedCornerShape(15.dp)
+                        ),
                     contentScale = ContentScale.Crop,
                 )
             } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFFE8E8E8)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = event.name.take(1),
-                        fontFamily = Pretendard,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 32.sp,
-                        color = Color(0xFFB5B5B5),
-                    )
-                }
-            }
-
-            if (!isOpen) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Color.Black.copy(alpha = 0.68f)
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "이벤트 종료",
-                        fontFamily = Pretendard,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = Color.White,
-                    )
-                }
+                Text(
+                    text = event.name.take(1),
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 32.sp,
+                    color = Color(0xFFB5B5B5),
+                )
             }
         }
 
         Spacer(
-            modifier = Modifier.height(12.dp)
+            modifier = Modifier.height(14.dp)
         )
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(
-                        if (isOpen) {
-                            Primary
-                        } else {
-                            Color(0xFF8F8F8F)
-                        }
-                    )
-                    .padding(
-                        horizontal = 10.dp,
-                        vertical = 3.dp,
-                    ),
-            ) {
-                Text(
-                    text = if (isOpen) {
-                        "참여 가능"
-                    } else {
-                        "마감"
-                    },
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 11.sp,
-                    color = Color.White,
+        Box(
+            modifier = Modifier
+                .clip(
+                    RoundedCornerShape(15.dp)
                 )
-            }
-
-            Spacer(
-                modifier = Modifier.width(10.dp)
-            )
-
+                .background(
+                    if (isOpen) {
+                        Color(0xFFEDF7FF)
+                    } else {
+                        Color(0xFFF1F1F1)
+                    }
+                )
+                .padding(
+                    horizontal = 10.dp,
+                    vertical = 5.dp,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
             Text(
-                text = event.name,
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.Medium,
-                fontSize = 16.sp,
-                color = Color(0xFF121212),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        if (!event.description.isNullOrBlank()) {
-            Spacer(
-                modifier = Modifier.height(9.dp)
-            )
-
-            Text(
-                text = event.description,
+                text = if (isOpen) {
+                    "참여 가능"
+                } else {
+                    "마감"
+                },
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                color = Color(0xFF595959),
+                fontSize = 14.sp,
+                color = if (isOpen) {
+                    Primary
+                } else {
+                    Color(0xFF8F8F8F)
+                },
             )
         }
 
@@ -514,231 +562,43 @@ private fun RaffleEventCard(
         )
 
         Text(
-            text = "이벤트 기간 : ${event.startDate} ~ ${event.endDate}",
+            text = event.name,
             fontFamily = Pretendard,
-            fontWeight = FontWeight.Normal,
-            fontSize = 12.sp,
-            lineHeight = 16.sp,
-            color = Color(0xFF828282),
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 18.sp,
+            color = Color(0xFF212121),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
-
-        Spacer(
-            modifier = Modifier.height(5.dp)
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            if (!event.reward.isNullOrBlank()) {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(7.dp))
-                        .background(Color(0xFFEDF7FF))
-                        .padding(
-                            horizontal = 8.dp,
-                            vertical = 5.dp,
-                        ),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "🎟",
-                        fontSize = 14.sp,
-                    )
-
-                    Spacer(
-                        modifier = Modifier.width(3.dp)
-                    )
-
-                    Text(
-                        text = event.reward,
-                        fontFamily = Pretendard,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 12.sp,
-                        color = Primary,
-                    )
-                }
-            }
-
-            Spacer(
-                modifier = Modifier.weight(1f)
-            )
-
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(Color(0xFFF8F8F8))
-                    .padding(
-                        horizontal = 8.dp,
-                        vertical = 5.dp,
-                    ),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "👤",
-                    fontSize = 14.sp,
-                )
-
-                Spacer(
-                    modifier = Modifier.width(3.dp)
-                )
-
-                Text(
-                    text = "${event.participantCount}명 참여",
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp,
-                    color = Color(0xFF8F8F8F),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FirstComeTabContent(
-    events: List<WebEventItem>,
-    onEventClick: (WebEventItem) -> Unit,
-) {
-    if (events.isEmpty()) {
-        EmptyContent()
-    } else {
-        events.forEachIndexed { index, event ->
-            Box(
-                modifier = Modifier.clickable {
-                    onEventClick(event)
-                }
-            ) {
-                FirstComeEventItem(
-                    event = event,
-                )
-            }
-
-            if (index < events.lastIndex) {
-                HorizontalDivider(
-                    color = Color(0xFFB5B5B5),
-                    thickness = 0.5.dp,
-                    modifier = Modifier.padding(
-                        horizontal = 20.dp
-                    ),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FirstComeEventItem(
-    event: WebEventItem,
-) {
-    val remaining = maxOf(
-        event.participantLimit - event.participantCount,
-        0,
-    )
-
-    val isSoldOut = remaining <= 0
-
-    val isOpen =
-        event.status != "ended" &&
-                !isSoldOut
-
-    val progress =
-        if (event.participantLimit > 0) {
-            event.participantCount.toFloat() /
-                    event.participantLimit.toFloat()
-        } else {
-            0f
-        }
-
-    Column(
-        modifier = Modifier
-            .padding(
-                horizontal = 20.dp,
-                vertical = 16.dp,
-            )
-            .alpha(
-                if (isSoldOut) {
-                    0.5f
-                } else {
-                    1f
-                }
-            ),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(Color(0xFFEDF7FF))
-                    .padding(
-                        horizontal = 10.dp,
-                        vertical = 3.dp,
-                    ),
-            ) {
-                Text(
-                    text = "선착순",
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 11.sp,
-                    color = Primary,
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(
-                        if (isOpen) {
-                            Primary
-                        } else {
-                            Color(0xFF8F8F8F)
-                        }
-                    )
-                    .padding(
-                        horizontal = 10.dp,
-                        vertical = 3.dp,
-                    ),
-            ) {
-                Text(
-                    text = if (isOpen) {
-                        "진행중"
-                    } else {
-                        "마감"
-                    },
-                    fontFamily = Pretendard,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 11.sp,
-                    color = Color.White,
-                )
-            }
-
-            Text(
-                text = event.name,
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.Medium,
-                fontSize = 16.sp,
-                color = Color(0xFF121212),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
 
         if (!event.description.isNullOrBlank()) {
             Spacer(
-                modifier = Modifier.height(9.dp)
+                modifier = Modifier.height(6.dp)
             )
 
             Text(
                 text = event.description,
                 fontFamily = Pretendard,
                 fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                color = Color(0xFF595959),
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = Color(0xFF7D7D7D),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
             )
         }
+
+        Spacer(
+            modifier = Modifier.height(10.dp)
+        )
+
+        Text(
+            text = "이벤트 기간 : ${event.startDate} ~ ${event.endDate}",
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.Normal,
+            fontSize = 14.sp,
+            color = Color(0xFF7D7D7D),
+        )
 
         if (!event.reward.isNullOrBlank()) {
             Spacer(
@@ -747,8 +607,12 @@ private fun FirstComeEventItem(
 
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(Color(0xFFF8F8F8))
+                    .clip(
+                        RoundedCornerShape(7.dp)
+                    )
+                    .background(
+                        Color(0xFFF8F8F8)
+                    )
                     .padding(
                         horizontal = 8.dp,
                         vertical = 5.dp,
@@ -775,37 +639,327 @@ private fun FirstComeEventItem(
         }
 
         Spacer(
-            modifier = Modifier.height(12.dp)
+            modifier = Modifier.height(8.dp)
         )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End,
         ) {
-            Text(
-                text = "잔여수량",
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.Normal,
-                fontSize = 10.sp,
-                lineHeight = 16.sp,
-                color = Color(0xFF595959),
+            Row(
+                modifier = Modifier
+                    .clip(
+                        RoundedCornerShape(7.dp)
+                    )
+                    .background(
+                        Color(0xFFF8F8F8)
+                    )
+                    .padding(
+                        horizontal = 8.dp,
+                        vertical = 5.dp,
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "👤",
+                    fontSize = 14.sp,
+                )
+
+                Spacer(
+                    modifier = Modifier.width(3.dp)
+                )
+
+                Text(
+                    text = "${event.participantCount}명 참여",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
+                    color = Color(0xFF8F8F8F),
+                )
+            }
+        }
+    }
+
+
+}
+
+// ============================================================
+// First Come
+// ============================================================
+
+@Composable
+private fun FirstComeTabContent(
+    events: List<WebEventItem>,
+    onEventClick: (WebEventItem) -> Unit,
+) {
+    if (events.isEmpty()) {
+        EmptyContent()
+    } else {
+        events.forEach { event ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        onEventClick(event)
+                    },
+            ) {
+                FirstComeEventItem(
+                    event = event,
+                )
+            }
+
+
+            HorizontalDivider(
+                color = Color(0xFFB5B5B5),
+                thickness = 0.5.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = 20.dp
+                    ),
+            )
+        }
+    }
+
+
+}
+
+// ============================================================
+// First Come Event Card
+// ============================================================
+
+@Composable
+private fun FirstComeEventItem(
+    event: WebEventItem,
+) {
+    val remaining =
+        maxOf(
+            event.participantLimit -
+                    event.participantCount,
+            0,
+        )
+
+
+    val isSoldOut =
+        remaining <= 0
+
+    val isOpen =
+        event.status != "ended" &&
+                !isSoldOut
+
+    val progress =
+        if (event.participantLimit > 0) {
+            event.participantCount.toFloat() /
+                    event.participantLimit.toFloat()
+        } else {
+            0f
+        }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = 20.dp,
+                vertical = 15.dp,
+            )
+            .alpha(
+                if (isSoldOut) {
+                    0.5f
+                } else {
+                    1f
+                }
+            ),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(210.dp)
+                .clip(
+                    RoundedCornerShape(15.dp)
+                )
+                .background(
+                    Color(0xFFE8E8E8)
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (!event.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = event.imageUrl,
+                    contentDescription = event.name,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(
+                            RoundedCornerShape(15.dp)
+                        ),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Text(
+                    text = event.name.take(1),
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 32.sp,
+                    color = Color(0xFFB5B5B5),
+                )
+            }
+        }
+
+        Spacer(
+            modifier = Modifier.height(14.dp)
+        )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(
+                        RoundedCornerShape(15.dp)
+                    )
+                    .background(
+                        Color(0xFFEDF7FF)
+                    )
+                    .padding(
+                        horizontal = 10.dp,
+                        vertical = 5.dp,
+                    ),
+            ) {
+                Text(
+                    text = "선착순",
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 14.sp,
+                    color = Primary,
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .defaultMinSize(minHeight = 32.dp)
+                    .clip(RoundedCornerShape(15.dp))
+                    .background(
+                        if (event.status == "closed") {
+                            Color(0xFFADADAD)
+                        } else {
+                            Color.White
+                        }
+                    )
+                    .then(
+                        if (event.status == "closed") {
+                            Modifier
+                        } else {
+                            Modifier.border(
+                                width = 1.dp,
+                                color = Color(0xFF2563EB),
+                                shape = RoundedCornerShape(15.dp),
+                            )
+                        }
+                    )
+                    .padding(
+                        horizontal = 10.dp,
+                        vertical = 5.dp,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = if (event.status == "closed") {
+                        "마감"
+                    } else {
+                        "진행중"
+                    },
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    color = if (event.status == "closed") {
+                        Color.White
+                    } else {
+                        Color(0xFF2563EB)
+                    },
+                )
+            }
+        }
+
+        Spacer(
+            modifier = Modifier.height(5.dp)
+        )
+
+        Text(
+            text = event.name,
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 18.sp,
+            color = Color(0xFF212121),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        if (!event.description.isNullOrBlank()) {
+            Spacer(
+                modifier = Modifier.height(6.dp)
             )
 
             Text(
-                text = "${remaining}/${event.participantLimit}명",
+                text = event.description,
                 fontFamily = Pretendard,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                color =
-                    if (isSoldOut) {
-                        Color(0xFF8F8F8F)
-                    } else {
-                        Primary
-                    },
+                fontWeight = FontWeight.Normal,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = Color(0xFF7D7D7D),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
             )
         }
+
+        Spacer(
+            modifier = Modifier.height(10.dp)
+        )
+
+        Text(
+            text = "이벤트 기간 : ${event.startDate} ~ ${event.endDate}",
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.Normal,
+            fontSize = 14.sp,
+            color = Color(0xFF7D7D7D),
+        )
+
+        if (!event.reward.isNullOrBlank()) {
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .clip(
+                        RoundedCornerShape(7.dp)
+                    )
+                    .background(
+                        Color(0xFFF8F8F8)
+                    )
+                    .padding(
+                        horizontal = 8.dp,
+                        vertical = 5.dp,
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Spacer(
+                    modifier = Modifier.width(3.dp)
+                )
+
+                Text(
+                    text = event.reward,
+                    fontFamily = Pretendard,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
+                    color = Color(0xFF8F8F8F),
+                )
+            }
+        }
+
+        Spacer(
+            modifier = Modifier.height(12.dp)
+        )
+
 
         Spacer(
             modifier = Modifier.height(4.dp)
@@ -816,13 +970,18 @@ private fun FirstComeEventItem(
                 .fillMaxWidth()
                 .height(8.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFF8F8F8)),
+                .background(
+                    Color(0xFFF8F8F8)
+                ),
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(
-                        progress.coerceIn(0f, 1f)
+                        progress.coerceIn(
+                            0f,
+                            1f,
+                        )
                     )
                     .clip(CircleShape)
                     .background(
@@ -835,15 +994,25 @@ private fun FirstComeEventItem(
             )
         }
     }
+
+
 }
+
+// ============================================================
+// Empty
+// ============================================================
 
 @Composable
 private fun EmptyContent() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 300.dp)
-            .padding(top = 80.dp),
+            .defaultMinSize(
+                minHeight = 300.dp
+            )
+            .padding(
+                top = 80.dp
+            ),
         contentAlignment = Alignment.TopCenter,
     ) {
         Text(
@@ -851,29 +1020,19 @@ private fun EmptyContent() {
             fontFamily = Pretendard,
             fontWeight = FontWeight.Normal,
             fontSize = 14.sp,
-            color = Color(0xFF8F8F8F),
+            color = Color(0xFF7D7D7D),
         )
     }
 }
 
-@Composable
-private fun Footer() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF9F9F9))
-            .padding(vertical = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = "2026 OLLYMOA. All rights reserved.",
-            fontFamily = Pretendard,
-            fontWeight = FontWeight.Normal,
-            fontSize = 10.sp,
-            color = Color(0xFF8F8F8F),
-        )
-    }
-}
+// ============================================================
+// Footer
+// ============================================================
+
+
+// ============================================================
+// Event Detail
+// ============================================================
 
 @Composable
 private fun PlaceholderEventDetail(
@@ -890,7 +1049,9 @@ private fun PlaceholderEventDetail(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
-                .padding(horizontal = 20.dp),
+                .padding(
+                    horizontal = 20.dp
+                ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -901,8 +1062,9 @@ private fun PlaceholderEventDetail(
                 modifier = Modifier
                     .clickable {
                         onBackClick()
-                    }
+                    },
             )
+
 
             Spacer(
                 modifier = Modifier.width(20.dp)
@@ -939,4 +1101,6 @@ private fun PlaceholderEventDetail(
             )
         }
     }
+
+
 }

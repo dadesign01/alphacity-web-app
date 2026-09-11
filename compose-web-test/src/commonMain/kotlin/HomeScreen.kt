@@ -38,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,6 +52,8 @@ import com.alphacity.stamptour.network.ApiService
 import com.alphacity.stamptour.network.dto.BannerItem
 import com.alphacity.stamptour.network.dto.EventItem
 import com.alphacity.stamptour.network.dto.FestivalItem
+import com.alphacity.stamptour.network.dto.ProgramItem
+import com.alphacity.stamptour.network.dto.StampItem
 import com.alphacity.stamptour.repository.HomeRepository
 import composewebtest.generated.resources.Res
 import composewebtest.generated.resources.header_left_arrow
@@ -58,11 +62,10 @@ import composewebtest.generated.resources.icon_coupon
 import composewebtest.generated.resources.icon_mapview
 import composewebtest.generated.resources.icon_profile
 import composewebtest.generated.resources.join_event_popup
-import org.jetbrains.compose.resources.painterResource
+import composewebtest.generated.resources.olly_walking_graphic
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.graphics.graphicsLayer
+import org.jetbrains.compose.resources.painterResource
 
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
@@ -171,6 +174,10 @@ fun HomeScreen(
 
         coroutineScope {
 
+            // 세미나 x2 실질 스탬프 계산에 사용할 데이터
+            var loadedPrograms = emptyList<ProgramItem>()
+            var loadedStamps = emptyList<StampItem>()
+
             val bannersDeferred = async {
                 try {
                     ApiService.getBanners()
@@ -246,6 +253,10 @@ fun HomeScreen(
             programsDeferred
                 .await()
                 .onSuccess { programs ->
+
+                    // 세미나 여부 판별용으로 보관
+                    loadedPrograms = programs
+
                     events = programs
                         .flatMap { program ->
                             program.events.orEmpty()
@@ -258,6 +269,7 @@ fun HomeScreen(
                         }
                 }
                 .onFailure {
+                    loadedPrograms = emptyList()
                     events = emptyList()
                 }
 
@@ -268,9 +280,14 @@ fun HomeScreen(
             stampsDeferred
                 .await()
                 .onSuccess { stamps ->
+
+                    // 세미나 스탬프 판별용으로 보관
+                    loadedStamps = stamps
+
                     totalStamps = stamps.size
                 }
                 .onFailure {
+                    loadedStamps = emptyList()
                     totalStamps = 0
                 }
 
@@ -282,9 +299,13 @@ fun HomeScreen(
                 userStampsDeferred
                     .await()
                     ?.onSuccess { userStamps ->
-                        stampCount = userStamps
-                            .distinctBy { it.stampId }
-                            .size
+
+                        // 세미나 스탬프는 실질적으로 2개로 계산
+                        stampCount = getEffectiveTotalStampCount(
+                            userStamps = userStamps,
+                            stamps = loadedStamps,
+                            programs = loadedPrograms,
+                        )
                     }
                     ?.onFailure {
                         stampCount = 0
@@ -465,11 +486,6 @@ private fun FirstComeCouponPopup(
                 .height(popupHeight),
         ) {
 
-            // ============================================
-            // 팝업 이미지
-            // Compose Image로 처리
-            // ============================================
-
             Image(
                 painter = painterResource(Res.drawable.join_event_popup),
                 contentDescription = null,
@@ -478,10 +494,6 @@ private fun FirstComeCouponPopup(
                     .width(popupWidth)
                     .height(popupHeight),
             )
-
-            // ============================================
-            // 지도 이동 영역
-            // ============================================
 
             Box(
                 modifier = Modifier
@@ -492,10 +504,6 @@ private fun FirstComeCouponPopup(
                         onMapClick()
                     },
             )
-
-            // ============================================
-            // 닫기 영역
-            // ============================================
 
             Box(
                 modifier = Modifier
@@ -534,10 +542,6 @@ private fun HomeHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
 
-        // ============================================
-        // Header Logo
-        // ============================================
-
         Image(
             painter = painterResource(Res.drawable.header_logo),
             contentDescription = null,
@@ -559,10 +563,6 @@ private fun HomeHeader(
         Spacer(
             modifier = Modifier.weight(1f)
         )
-
-        // ============================================
-        // Profile
-        // ============================================
 
         Box(
             modifier = Modifier
@@ -683,11 +683,6 @@ private fun BannerCarousel(
                                 onBannerClick(banner.id)
                             },
                     ) {
-
-                        // ====================================
-                        // 서버 배너 이미지
-                        // WebElementView 제거
-                        // ====================================
 
                         WebImage(
                             path = banner.imageUrl,
@@ -1412,13 +1407,16 @@ private fun StampProgressSection(
                                     vh(viewportHeight, 18f),
                             y = 0.dp,
                         )
-                        .clip(CircleShape)
-                        .background(Color.White),
+                        .clip(CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = "🚶",
-                        fontSize = 20.sp,
+                    Image(
+                        painter = painterResource(
+                            Res.drawable.olly_walking_graphic
+                        ),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }

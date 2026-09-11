@@ -57,7 +57,7 @@ private val Pretendard = FontFamily.SansSerif
  * Android / iOS는 기존 50m 유지
  * WASM 웹앱은 25m
  */
-private const val LOCATION_THRESHOLD_METERS = 25.0
+private const val LOCATION_THRESHOLD_METERS = 50.0
 
 /*
  * =============================================================
@@ -122,6 +122,11 @@ fun StayTimeMissionScreen(
 
     var alertMessage by remember(mission.id) {
         mutableStateOf("")
+    }
+
+    // 체류시간 완료여부
+    var stayTimeCompleted by remember {
+        mutableStateOf(false)
     }
 
     /*
@@ -353,6 +358,11 @@ fun StayTimeMissionScreen(
      *
      * 버튼을 누른 순간부터 카운트한다.
      */
+    /*
+     * ─────────────────────────────
+     * 체류시간 타이머
+     * ─────────────────────────────
+     */
     LaunchedEffect(
         isTimerRunning,
         mission.id,
@@ -374,78 +384,89 @@ fun StayTimeMissionScreen(
             }
         }
 
-        /*
-         * 체류시간을 모두 채운 경우
-         */
         if (
             isTimerRunning &&
             remainingSeconds <= 0
         ) {
-
-            /*
-             * 타이머 먼저 종료
-             */
             isTimerRunning = false
+            stayTimeCompleted = true
+        }
+    }
 
-            /*
-             * 완료 API 호출
-             */
-            isLoading = true
+
+    /*
+     * ─────────────────────────────
+     * 체류시간 완료 API
+     * ─────────────────────────────
+     */
+    LaunchedEffect(
+        stayTimeCompleted,
+        mission.id,
+    ) {
+
+        if (!stayTimeCompleted) {
+            return@LaunchedEffect
+        }
+
+        if (isCompleted) {
+            return@LaunchedEffect
+        }
+
+        isLoading = true
+
+        println("================================")
+        println("=== STAY MISSION TIMER COMPLETE ===")
+        println("missionId = ${mission.id}")
+        println("stayMinutes = $stayMinutes")
+        println("→ completeMission() 호출")
+        println("================================")
+
+        repository.completeMission(
+            missionId = mission.id,
+        ).onSuccess {
 
             println("================================")
-            println("=== STAY MISSION TIMER COMPLETE ===")
+            println("=== STAY MISSION COMPLETE API SUCCESS ===")
             println("missionId = ${mission.id}")
-            println("stayMinutes = $stayMinutes")
-            println("→ completeMission() 호출")
             println("================================")
 
-            repository.completeMission(
-                missionId = mission.id,
-            ).onSuccess {
+            isCompleted = true
 
-                println("================================")
-                println("=== STAY MISSION COMPLETE API SUCCESS ===")
-                println("missionId = ${mission.id}")
-                println("================================")
+        }.onFailure { error ->
 
-                isCompleted = true
+            val message =
+                error.message
+                    ?: "미션 완료에 실패했습니다."
 
-            }.onFailure { error ->
+            println("================================")
+            println("=== STAY MISSION COMPLETE API FAILED ===")
+            println("missionId = ${mission.id}")
+            println("error = $message")
+            println("================================")
 
-                val message =
-                    error.message
-                        ?: "미션 완료에 실패했습니다."
+            when {
 
-                println("================================")
-                println("=== STAY MISSION COMPLETE API FAILED ===")
-                println("missionId = ${mission.id}")
-                println("error = $message")
-                println("================================")
+                message.contains("이미 완료") -> {
 
-                when {
+                    isCompleted = true
 
-                    message.contains("이미 완료") -> {
+                    alertMessage =
+                        "이미 완료한 미션입니다."
 
-                        isCompleted = true
+                    showAlert = true
+                }
 
-                        alertMessage =
-                            "이미 완료한 미션입니다."
+                else -> {
 
-                        showAlert = true
-                    }
+                    alertMessage =
+                        message
 
-                    else -> {
-
-                        alertMessage =
-                            message
-
-                        showAlert = true
-                    }
+                    showAlert = true
                 }
             }
-
-            isLoading = false
         }
+
+        isLoading = false
     }
 
     /*
@@ -758,7 +779,7 @@ fun StayTimeMissionScreen(
                             )
 
                             onCompleted()
-                            onDismiss()
+//                            onDismiss()
                         }
                         .padding(vertical = 16.dp),
                     contentAlignment =

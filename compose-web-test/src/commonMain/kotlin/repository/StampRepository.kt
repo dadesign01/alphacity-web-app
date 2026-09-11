@@ -3,6 +3,7 @@ package com.alphacity.stamptour.repository
 import com.alphacity.stamptour.network.ApiService
 import com.alphacity.stamptour.network.dto.MissionCompletionResult
 import com.alphacity.stamptour.network.dto.MissionItem
+import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StampItem
 import com.alphacity.stamptour.network.dto.UserStampItem
 
@@ -136,5 +137,46 @@ class StampRepository(
         }
     }
 
+    // 실질 스탬프 개수 계산
+    fun getEffectiveStampCount(
+        userStamp: UserStampItem,
+        stamps: List<StampItem>,
+        programs: List<ProgramItem>,
+    ): Int {
+
+        val stamp = stamps.firstOrNull {
+            it.id == userStamp.stampId
+        }
+
+        val programId = stamp?.programId
+
+        val program = programs.firstOrNull {
+            it.id == programId
+        }
+
+        return if (program?.category == "seminar") {
+            2
+        } else {
+            1
+        }
+    }
+
+    // 유저의 실질 스탬프 총 개수
+    fun getEffectiveTotalStampCount(
+        userStamps: List<UserStampItem>,
+        stamps: List<StampItem>,
+        programs: List<ProgramItem>,
+    ): Int {
+
+        return userStamps
+            .distinctBy { it.stampId }
+            .sumOf { userStamp ->
+                getEffectiveStampCount(
+                    userStamp = userStamp,
+                    stamps = stamps,
+                    programs = programs,
+                )
+            }
+    }
 
 }

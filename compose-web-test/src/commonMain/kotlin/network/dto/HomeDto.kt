@@ -133,6 +133,7 @@ data class EventProgram(
 data class StampItem(
     val id: Int,
     val festivalId: Int? = null,
+    val programId: Int? = null,
     val name: String,
     val conditionType: String,
     val conditionDetail: String? = null,

@@ -50,7 +50,7 @@ import kotlin.math.PI
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
 
-private const val LOCATION_THRESHOLD_METERS = 25.0
+private const val LOCATION_THRESHOLD_METERS = 50.0
 
 @Composable
 fun QuizMissionScreen(

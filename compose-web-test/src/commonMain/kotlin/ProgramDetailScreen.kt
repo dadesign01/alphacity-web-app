@@ -64,10 +64,15 @@ import composewebtest.generated.resources.mission_check_icon
 import composewebtest.generated.resources.program_stamp_info
 import composewebtest.generated.resources.road_navigation
 import composewebtest.generated.resources.tts_sound
+import composewebtest.theme.MainGradient
 import kotlinx.browser.document
+import kotlinx.browser.window
 import org.jetbrains.compose.resources.painterResource
 import org.w3c.dom.HTMLAudioElement
-import composewebtest.theme.MainGradient
+
+// 설문조사 링크
+private const val SURVEY_URL =
+    "https://ollymoa-web-app.vercel.app/"
 
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
@@ -108,6 +113,7 @@ fun ProgramDetailScreen(
         lat: Double?,
         lng: Double?,
     ) -> Unit = { _, _ -> },
+    onNavigateToMyCoupons: () -> Unit = {},
 ) {
     // ============================================================
     // QR 스캐너 화면
@@ -123,6 +129,7 @@ fun ProgramDetailScreen(
                 println(
                     "[ProgramDetailScreen] QR detected: $qrText"
                 )
+                window.location.href = qrText
             },
             onClose = {
                 showQrScanner = false
@@ -561,9 +568,13 @@ fun ProgramDetailScreen(
                             ) {
                                 Text(
                                     text =
-                                        currentProgram
-                                            .operatingDays
-                                            ?: "",
+                                        "${currentProgram.startDate ?: ""}${
+                                            when (currentProgram.startDate) {
+                                                "2026-09-15" -> " (화)"
+                                                "2026-09-16" -> " (수)"
+                                                else -> ""
+                                            }
+                                        }",
                                     fontFamily = Pretendard,
                                     fontWeight =
                                         FontWeight.Normal,
@@ -644,7 +655,11 @@ fun ProgramDetailScreen(
                                                     .program_stamp_info
                                             ),
                                         contentDescription =
-                                            "스탬프 1개 적립",
+                                            if (currentProgram.category == "seminar") {
+                                                "스탬프 2개 적립"
+                                            } else {
+                                                "스탬프 1개 적립"
+                                            },
                                         modifier =
                                             Modifier
                                                 .size(24.dp)
@@ -662,7 +677,12 @@ fun ProgramDetailScreen(
 
                                     Text(
                                         text =
-                                            "스탬프 1개 적립",
+                                            if (currentProgram.category == "seminar") {
+                                                "스탬프 2개 적립"
+                                            }else{
+                                                "스탬프 1개 적립"
+                                            }
+                                        ,
                                         fontFamily =
                                             Pretendard,
                                         fontWeight =
@@ -721,16 +741,12 @@ fun ProgramDetailScreen(
                             println("category = [${currentProgram.category}]")
                             println("converted ttsUrl = [$ttsUrl]")
 
-
                             val hasTts = !ttsUrl.isNullOrBlank()
 
                             println("converted ttsUrl = [$hasTts]")
 
                             // ====================================================
                             // 소개 제목 + TTS 아이콘
-                            //
-                            // 이 Row 전체만 클릭 가능
-                            // 아래 설명 Text는 클릭 영역에 포함되지 않음
                             // ====================================================
 
                             Row(
@@ -747,7 +763,6 @@ fun ProgramDetailScreen(
                                             ttsUrl
                                                 ?: return@clickable
 
-                                        // 이미 재생 중이면 정지
                                         if (isSpeaking) {
                                             ttsAudio?.pause()
                                             ttsAudio?.currentTime = 0.0
@@ -756,13 +771,11 @@ fun ProgramDetailScreen(
                                             return@clickable
                                         }
 
-                                        // 기존 오디오 정리
                                         ttsAudio?.pause()
                                         ttsAudio?.currentTime = 0.0
                                         ttsAudio = null
                                         isSpeaking = false
 
-                                        // 새 오디오 생성
                                         val audio =
                                             document.createElement(
                                                 "audio"
@@ -861,13 +874,6 @@ fun ProgramDetailScreen(
                                     }
                                 }
                             }
-
-                            // ====================================================
-                            // 소개 내용
-                            //
-                            // 위 Row와 완전히 분리되어 있음.
-                            // 따라서 여기를 눌러도 TTS가 재생되지 않음.
-                            // ====================================================
 
                             Spacer(
                                 modifier =
@@ -1234,7 +1240,16 @@ fun ProgramDetailScreen(
                                     )
                                     .clickable {
                                         message =
-                                            "QR코드를 스캔하여 참여하시겠습니까?"
+                                            when (programId) {
+                                                42 ->
+                                                    "보유 쿠폰을 확인하시겠습니까?"
+
+                                                43 ->
+                                                    "설문조사에 참여하시겠습니까?"
+
+                                                else ->
+                                                    "QR코드를 스캔하여 참여하시겠습니까?"
+                                            }
                                     },
                                 contentAlignment =
                                     Alignment.Center,
@@ -1282,7 +1297,32 @@ fun ProgramDetailScreen(
                     onClick = {
                         message = null
 
-                        showQrScanner = true
+                        when (programId) {
+                            // =================================================
+                            // 42번 증정이벤트
+                            // =================================================
+
+                            42 -> {
+                                onNavigateToMyCoupons()
+                            }
+
+                            // =================================================
+                            // 43번 설문조사이벤트
+                            // =================================================
+
+                            43 -> {
+                                kotlinx.browser.window.location.href =
+                                    SURVEY_URL
+                            }
+
+                            // =================================================
+                            // 그 외 기존 프로그램
+                            // =================================================
+
+                            else -> {
+                                showQrScanner = true
+                            }
+                        }
                     },
                 ) {
                     Text(

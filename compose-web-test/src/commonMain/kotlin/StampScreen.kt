@@ -45,11 +45,13 @@ import androidx.compose.ui.unit.sp
 import com.alphacity.stamptour.network.ApiService
 import com.alphacity.stamptour.network.dto.FestivalItem
 import com.alphacity.stamptour.network.dto.MissionItem
+import com.alphacity.stamptour.network.dto.ProgramItem
 import com.alphacity.stamptour.network.dto.StampItem
 import com.alphacity.stamptour.network.dto.UserStampItem
 import com.alphacity.stamptour.repository.HomeRepository
 import com.alphacity.stamptour.repository.StampRepository
 import com.alphacity.stamptour.web.WebTokenManager
+import kotlin.collections.emptyList
 
 private val Primary = Color(0xFF02CDF8)
 private val Pretendard = FontFamily.SansSerif
@@ -90,6 +92,10 @@ fun StampScreen(
         mutableStateOf<List<UserStampItem>>(emptyList())
     }
 
+    var programs by remember {
+        mutableStateOf<List<ProgramItem>>(emptyList())
+    }
+
     /*
      * 축제 목록 조회
      */
@@ -101,6 +107,20 @@ fun StampScreen(
             .onFailure {
                 println(
                     "[StampScreen] 축제 조회 실패: ${it.message}"
+                )
+            }
+
+        homeRepository.getPrograms()
+            .onSuccess {
+                programs = it
+
+                println(
+                    "[StampScreen] 프로그램 조회 성공: ${it.size}개"
+                )
+            }
+            .onFailure {
+                println(
+                    "[StampScreen] 프로그램 조회 실패: ${it.message}"
                 )
             }
     }
@@ -195,21 +215,39 @@ fun StampScreen(
             .toSet()
 
     /*
-     * 실제 획득한 스탬프 개수
+     * 실질적으로 획득한 스탬프 개수
      *
-     * userStamps.size가 아니라
-     * stampId 기준 중복 제거한 개수를 사용한다.
+     * seminar 프로그램의 스탬프는 2개로 계산한다.
      */
     val userStampCount =
-        collectedStampIds.size
+        getEffectiveTotalStampCount(
+            userStamps = userStamps,
+            stamps = stamps,
+            programs = programs,
+        )
 
     /*
-     * 실제 등록된 전체 스탬프 개수
+     * 전체 실질 스탬프 개수
      *
-     * 더 이상 maxOf(..., 1)을 사용하지 않는다.
+     * seminar 프로그램의 스탬프는 2개로 계산한다.
      */
     val totalStampCount =
-        stamps.size
+        stamps.sumOf { stamp ->
+
+            val program =
+                stamp.programId
+                    ?.let { programId ->
+                        programs.find {
+                            it.id == programId
+                        }
+                    }
+
+            if (program?.category == "seminar") {
+                2
+            } else {
+                1
+            }
+        }
 
     /*
      * 스탬프 진행률
@@ -340,10 +378,10 @@ fun StampScreen(
             Spacer(
                 modifier = Modifier.height(12.dp)
             )
-
-            RewardButton(
-                onClick = onNavigateToExchange
-            )
+//
+//            RewardButton(
+//                onClick = onNavigateToExchange
+//            )
 
             Spacer(
                 modifier = Modifier.height(20.dp)
@@ -553,14 +591,6 @@ private fun StampProgressCard(
                     Spacer(
                         modifier = Modifier.height(6.dp)
                     )
-
-                    Text(
-                        text = "차곡차곡 모아 다양한 리워드를 만나보세요.",
-                        fontFamily = Pretendard,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp,
-                        color = Color(0xFF3D608D),
-                    )
                 }
 
                 Text(
@@ -638,38 +668,6 @@ private fun StampProgressCard(
                     total = "/ $totalStampCount",
                     color = Color(0xFF2563EB),
                 )
-
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(36.dp)
-                        .background(
-                            Color(0xFFD0D5DD)
-                        ),
-                )
-
-                StatItem(
-                    label = "완료 미션",
-                    value = "$completedMissionCount",
-                    total = "/ $totalMissionCount",
-                    color = Color(0xFF16A34A),
-                )
-
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(36.dp)
-                        .background(
-                            Color(0xFFD0D5DD)
-                        ),
-                )
-
-                StatItem(
-                    label = "남은 미션",
-                    value = "$remainingMissionCount",
-                    total = "",
-                    color = Color(0xFFEA580C),
-                )
             }
         }
     }
@@ -722,67 +720,33 @@ private fun StatItem(
     }
 }
 
-@Composable
-private fun RewardButton(
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .height(56.dp)
-            .clip(
-                RoundedCornerShape(8.dp)
-            )
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFF6092FF),
-                        Color(0xFF2563EB),
-                        Color(0xFF1551D3),
-                    )
-                )
-            )
-            .clickable {
-                onClick()
-            },
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalAlignment =
-                Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "🎁",
-                fontSize = 18.sp,
-            )
-
-            Spacer(
-                modifier = Modifier.width(12.dp)
-            )
-
-            Text(
-                text = "스탬프로 리워드 교환하러 가기",
-                fontFamily = Pretendard,
-                fontWeight = FontWeight.Medium,
-                fontSize = 16.sp,
-                color = Color.White,
-            )
-
-            Spacer(
-                modifier = Modifier.weight(1f)
-            )
-
-            Text(
-                text = ">",
-                fontSize = 16.sp,
-                color = Color.White,
-            )
-        }
-    }
-}
+//@Composable
+//private fun RewardButton(
+//    onClick: () -> Unit,
+//) {
+//    Box(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(horizontal = 20.dp)
+//            .height(56.dp)
+//            .clip(
+//                RoundedCornerShape(8.dp)
+//            )
+//            .background(
+//                Brush.linearGradient(
+//                    colors = listOf(
+//                        Color(0xFF6092FF),
+//                        Color(0xFF2563EB),
+//                        Color(0xFF1551D3),
+//                    )
+//                )
+//            )
+//            .clickable {
+//                onClick()
+//            },
+//    ) {
+//    }
+//}
 
 /*
  * 실제 등록된 스탬프 개수만큼 동적으로 표시한다.

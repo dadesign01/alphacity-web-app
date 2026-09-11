@@ -27,6 +27,9 @@ import io.ktor.client.request.setBody
 import com.alphacity.stamptour.network.dto.TermItem
 import com.alphacity.stamptour.network.dto.SocialLoginRequest
 import com.alphacity.stamptour.network.dto.AuthData
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 
 object ApiService {
@@ -188,15 +191,17 @@ object ApiService {
         answer: String? = null,
     ): ApiResponse<MissionCompletionResult> {
 
-        val body = if (answer != null) {
-            mapOf("answer" to answer)
+        return if (answer == null) {
+            client.post("missions/$missionId/complete").body()
         } else {
-            emptyMap()
+            client.post("missions/$missionId/complete") {
+                setBody(
+                    buildJsonObject {
+                        put("answer", answer)
+                    }
+                )
+            }.body()
         }
-
-        return client.post("missions/$missionId/complete") {
-            setBody(body)
-        }.body()
     }
 
 // =========================

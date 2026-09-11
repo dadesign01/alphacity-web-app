@@ -1,5 +1,6 @@
 package com.alphacity.stamptour.ui.screen
 
+import StoreRegisterScreen
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -185,8 +186,7 @@ fun MyPageScreen(
         }
 
         showStoreRegister -> {
-            SimpleSubScreen(
-                title = "매장 등록",
+            StoreRegisterScreen(
                 onBackClick = {
                     showStoreRegister = false
                 },
