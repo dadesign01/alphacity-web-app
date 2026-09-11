@@ -32,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -61,6 +62,11 @@ import io.ktor.http.contentType
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import web.QrTarget
+import androidx.compose.ui.viewinterop.WebElementView
+import kotlinx.browser.document
+import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.events.Event
+import kotlin.js.unsafeCast
 
 @Composable
 fun PhoneLogin(
@@ -608,6 +614,7 @@ fun PhoneLogin(
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun AuthTextField(
     value: String,
@@ -618,79 +625,60 @@ private fun AuthTextField(
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    val textFieldState = rememberTextFieldState(
-        initialText = value
-    )
+    WebElementView(
+        factory = {
+            val input =
+                document
+                    .createElement("input")
+                    .unsafeCast<HTMLInputElement>()
 
-//    // 외부 value → TextFieldState 동기화
-//    LaunchedEffect(value) {
-//        val currentText = textFieldState.text.toString()
-//
-//        if (currentText != value) {
-//            textFieldState.edit {
-//                replace(
-//                    0,
-//                    length,
-//                    value,
-//                )
-//            }
-//        }
-//    }
+            input.type =
+                when (keyboardType) {
+                    KeyboardType.Phone,
+                    KeyboardType.Number -> "tel"
 
-    // TextFieldState → 외부 value 동기화
-    LaunchedEffect(textFieldState) {
-        snapshotFlow {
-            textFieldState.text.toString()
-        }.collect { text ->
-            if (text != value) {
-                onValueChange(text)
-            }
-        }
-    }
-
-    BasicTextField(
-        state = textFieldState,
-        enabled = enabled,
-        lineLimits = androidx.compose.foundation.text.input
-            .TextFieldLineLimits.SingleLine,
-        keyboardOptions = KeyboardOptions(
-            keyboardType = keyboardType,
-            imeAction = ImeAction.Done,
-        ),
-        modifier = modifier
-            .focusRequester(focusRequester),
-        textStyle = TextStyle(
-            fontSize = 16.sp,
-            color = Color.Black,
-        ),
-        decorator = { innerTextField ->
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Bottom,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(47.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    if (textFieldState.text.isEmpty()) {
-                        Text(
-                            text = placeholder,
-                            fontSize = 15.sp,
-                            color = Color(0xFF8F8F8F),
-                        )
-                    }
-
-                    innerTextField()
+                    else -> "text"
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(Color.Black),
-                )
+            input.placeholder = placeholder
+
+            input.autocomplete = "off"
+            input.spellcheck = false
+
+            input.style.width = "100%"
+            input.style.height = "47px"
+            input.style.border = "none"
+            input.style.outline = "none"
+            input.style.background = "transparent"
+            input.style.padding = "0"
+            input.style.margin = "0"
+
+            input.style.fontSize = "16px"
+            input.style.color = "#000000"
+            input.style.fontFamily = "inherit"
+
+            input.disabled = !enabled
+
+            input.addEventListener("input") {
+                onValueChange(input.value)
+            }
+
+            input
+        },
+        modifier = modifier
+            .focusRequester(focusRequester),
+        update = { input ->
+
+            input.disabled = !enabled
+
+            /*
+             * iOS 한글 조합 중에는 절대 value를 다시 세팅하지 않는다.
+             */
+            if (
+                input.value != value &&
+                !input.matches(":focus")
+            ) {
+                input.value = value
             }
         },
     )
