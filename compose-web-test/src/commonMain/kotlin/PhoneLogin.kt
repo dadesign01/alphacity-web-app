@@ -622,20 +622,20 @@ private fun AuthTextField(
         initialText = value
     )
 
-    // 외부 value → TextFieldState 동기화
-    LaunchedEffect(value) {
-        val currentText = textFieldState.text.toString()
-
-        if (currentText != value) {
-            textFieldState.edit {
-                replace(
-                    0,
-                    length,
-                    value,
-                )
-            }
-        }
-    }
+//    // 외부 value → TextFieldState 동기화
+//    LaunchedEffect(value) {
+//        val currentText = textFieldState.text.toString()
+//
+//        if (currentText != value) {
+//            textFieldState.edit {
+//                replace(
+//                    0,
+//                    length,
+//                    value,
+//                )
+//            }
+//        }
+//    }
 
     // TextFieldState → 외부 value 동기화
     LaunchedEffect(textFieldState) {
